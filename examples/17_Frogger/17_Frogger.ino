@@ -14,10 +14,11 @@
 
   Spielregeln:
   - Bringe den Frosch sicher nach oben zu den Häusern
-  - Straße (Y=2-9): Vermeide Autos (4 Spuren mit Verkehr)
+  - Straße (Y=2-9): Vermeide Autos (4 Spuren mit Verkehr, 2 Autos/Spur)
   - Erholungsspuren (Y=10-11): Sichere Zone zum Ausruhen
-  - Fluss (Y=12-19): Springe auf Baumstämme! (4 Spuren)
+  - Fluss (Y=12-19): Springe auf Baumstämme! (8 Spuren, 3 Baumstämme/Spur)
   - WICHTIG: Frosch ERTRINKT im Wasser, Baumstämme retten und tragen dich!
+  - Baumstämme sind BREIT (10-13 Zellen) - leichter zu treffen!
   - Erreiche alle 5 Häuser für nächstes Level
   - 3 Leben
   - Punkte: Vorwärts bewegen = +10, Haus erreichen = +50
@@ -77,7 +78,7 @@ struct Car {
 
 // Baumstamm (WICHTIG: Baumstämme RETTEN den Frosch und bewegen ihn mit!)
 struct Log {
-  int lane;              // Reihe (Y=13-16, 4 Spuren)
+  int lane;              // Reihe (Y=12-19, 8 Spuren - ALLE Wasserreihen)
   float x;               // Position
   int w;                 // Breite in Zellen
   float speed;           // Geschwindigkeit
@@ -96,7 +97,7 @@ Frog frog;
 #define MAX_CARS 8
 Car cars[MAX_CARS];
 
-#define MAX_LOGS 12
+#define MAX_LOGS 24
 Log logs[MAX_LOGS];
 
 #define NUM_HOMES 5
@@ -231,7 +232,7 @@ void initLevel() {
       if (carCount < MAX_CARS) {
         cars[carCount].lane = lane;
         cars[carCount].x = (GRID_WIDTH / numCars) * i;  // Gleichmäßig verteilt
-        cars[carCount].w = 3 + random(0, 2);  // 3-4 Zellen breit
+        cars[carCount].w = 5 + random(0, 3);  // 5-7 Zellen breit (breiter für breite Straße!)
         cars[carCount].speed = (0.15 + level * 0.03) * (dirRight ? 1 : -1);
         cars[carCount].color = (random(0, 2) == 0) ? COLOR_CAR_RED : COLOR_CAR_BLUE;  // Zufällig rot oder blau
         cars[carCount].active = true;
@@ -240,10 +241,10 @@ void initLevel() {
     }
   }
 
-  // Baumstämme initialisieren (4 Spuren: Y=13-16)
+  // Baumstämme initialisieren (8 Spuren: Y=12-19, ALLE Wasserreihen!)
   // WICHTIG: Baumstämme RETTEN den Frosch und bewegen ihn mit!
   int logCount = 0;
-  for (int lane = 13; lane <= 16; lane++) {
+  for (int lane = 12; lane <= 19; lane++) {
     int numLogs = 3;  // 3 Baumstämme pro Bahn (breiter Fluss braucht viele Baumstämme!)
     bool dirRight = (lane % 2 == 0);
 
@@ -251,7 +252,7 @@ void initLevel() {
       if (logCount < MAX_LOGS) {
         logs[logCount].lane = lane;
         logs[logCount].x = (GRID_WIDTH / numLogs) * i;
-        logs[logCount].w = 5 + random(0, 3);  // 5-7 Zellen breit (breit genug zum Landen)
+        logs[logCount].w = 10 + random(0, 4);  // 10-13 Zellen SEHR breit! (breiter Fluss!)
         logs[logCount].speed = (0.1 + level * 0.02) * (dirRight ? 1 : -1);
         logs[logCount].active = true;
         logCount++;
@@ -355,8 +356,8 @@ void updateLogs() {
     drawLog(i);
   }
 
-  // Frosch auf Baumstamm mitbewegen (Y=13-16 haben Baumstämme)
-  if (frog.alive && (int)frog.y >= 13 && (int)frog.y <= 16) {
+  // Frosch auf Baumstamm mitbewegen (Y=12-19 haben ALLE Baumstämme)
+  if (frog.alive && (int)frog.y >= 12 && (int)frog.y <= 19) {
     for (int i = 0; i < MAX_LOGS; i++) {
       if (!logs[i].active) continue;
       if (logs[i].lane != (int)frog.y) continue;
@@ -397,16 +398,14 @@ void checkCollisions() {
   if ((int)frog.y >= 12 && (int)frog.y <= 19) {
     bool onLog = false;
 
-    // Prüfe ob auf Baumstamm (Y=13-16 haben Baumstämme)
-    if ((int)frog.y >= 13 && (int)frog.y <= 16) {
-      for (int i = 0; i < MAX_LOGS; i++) {
-        if (!logs[i].active) continue;
-        if (logs[i].lane != (int)frog.y) continue;
+    // Prüfe ob auf Baumstamm (Y=12-19 haben ALLE Baumstämme)
+    for (int i = 0; i < MAX_LOGS; i++) {
+      if (!logs[i].active) continue;
+      if (logs[i].lane != (int)frog.y) continue;
 
-        if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
-          onLog = true;
-          break;
-        }
+      if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
+        onLog = true;
+        break;
       }
     }
 
