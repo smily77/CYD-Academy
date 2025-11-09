@@ -702,27 +702,34 @@ void drawGame() {
 
   // Ball zeichnen - NUR wenn er sich bewegt hat
   if (oldBallX != ball.x || oldBallY != ball.y) {
-    // Trail zeichnen
+    // Ball löschen (alte Position) - NUR wenn NICHT am Schläger
+    // (Wenn am Schläger, hat der Paddle das schon erledigt)
     if (!ball.stuck) {
+      // Ball mit Glow löschen (mit HLines statt einzelnen Pixeln - viel schneller!)
+      int r = ball.size + 3;
+      int centerX = oldBallX + ball.size/2;
+      int centerY = oldBallY + ball.size/2;
+
+      for (int dy = -r; dy <= r; dy++) {
+        int py = centerY + dy;
+        if (py >= 0 && py < SCREEN_HEIGHT) {
+          // Berechne Start- und End-X für diese Zeile
+          int startX = max(0, centerX - r);
+          int endX = min(SCREEN_WIDTH - 1, centerX + r);
+
+          // Zeichne Hintergrund-Zeile (viel schneller als einzelne Pixel!)
+          uint16_t bgColor = lerpColor(COLOR_BG_TOP, COLOR_BG_BOTTOM, (float)py / SCREEN_HEIGHT);
+          lcd.drawFastHLine(startX, py, endX - startX + 1, bgColor);
+        }
+      }
+
+      // Trail zeichnen
       for (int i = 0; i < TRAIL_LENGTH; i++) {
         if (trail[i].active) {
           int age = (trailIndex - i + TRAIL_LENGTH) % TRAIL_LENGTH;
           float alpha = 1.0 - (float)age / TRAIL_LENGTH;
           uint16_t color = dimColor(COLOR_BALL, alpha * 0.4);
           lcd.fillCircle(trail[i].x, trail[i].y, 2, color);
-        }
-      }
-    }
-
-    // Ball löschen (alte Position) - IMMER, auch wenn am Schläger
-    int r = ball.size + 3;
-    for (int dy = -r; dy <= r; dy++) {
-      for (int dx = -r; dx <= r; dx++) {
-        int px = oldBallX + ball.size/2 + dx;
-        int py = oldBallY + ball.size/2 + dy;
-        if (px >= 0 && px < SCREEN_WIDTH && py >= 0 && py < SCREEN_HEIGHT) {
-          uint16_t bgColor = lerpColor(COLOR_BG_TOP, COLOR_BG_BOTTOM, (float)py / SCREEN_HEIGHT);
-          lcd.drawPixel(px, py, bgColor);
         }
       }
     }
