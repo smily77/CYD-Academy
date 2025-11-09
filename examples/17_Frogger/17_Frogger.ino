@@ -40,6 +40,7 @@ LGFX lcd;
 #define CELL_SIZE 10
 #define GRID_WIDTH  (SCREEN_WIDTH / CELL_SIZE)   // 32
 #define GRID_HEIGHT (SCREEN_HEIGHT / CELL_SIZE)  // 24
+#define PLAY_OFFSET_Y 8  // UI oben, Spielfeld startet bei Y=8
 
 // Farben
 #define COLOR_BG        0x0000  // Schwarz
@@ -219,15 +220,15 @@ void initLevel() {
   // Autos initialisieren (4 Fahrspuren: Y=2,3,4,5)
   int carCount = 0;
   for (int lane = 2; lane <= 5; lane++) {
-    int numCars = 2;  // 2 Autos pro Spur
+    int numCars = 1;  // 1 Auto pro Spur (reduziert)
     bool dirRight = (lane % 2 == 0);  // Abwechselnde Richtungen
 
     for (int i = 0; i < numCars; i++) {
       if (carCount < MAX_CARS) {
         cars[carCount].lane = lane;
-        cars[carCount].x = (GRID_WIDTH / numCars) * i;
+        cars[carCount].x = (GRID_WIDTH / numCars) * i + (GRID_WIDTH / 3);  // Versetzt starten
         cars[carCount].w = 3 + random(0, 2);  // 3-4 Zellen breit
-        cars[carCount].speed = (0.5 + level * 0.1) * (dirRight ? 1 : -1);
+        cars[carCount].speed = (0.15 + level * 0.03) * (dirRight ? 1 : -1);  // Langsamer
         cars[carCount].active = true;
         carCount++;
       }
@@ -245,7 +246,7 @@ void initLevel() {
         logs[logCount].lane = lane;
         logs[logCount].x = (GRID_WIDTH / numLogs) * i;
         logs[logCount].w = 4 + random(0, 3);  // 4-6 Zellen breit
-        logs[logCount].speed = (0.3 + level * 0.05) * (dirRight ? 1 : -1);
+        logs[logCount].speed = (0.1 + level * 0.02) * (dirRight ? 1 : -1);  // Langsamer
         logs[logCount].active = true;
         logCount++;
       }
@@ -508,20 +509,24 @@ void handleGameOver() {
 // ===== ZEICHNEN =====
 
 void drawBackground() {
-  // Startzone (Y=0-1): Gras
-  lcd.fillRect(0, (GRID_HEIGHT - 2) * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
+  // UI-Bereich oben (8px)
+  lcd.fillRect(0, 0, SCREEN_WIDTH, PLAY_OFFSET_Y, COLOR_BG);
 
-  // Straße (Y=2-5): Grau
-  lcd.fillRect(0, (GRID_HEIGHT - 6) * CELL_SIZE, SCREEN_WIDTH, 4 * CELL_SIZE, COLOR_ROAD);
-
-  // Sichere Zone (Y=6-7): Gras
-  lcd.fillRect(0, (GRID_HEIGHT - 8) * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
+  // Spielfeld startet ab Y=PLAY_OFFSET_Y
+  // Ziel-Zone (Y=12-23): Gras
+  lcd.fillRect(0, PLAY_OFFSET_Y, SCREEN_WIDTH, (GRID_HEIGHT - 12) * CELL_SIZE, COLOR_GRASS);
 
   // Wasser (Y=8-11): Blau
-  lcd.fillRect(0, (GRID_HEIGHT - 12) * CELL_SIZE, SCREEN_WIDTH, 4 * CELL_SIZE, COLOR_WATER);
+  lcd.fillRect(0, PLAY_OFFSET_Y + (GRID_HEIGHT - 12) * CELL_SIZE, SCREEN_WIDTH, 4 * CELL_SIZE, COLOR_WATER);
 
-  // Ziel-Zone (Y=12-23): Gras
-  lcd.fillRect(0, 0, SCREEN_WIDTH, (GRID_HEIGHT - 12) * CELL_SIZE, COLOR_GRASS);
+  // Sichere Zone (Y=6-7): Gras
+  lcd.fillRect(0, PLAY_OFFSET_Y + (GRID_HEIGHT - 8) * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
+
+  // Straße (Y=2-5): Grau
+  lcd.fillRect(0, PLAY_OFFSET_Y + (GRID_HEIGHT - 6) * CELL_SIZE, SCREEN_WIDTH, 4 * CELL_SIZE, COLOR_ROAD);
+
+  // Startzone (Y=0-1): Gras
+  lcd.fillRect(0, PLAY_OFFSET_Y + (GRID_HEIGHT - 2) * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
 }
 
 void drawCars() {
@@ -535,16 +540,28 @@ void drawCars() {
 void drawCar(int index) {
   Car* c = &cars[index];
   int screenX = (int)c->x * CELL_SIZE;
-  int screenY = (GRID_HEIGHT - c->lane - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - c->lane - 1) * CELL_SIZE;
   int width = c->w * CELL_SIZE;
 
+  // Auto-Karosserie
   lcd.fillRect(screenX, screenY, width, CELL_SIZE, COLOR_CAR);
+
+  // Fenster (heller)
+  if (width >= 20) {
+    lcd.fillRect(screenX + 3, screenY + 2, width - 6, CELL_SIZE - 4, 0x8000);  // Dunkelrot (Fenster)
+  }
+
+  // Räder (schwarz, unten)
+  lcd.fillRect(screenX + 2, screenY + CELL_SIZE - 2, 3, 2, COLOR_BG);
+  if (width >= 15) {
+    lcd.fillRect(screenX + width - 5, screenY + CELL_SIZE - 2, 3, 2, COLOR_BG);
+  }
 }
 
 void eraseCar(int index) {
   Car* c = &cars[index];
   int screenX = (int)c->x * CELL_SIZE;
-  int screenY = (GRID_HEIGHT - c->lane - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - c->lane - 1) * CELL_SIZE;
   int width = c->w * CELL_SIZE;
 
   lcd.fillRect(screenX, screenY, width, CELL_SIZE, COLOR_ROAD);
@@ -561,16 +578,26 @@ void drawLogs() {
 void drawLog(int index) {
   Log* l = &logs[index];
   int screenX = (int)l->x * CELL_SIZE;
-  int screenY = (GRID_HEIGHT - l->lane - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - l->lane - 1) * CELL_SIZE;
   int width = l->w * CELL_SIZE;
 
+  // Baumstamm-Grundfarbe
   lcd.fillRect(screenX, screenY, width, CELL_SIZE, COLOR_LOG);
+
+  // Jahresringe/Textur (hellere Streifen)
+  for (int i = 0; i < width; i += 8) {
+    lcd.drawFastVLine(screenX + i, screenY + 1, CELL_SIZE - 2, 0x9B60);  // Helles Braun
+  }
+
+  // Rand oben/unten dunkler
+  lcd.drawFastHLine(screenX, screenY, width, 0x5280);  // Dunkelbraun
+  lcd.drawFastHLine(screenX, screenY + CELL_SIZE - 1, width, 0x5280);
 }
 
 void eraseLog(int index) {
   Log* l = &logs[index];
   int screenX = (int)l->x * CELL_SIZE;
-  int screenY = (GRID_HEIGHT - l->lane - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - l->lane - 1) * CELL_SIZE;
   int width = l->w * CELL_SIZE;
 
   lcd.fillRect(screenX, screenY, width, CELL_SIZE, COLOR_WATER);
@@ -579,7 +606,7 @@ void eraseLog(int index) {
 void drawHomes() {
   for (int i = 0; i < NUM_HOMES; i++) {
     int screenX = homes[i].x * CELL_SIZE;
-    int screenY = 0;  // Oben (Y=23)
+    int screenY = PLAY_OFFSET_Y;  // Oben im Spielfeld (Y=23 → 8px + 0)
 
     if (homes[i].filled) {
       lcd.fillRect(screenX - CELL_SIZE, screenY, CELL_SIZE * 2, CELL_SIZE * 2, COLOR_HOME);
@@ -598,16 +625,27 @@ void drawFrog() {
   }
 
   int screenX = frog.x * CELL_SIZE;
-  int screenY = (GRID_HEIGHT - frog.y - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - frog.y - 1) * CELL_SIZE;
 
-  lcd.fillRect(screenX, screenY, CELL_SIZE, CELL_SIZE, COLOR_FROG);
+  // Frosch-Körper (runder)
+  lcd.fillCircle(screenX + CELL_SIZE/2, screenY + CELL_SIZE/2, CELL_SIZE/2 - 1, COLOR_FROG);
+
+  // Augen (weiß mit schwarzem Punkt)
+  lcd.fillCircle(screenX + 3, screenY + 3, 2, COLOR_TEXT);  // Linkes Auge
+  lcd.fillCircle(screenX + CELL_SIZE - 3, screenY + 3, 2, COLOR_TEXT);  // Rechtes Auge
+  lcd.drawPixel(screenX + 3, screenY + 3, COLOR_BG);  // Pupille links
+  lcd.drawPixel(screenX + CELL_SIZE - 3, screenY + 3, COLOR_BG);  // Pupille rechts
+
+  // Beine andeuten (kleine Rechtecke)
+  lcd.fillRect(screenX + 1, screenY + CELL_SIZE - 3, 2, 2, 0x05E0);  // Vorne links
+  lcd.fillRect(screenX + CELL_SIZE - 3, screenY + CELL_SIZE - 3, 2, 2, 0x05E0);  // Vorne rechts
 }
 
 void eraseFrog() {
   if (oldFrogX < 0 || oldFrogY < 0) return;
 
   int screenX = oldFrogX * CELL_SIZE;
-  int screenY = (GRID_HEIGHT - oldFrogY - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - oldFrogY - 1) * CELL_SIZE;
 
   // Hintergrundfarbe abhängig von Zone
   uint16_t bgColor = COLOR_GRASS;
@@ -618,22 +656,22 @@ void eraseFrog() {
 }
 
 void drawUI() {
-  // Oberer Bereich
-  lcd.fillRect(0, SCREEN_HEIGHT - 12, SCREEN_WIDTH, 12, COLOR_BG);
+  // UI-Bereich oben löschen
+  lcd.fillRect(0, 0, SCREEN_WIDTH, 8, COLOR_BG);
 
   lcd.setTextSize(1);
   lcd.setTextColor(COLOR_TEXT, COLOR_BG);
 
   // Score (links)
-  lcd.setCursor(5, SCREEN_HEIGHT - 10);
+  lcd.setCursor(2, 0);
   lcd.printf("S:%d", score);
 
   // Level (Mitte)
-  lcd.setCursor(SCREEN_WIDTH/2 - 20, SCREEN_HEIGHT - 10);
+  lcd.setCursor(SCREEN_WIDTH/2 - 15, 0);
   lcd.printf("L:%d", level);
 
   // Lives (rechts)
-  lcd.setCursor(SCREEN_WIDTH - 50, SCREEN_HEIGHT - 10);
+  lcd.setCursor(SCREEN_WIDTH - 40, 0);
   lcd.printf("Lvs:%d", lives);
 }
 
