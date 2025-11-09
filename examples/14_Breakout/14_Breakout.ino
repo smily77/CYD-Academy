@@ -205,7 +205,7 @@ void initGame() {
   paddle.x = SCREEN_WIDTH / 2 - paddle.w / 2;
   paddle.y = SCREEN_HEIGHT - 20;
   paddle.color = COLOR_PADDLE;
-  oldPaddleX = paddle.x;
+  oldPaddleX = -1;  // Ungültiger Wert damit Schläger beim ersten Frame gezeichnet wird
 
   // Ball initialisieren
   resetBall();
@@ -271,8 +271,9 @@ void resetBall() {
   ball.vx = 0;
   ball.vy = 0;
 
-  oldBallX = ball.x;
-  oldBallY = ball.y;
+  // Ungültige Werte damit Ball beim ersten Frame gezeichnet wird
+  oldBallX = -1;
+  oldBallY = -1;
 }
 
 void launchBall() {
@@ -309,7 +310,9 @@ void updatePaddle() {
   // Ball bewegen wenn festgeklebt
   if (ball.stuck) {
     oldBallX = ball.x;  // Alte Position merken BEVOR wir bewegen
+    oldBallY = ball.y;  // Auch Y-Position merken
     ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
+    // ball.y bleibt gleich (klebt am Schläger)
   }
 }
 
@@ -485,14 +488,19 @@ void drawUI() {
 }
 
 void drawGame() {
-  // Schläger zeichnen (immer neu zeichnen um Doppelungen zu vermeiden)
-  // Alten löschen
-  lcd.fillRect(oldPaddleX, paddle.y, paddle.w, paddle.h, COLOR_BG);
-  // Neuen zeichnen
-  lcd.fillRect(paddle.x, paddle.y, paddle.w, paddle.h, paddle.color);
-  oldPaddleX = paddle.x;
+  // Schläger zeichnen - NUR wenn er sich bewegt hat (verhindert Flackern)
+  if (oldPaddleX != paddle.x) {
+    // Alten löschen
+    lcd.fillRect(oldPaddleX, paddle.y, paddle.w, paddle.h, COLOR_BG);
+    // Neuen zeichnen
+    lcd.fillRect(paddle.x, paddle.y, paddle.w, paddle.h, paddle.color);
+  }
 
-  // Ball zeichnen - alte Position IMMER löschen (auch wenn am Schläger)
-  lcd.fillRect(oldBallX, oldBallY, ball.size, ball.size, COLOR_BG);
-  lcd.fillRect(ball.x, ball.y, ball.size, ball.size, ball.color);
+  // Ball zeichnen - NUR wenn er sich bewegt hat
+  if (oldBallX != ball.x || oldBallY != ball.y) {
+    // Alte Position löschen
+    lcd.fillRect(oldBallX, oldBallY, ball.size, ball.size, COLOR_BG);
+    // Neue Position zeichnen
+    lcd.fillRect(ball.x, ball.y, ball.size, ball.size, ball.color);
+  }
 }
