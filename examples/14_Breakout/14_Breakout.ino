@@ -99,7 +99,6 @@ float oldBallY = 0;
 void setup() {
   Serial.begin(115200);
   Serial.println("\n=== BREAKOUT GAME ===\n");
-
   // Display initialisieren
   lcd.init();
   lcd.setRotation(1);
@@ -205,7 +204,7 @@ void initGame() {
   paddle.x = SCREEN_WIDTH / 2 - paddle.w / 2;
   paddle.y = SCREEN_HEIGHT - 20;
   paddle.color = COLOR_PADDLE;
-  oldPaddleX = paddle.x;
+  oldPaddleX = -1;  // Ungültiger Wert damit Schläger beim ersten Frame gezeichnet wird
 
   // Ball initialisieren
   resetBall();
@@ -271,8 +270,9 @@ void resetBall() {
   ball.vx = 0;
   ball.vy = 0;
 
-  oldBallX = ball.x;
-  oldBallY = ball.y;
+  // Ungültige Werte damit Ball beim ersten Frame gezeichnet wird
+  oldBallX = -1;
+  oldBallY = -1;
 }
 
 void launchBall() {
@@ -282,34 +282,38 @@ void launchBall() {
   float angle = random(30, 150);  // Grad
   float rad = angle * 3.14159 / 180.0;
 
-  // Langsamer Start, wird mit Score schneller
-  float baseSpeed = 2.5;
-  float speedBoost = score / 100.0;  // +1.0 pro 100 Punkte
+  // Langsamer Start, wird mit Level schneller (nicht mit Score)
+  float baseSpeed = 1.5;  // Langsamer Start
+  float speedBoost = (level - 1) * 0.3;  // +0.3 pro Level
   float speed = baseSpeed + speedBoost;
-  speed = constrain(speed, 2.5, 5.0);  // Max 5.0
+  speed = constrain(speed, 1.5, 4.0);  // Max 4.0
 
   ball.vx = cos(rad) * speed;
   ball.vy = -abs(sin(rad)) * speed;  // Immer nach oben
 
-  Serial.printf("Ball gestartet! Speed: %.1f\n", speed);
+  Serial.printf("Ball gestartet! Speed: %.1f (Level %d)\n", speed, level);
 }
 
 // ===== UPDATE FUNKTIONEN =====
 
 void updatePaddle() {
-  oldPaddleX = paddle.x;
-
-  // Analog-Wert lesen (Mapping wie in Pong)
+  // Analog-Wert lesen (0-4095 vom ESP32 ADC mit ADC_ATTEN_DB_0 für 0-1V)
   int potValue = analogRead(POT_PADDLE);
-  paddle.x = map(potValue, 1000, 0, 0, SCREEN_WIDTH - paddle.w);
+  int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
+  newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
 
-  // Grenzen
-  paddle.x = constrain(paddle.x, 0, SCREEN_WIDTH - paddle.w);
+  // Deadzone: Nur bewegen wenn Änderung > 5 Pixel (verhindert Flackern durch ADC-Rauschen)
+  if (abs(newX - paddle.x) > 5) {
+    paddle.x = newX;
 
-  // Ball bewegen wenn festgeklebt
-  if (ball.stuck) {
-    ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
-    oldBallX = ball.x;
+    // Ball bewegen wenn festgeklebt
+    // WICHTIG: oldBallX/Y MUSS vor ball.x Änderung gesetzt werden!
+    if (ball.stuck) {
+      oldBallX = ball.x;  // Alte Position speichern
+      oldBallY = ball.y;  // Alte Position speichern
+      ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
+      // ball.y bleibt gleich (klebt am Schläger)
+    }
   }
 }
 
@@ -471,30 +475,38 @@ void drawUI() {
   lcd.setTextSize(2);
   lcd.setTextColor(COLOR_TEXT, COLOR_BG);
 
-  // Score
-  lcd.setCursor(10, 5);
-  lcd.printf("Score:%d", score);
+  // Score (links)
+  lcd.setCursor(5, 5);
+  lcd.printf("S:%d", score);  // Kürzere Bezeichnung für mehr Platz
 
-  // Level
-  lcd.setCursor(SCREEN_WIDTH/2 - 40, 5);
-  lcd.printf("Level:%d", level);
+  // Level (Mitte - mehr Abstand)
+  lcd.setCursor(135, 5);
+  lcd.printf("L:%d", level);
 
-  // Leben
-  lcd.setCursor(SCREEN_WIDTH - 90, 5);
-  lcd.printf("Lives:%d", lives);
+  // Lives (rechts)
+  lcd.setCursor(SCREEN_WIDTH - 70, 5);
+  lcd.printf("Lvs:%d", lives);
 }
 
 void drawGame() {
-  // Schläger zeichnen (immer neu zeichnen um Doppelungen zu vermeiden)
-  // Alten löschen
-  lcd.fillRect(oldPaddleX, paddle.y, paddle.w, paddle.h, COLOR_BG);
-  // Neuen zeichnen
-  lcd.fillRect(paddle.x, paddle.y, paddle.w, paddle.h, paddle.color);
-  oldPaddleX = paddle.x;
-
-  // Ball zeichnen
-  if (!ball.stuck) {
-    lcd.fillRect(oldBallX, oldBallY, ball.size, ball.size, COLOR_BG);
+  // Schläger zeichnen - NUR wenn er sich bewegt hat (verhindert Flackern)
+  if (oldPaddleX != paddle.x) {
+    // Alten löschen
+    lcd.fillRect(oldPaddleX, paddle.y, paddle.w, paddle.h, COLOR_BG);
+    // Neuen zeichnen
+    lcd.fillRect(paddle.x, paddle.y, paddle.w, paddle.h, paddle.color);
+    // Position aktualisieren NACH dem Zeichnen (wichtig!)
+    oldPaddleX = paddle.x;
   }
-  lcd.fillRect(ball.x, ball.y, ball.size, ball.size, ball.color);
+
+  // Ball zeichnen - NUR wenn er sich bewegt hat
+  if (oldBallX != ball.x || oldBallY != ball.y) {
+    // Alte Position löschen
+    lcd.fillRect(oldBallX, oldBallY, ball.size, ball.size, COLOR_BG);
+    // Neue Position zeichnen
+    lcd.fillRect(ball.x, ball.y, ball.size, ball.size, ball.color);
+    // Position aktualisieren NACH dem Zeichnen (wichtig!)
+    oldBallX = ball.x;
+    oldBallY = ball.y;
+  }
 }
