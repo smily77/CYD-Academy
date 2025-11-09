@@ -16,11 +16,13 @@
   - Bringe den Frosch sicher nach oben zu den Häusern
   - Straße (Y=2-9): Vermeide Autos (4 BREITE Spuren, je 2 Reihen hoch!)
     * Y=2-3, 4-5, 6-7, 8-9: Je 2 Autos pro Spur
+    * Autos haben schöne Details: Fenster, Räder, Scheinwerfer
   - Erholungsspuren (Y=10-11): Sichere Zone zum Ausruhen
   - Fluss (Y=12-19): Springe auf Baumstämme! (4 BREITE Spuren, je 2 Reihen hoch!)
-    * Y=12-13, 14-15, 16-17, 18-19: Je 3 Baumstämme pro Spur
+    * Y=12-13, 14-15, 16-17, 18-19: Je 2 Baumstämme pro Spur (nicht zu viele!)
+    * Baumstämme sind 5-7 Zellen lang (gut springbar)
   - WICHTIG: Frosch ERTRINKT im Wasser, Baumstämme retten und tragen dich!
-  - Objekte sind jetzt BREIT (2 Reihen hoch) - viel einfacher!
+  - Objekte sind BREIT (2 Reihen hoch) - viel einfacher zu treffen!
   - Erreiche alle 5 Häuser für nächstes Level
   - 3 Leben
   - Punkte: Vorwärts bewegen = +10, Haus erreichen = +50
@@ -101,7 +103,7 @@ Frog frog;
 #define MAX_CARS 8
 Car cars[MAX_CARS];
 
-#define MAX_LOGS 12
+#define MAX_LOGS 8
 Log logs[MAX_LOGS];
 
 #define NUM_HOMES 5
@@ -254,14 +256,14 @@ void initLevel() {
   int logLanes[] = {12, 14, 16, 18};  // Basis-Y für jede Spur
   for (int i = 0; i < 4; i++) {
     int lane = logLanes[i];
-    int numLogs = 3;  // 3 Baumstämme pro Spur
+    int numLogs = 2;  // 2 Baumstämme pro Spur (reduziert von 3)
     bool dirRight = (lane % 4 == 0);
 
     for (int j = 0; j < numLogs; j++) {
       if (logCount < MAX_LOGS) {
         logs[logCount].lane = lane;
         logs[logCount].x = (GRID_WIDTH / numLogs) * j;
-        logs[logCount].w = 8 + random(0, 3);  // 8-10 Zellen lang
+        logs[logCount].w = 5 + random(0, 3);  // 5-7 Zellen lang (kürzer!)
         logs[logCount].h = 2;  // 2 Reihen HOCH (= breit!)
         logs[logCount].speed = (0.1 + level * 0.02) * (dirRight ? 1 : -1);
         logs[logCount].active = true;
@@ -567,19 +569,47 @@ void drawCar(int index) {
   int width = c->w * CELL_SIZE;
   int height = c->h * CELL_SIZE;  // Höhe in Pixel
 
-  // Auto-Karosserie (rot oder blau) - mehrere Reihen hoch!
-  lcd.fillRect(screenX, screenY, width, height, c->color);
+  // Auto-Karosserie (rot oder blau) - Hauptteil
+  lcd.fillRect(screenX + 1, screenY + 2, width - 2, height - 4, c->color);
 
-  // Fenster (heller, Farbe abhängig vom Auto)
-  if (width >= 20 && height >= 15) {
-    uint16_t windowColor = (c->color == COLOR_CAR_RED) ? 0x8000 : 0x0010;  // Dunkelrot oder Dunkelblau
-    lcd.fillRect(screenX + 3, screenY + 3, width - 6, height - 6, windowColor);
+  // Abgerundete Ecken vorne (links bei Rechtsbewegung)
+  lcd.fillRect(screenX + 2, screenY + 1, 2, 1, c->color);
+  lcd.fillRect(screenX + 2, screenY + height - 2, 2, 1, c->color);
+
+  // Abgerundete Ecken hinten (rechts)
+  if (width >= 20) {
+    lcd.fillRect(screenX + width - 4, screenY + 1, 2, 1, c->color);
+    lcd.fillRect(screenX + width - 4, screenY + height - 2, 2, 1, c->color);
   }
 
-  // Räder (schwarz, unten)
-  lcd.fillRect(screenX + 2, screenY + height - 2, 3, 2, COLOR_BG);
+  // Dach/Kabine (dunkler, in der Mitte)
+  uint16_t roofColor = (c->color == COLOR_CAR_RED) ? 0x8000 : 0x0010;  // Dunkelrot oder Dunkelblau
+  if (width >= 25) {
+    int roofStart = screenX + width / 3;
+    int roofWidth = width / 3;
+    lcd.fillRect(roofStart, screenY + 3, roofWidth, height - 6, roofColor);
+  }
+
+  // Fenster (hellblau/cyan für Glas-Effekt)
+  if (width >= 25) {
+    int windowStart = screenX + width / 3 + 2;
+    int windowWidth = width / 3 - 4;
+    if (windowWidth > 0) {
+      lcd.fillRect(windowStart, screenY + 5, windowWidth, height - 10, 0x7BEF);  // Hellgrau/cyan
+    }
+  }
+
+  // Räder (schwarz, rund)
+  int wheelRadius = 2;
+  lcd.fillCircle(screenX + 5, screenY + height - 3, wheelRadius, COLOR_BG);
+  if (width >= 20) {
+    lcd.fillCircle(screenX + width - 6, screenY + height - 3, wheelRadius, COLOR_BG);
+  }
+
+  // Scheinwerfer (gelb, vorne)
   if (width >= 15) {
-    lcd.fillRect(screenX + width - 5, screenY + height - 2, 3, 2, COLOR_BG);
+    lcd.fillRect(screenX + 1, screenY + 4, 2, 3, 0xFFE0);  // Gelb
+    lcd.fillRect(screenX + 1, screenY + height - 7, 2, 3, 0xFFE0);
   }
 }
 
