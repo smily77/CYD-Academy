@@ -568,18 +568,33 @@ void drawCar(int index) {
   int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - c->lane - c->h) * CELL_SIZE;  // Angepasst für Höhe
   int width = c->w * CELL_SIZE;
   int height = c->h * CELL_SIZE;  // Höhe in Pixel
+  bool movingRight = (c->speed > 0);  // Fahrtrichtung
 
   // Auto-Karosserie (rot oder blau) - Hauptteil
   lcd.fillRect(screenX + 1, screenY + 2, width - 2, height - 4, c->color);
 
-  // Abgerundete Ecken vorne (links bei Rechtsbewegung)
-  lcd.fillRect(screenX + 2, screenY + 1, 2, 1, c->color);
-  lcd.fillRect(screenX + 2, screenY + height - 2, 2, 1, c->color);
-
-  // Abgerundete Ecken hinten (rechts)
-  if (width >= 20) {
+  // Abgerundete Ecken vorne (abhängig von Fahrtrichtung)
+  if (movingRight) {
+    // Vorne ist rechts
     lcd.fillRect(screenX + width - 4, screenY + 1, 2, 1, c->color);
     lcd.fillRect(screenX + width - 4, screenY + height - 2, 2, 1, c->color);
+  } else {
+    // Vorne ist links
+    lcd.fillRect(screenX + 2, screenY + 1, 2, 1, c->color);
+    lcd.fillRect(screenX + 2, screenY + height - 2, 2, 1, c->color);
+  }
+
+  // Abgerundete Ecken hinten
+  if (width >= 20) {
+    if (movingRight) {
+      // Hinten ist links
+      lcd.fillRect(screenX + 2, screenY + 1, 2, 1, c->color);
+      lcd.fillRect(screenX + 2, screenY + height - 2, 2, 1, c->color);
+    } else {
+      // Hinten ist rechts
+      lcd.fillRect(screenX + width - 4, screenY + 1, 2, 1, c->color);
+      lcd.fillRect(screenX + width - 4, screenY + height - 2, 2, 1, c->color);
+    }
   }
 
   // Dach/Kabine (dunkler, in der Mitte)
@@ -606,10 +621,17 @@ void drawCar(int index) {
     lcd.fillCircle(screenX + width - 6, screenY + height - 3, wheelRadius, COLOR_BG);
   }
 
-  // Scheinwerfer (gelb, vorne)
+  // Scheinwerfer (gelb, vorne = Fahrtrichtung!)
   if (width >= 15) {
-    lcd.fillRect(screenX + 1, screenY + 4, 2, 3, 0xFFE0);  // Gelb
-    lcd.fillRect(screenX + 1, screenY + height - 7, 2, 3, 0xFFE0);
+    if (movingRight) {
+      // Scheinwerfer rechts (vorne)
+      lcd.fillRect(screenX + width - 3, screenY + 4, 2, 3, 0xFFE0);  // Gelb oben
+      lcd.fillRect(screenX + width - 3, screenY + height - 7, 2, 3, 0xFFE0);  // Gelb unten
+    } else {
+      // Scheinwerfer links (vorne)
+      lcd.fillRect(screenX + 1, screenY + 4, 2, 3, 0xFFE0);  // Gelb oben
+      lcd.fillRect(screenX + 1, screenY + height - 7, 2, 3, 0xFFE0);  // Gelb unten
+    }
   }
 }
 
