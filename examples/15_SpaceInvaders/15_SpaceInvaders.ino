@@ -327,10 +327,10 @@ void updatePlayer() {
   int newX = player.x;
 
   if (digitalRead(BTN_LEFT) == LOW) {
-    newX -= 3;
+    newX -= 2;
   }
   if (digitalRead(BTN_RIGHT) == LOW) {
-    newX += 3;
+    newX += 2;
   }
 
   newX = constrain(newX, 0, SCREEN_WIDTH - player.w);
