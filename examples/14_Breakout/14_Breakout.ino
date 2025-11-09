@@ -299,17 +299,17 @@ void launchBall() {
 void updatePaddle() {
   oldPaddleX = paddle.x;
 
-  // Analog-Wert lesen (Mapping wie in Pong)
+  // Analog-Wert lesen (0-4095 vom ESP32 ADC)
   int potValue = analogRead(POT_PADDLE);
-  paddle.x = map(potValue, 1000, 0, 0, SCREEN_WIDTH - paddle.w);
+  paddle.x = map(potValue, 0, 4095, 0, SCREEN_WIDTH - paddle.w);
 
   // Grenzen
   paddle.x = constrain(paddle.x, 0, SCREEN_WIDTH - paddle.w);
 
   // Ball bewegen wenn festgeklebt
   if (ball.stuck) {
+    oldBallX = ball.x;  // Alte Position merken BEVOR wir bewegen
     ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
-    oldBallX = ball.x;
   }
 }
 
@@ -492,9 +492,7 @@ void drawGame() {
   lcd.fillRect(paddle.x, paddle.y, paddle.w, paddle.h, paddle.color);
   oldPaddleX = paddle.x;
 
-  // Ball zeichnen
-  if (!ball.stuck) {
-    lcd.fillRect(oldBallX, oldBallY, ball.size, ball.size, COLOR_BG);
-  }
+  // Ball zeichnen - alte Position IMMER löschen (auch wenn am Schläger)
+  lcd.fillRect(oldBallX, oldBallY, ball.size, ball.size, COLOR_BG);
   lcd.fillRect(ball.x, ball.y, ball.size, ball.size, ball.color);
 }
