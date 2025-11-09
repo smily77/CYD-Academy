@@ -14,11 +14,13 @@
 
   Spielregeln:
   - Bringe den Frosch sicher nach oben zu den Häusern
-  - Straße (Y=2-9): Vermeide Autos (4 Spuren mit Verkehr, 2 Autos/Spur)
+  - Straße (Y=2-9): Vermeide Autos (4 BREITE Spuren, je 2 Reihen hoch!)
+    * Y=2-3, 4-5, 6-7, 8-9: Je 2 Autos pro Spur
   - Erholungsspuren (Y=10-11): Sichere Zone zum Ausruhen
-  - Fluss (Y=12-19): Springe auf Baumstämme! (8 Spuren, 3 Baumstämme/Spur)
+  - Fluss (Y=12-19): Springe auf Baumstämme! (4 BREITE Spuren, je 2 Reihen hoch!)
+    * Y=12-13, 14-15, 16-17, 18-19: Je 3 Baumstämme pro Spur
   - WICHTIG: Frosch ERTRINKT im Wasser, Baumstämme retten und tragen dich!
-  - Baumstämme sind BREIT (10-13 Zellen) - leichter zu treffen!
+  - Objekte sind jetzt BREIT (2 Reihen hoch) - viel einfacher!
   - Erreiche alle 5 Häuser für nächstes Level
   - 3 Leben
   - Punkte: Vorwärts bewegen = +10, Haus erreichen = +50
@@ -68,9 +70,10 @@ struct Frog {
 
 // Auto
 struct Car {
-  int lane;              // Fahrspur (Y=3-6, 4 Spuren)
+  int lane;              // Fahrspur (Y=2, 4, 6, 8 - Basis-Position)
   float x;               // Position
-  int w;                 // Breite in Zellen
+  int w;                 // Breite in Zellen (X-Richtung = Länge)
+  int h;                 // Höhe in Zellen (Y-Richtung = BREITE, wie gewünscht!)
   float speed;           // Geschwindigkeit (Zellen pro Frame)
   uint16_t color;        // Farbe (rot oder blau)
   bool active;
@@ -78,9 +81,10 @@ struct Car {
 
 // Baumstamm (WICHTIG: Baumstämme RETTEN den Frosch und bewegen ihn mit!)
 struct Log {
-  int lane;              // Reihe (Y=12-19, 8 Spuren - ALLE Wasserreihen)
+  int lane;              // Reihe (Y=12, 14, 16, 18 - Basis-Position)
   float x;               // Position
-  int w;                 // Breite in Zellen
+  int w;                 // Breite in Zellen (X-Richtung = Länge)
+  int h;                 // Höhe in Zellen (Y-Richtung = BREITE!)
   float speed;           // Geschwindigkeit
   bool active;
 };
@@ -97,7 +101,7 @@ Frog frog;
 #define MAX_CARS 8
 Car cars[MAX_CARS];
 
-#define MAX_LOGS 24
+#define MAX_LOGS 12
 Log logs[MAX_LOGS];
 
 #define NUM_HOMES 5
@@ -222,37 +226,43 @@ void initLevel() {
     homes[i].filled = false;
   }
 
-  // Autos initialisieren (4 Fahrspuren: Y=3-6)
+  // Autos initialisieren (4 Spuren, je 2 Reihen hoch: Y=2-3, 4-5, 6-7, 8-9)
   int carCount = 0;
-  for (int lane = 3; lane <= 6; lane++) {
-    int numCars = 2;  // 2 Autos pro Spur (mehr Verkehr für breite Straße)
-    bool dirRight = (lane % 2 == 0);  // Abwechselnde Richtungen
+  int carLanes[] = {2, 4, 6, 8};  // Basis-Y für jede Spur
+  for (int i = 0; i < 4; i++) {
+    int lane = carLanes[i];
+    int numCars = 2;  // 2 Autos pro Spur
+    bool dirRight = (lane % 4 == 0);  // Abwechselnde Richtungen
 
-    for (int i = 0; i < numCars; i++) {
+    for (int j = 0; j < numCars; j++) {
       if (carCount < MAX_CARS) {
         cars[carCount].lane = lane;
-        cars[carCount].x = (GRID_WIDTH / numCars) * i;  // Gleichmäßig verteilt
-        cars[carCount].w = 5 + random(0, 3);  // 5-7 Zellen breit (breiter für breite Straße!)
+        cars[carCount].x = (GRID_WIDTH / numCars) * j;  // Gleichmäßig verteilt
+        cars[carCount].w = 3 + random(0, 2);  // 3-4 Zellen lang
+        cars[carCount].h = 2;  // 2 Reihen HOCH (= breit!)
         cars[carCount].speed = (0.15 + level * 0.03) * (dirRight ? 1 : -1);
-        cars[carCount].color = (random(0, 2) == 0) ? COLOR_CAR_RED : COLOR_CAR_BLUE;  // Zufällig rot oder blau
+        cars[carCount].color = (random(0, 2) == 0) ? COLOR_CAR_RED : COLOR_CAR_BLUE;
         cars[carCount].active = true;
         carCount++;
       }
     }
   }
 
-  // Baumstämme initialisieren (8 Spuren: Y=12-19, ALLE Wasserreihen!)
+  // Baumstämme initialisieren (4 Spuren, je 2 Reihen hoch: Y=12-13, 14-15, 16-17, 18-19)
   // WICHTIG: Baumstämme RETTEN den Frosch und bewegen ihn mit!
   int logCount = 0;
-  for (int lane = 12; lane <= 19; lane++) {
-    int numLogs = 3;  // 3 Baumstämme pro Bahn (breiter Fluss braucht viele Baumstämme!)
-    bool dirRight = (lane % 2 == 0);
+  int logLanes[] = {12, 14, 16, 18};  // Basis-Y für jede Spur
+  for (int i = 0; i < 4; i++) {
+    int lane = logLanes[i];
+    int numLogs = 3;  // 3 Baumstämme pro Spur
+    bool dirRight = (lane % 4 == 0);
 
-    for (int i = 0; i < numLogs; i++) {
+    for (int j = 0; j < numLogs; j++) {
       if (logCount < MAX_LOGS) {
         logs[logCount].lane = lane;
-        logs[logCount].x = (GRID_WIDTH / numLogs) * i;
-        logs[logCount].w = 10 + random(0, 4);  // 10-13 Zellen SEHR breit! (breiter Fluss!)
+        logs[logCount].x = (GRID_WIDTH / numLogs) * j;
+        logs[logCount].w = 8 + random(0, 3);  // 8-10 Zellen lang
+        logs[logCount].h = 2;  // 2 Reihen HOCH (= breit!)
         logs[logCount].speed = (0.1 + level * 0.02) * (dirRight ? 1 : -1);
         logs[logCount].active = true;
         logCount++;
@@ -356,11 +366,13 @@ void updateLogs() {
     drawLog(i);
   }
 
-  // Frosch auf Baumstamm mitbewegen (Y=12-19 haben ALLE Baumstämme)
+  // Frosch auf Baumstamm mitbewegen (Y=12-19)
   if (frog.alive && (int)frog.y >= 12 && (int)frog.y <= 19) {
     for (int i = 0; i < MAX_LOGS; i++) {
       if (!logs[i].active) continue;
-      if (logs[i].lane != (int)frog.y) continue;
+
+      // Prüfe ob Frosch in Y-Bereich des Baumstamms ist (lane bis lane+h-1)
+      if ((int)frog.y < logs[i].lane || (int)frog.y >= logs[i].lane + logs[i].h) continue;
 
       if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
         // Frosch mitbewegen (WICHTIG: float-Speed verwenden, nicht (int)!)
@@ -380,11 +392,13 @@ void checkCollisions() {
     return;
   }
 
-  // Straße (Y=3-6): Kollision mit Autos
-  if ((int)frog.y >= 3 && (int)frog.y <= 6) {
+  // Straße (Y=2-9): Kollision mit Autos
+  if ((int)frog.y >= 2 && (int)frog.y <= 9) {
     for (int i = 0; i < MAX_CARS; i++) {
       if (!cars[i].active) continue;
-      if (cars[i].lane != (int)frog.y) continue;
+
+      // Prüfe ob Frosch in Y-Bereich des Autos ist (lane bis lane+h-1)
+      if ((int)frog.y < cars[i].lane || (int)frog.y >= cars[i].lane + cars[i].h) continue;
 
       if (frog.x >= cars[i].x && frog.x < cars[i].x + cars[i].w) {
         // Von Auto überfahren!
@@ -398,10 +412,12 @@ void checkCollisions() {
   if ((int)frog.y >= 12 && (int)frog.y <= 19) {
     bool onLog = false;
 
-    // Prüfe ob auf Baumstamm (Y=12-19 haben ALLE Baumstämme)
+    // Prüfe ob auf Baumstamm
     for (int i = 0; i < MAX_LOGS; i++) {
       if (!logs[i].active) continue;
-      if (logs[i].lane != (int)frog.y) continue;
+
+      // Prüfe ob Frosch in Y-Bereich des Baumstamms ist (lane bis lane+h-1)
+      if ((int)frog.y < logs[i].lane || (int)frog.y >= logs[i].lane + logs[i].h) continue;
 
       if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
         onLog = true;
@@ -547,32 +563,34 @@ void drawCars() {
 void drawCar(int index) {
   Car* c = &cars[index];
   int screenX = (int)c->x * CELL_SIZE;
-  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - c->lane - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - c->lane - c->h) * CELL_SIZE;  // Angepasst für Höhe
   int width = c->w * CELL_SIZE;
+  int height = c->h * CELL_SIZE;  // Höhe in Pixel
 
-  // Auto-Karosserie (rot oder blau)
-  lcd.fillRect(screenX, screenY, width, CELL_SIZE, c->color);
+  // Auto-Karosserie (rot oder blau) - mehrere Reihen hoch!
+  lcd.fillRect(screenX, screenY, width, height, c->color);
 
   // Fenster (heller, Farbe abhängig vom Auto)
-  if (width >= 20) {
+  if (width >= 20 && height >= 15) {
     uint16_t windowColor = (c->color == COLOR_CAR_RED) ? 0x8000 : 0x0010;  // Dunkelrot oder Dunkelblau
-    lcd.fillRect(screenX + 3, screenY + 2, width - 6, CELL_SIZE - 4, windowColor);
+    lcd.fillRect(screenX + 3, screenY + 3, width - 6, height - 6, windowColor);
   }
 
   // Räder (schwarz, unten)
-  lcd.fillRect(screenX + 2, screenY + CELL_SIZE - 2, 3, 2, COLOR_BG);
+  lcd.fillRect(screenX + 2, screenY + height - 2, 3, 2, COLOR_BG);
   if (width >= 15) {
-    lcd.fillRect(screenX + width - 5, screenY + CELL_SIZE - 2, 3, 2, COLOR_BG);
+    lcd.fillRect(screenX + width - 5, screenY + height - 2, 3, 2, COLOR_BG);
   }
 }
 
 void eraseCar(int index) {
   Car* c = &cars[index];
   int screenX = (int)c->x * CELL_SIZE;
-  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - c->lane - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - c->lane - c->h) * CELL_SIZE;  // Angepasst für Höhe
   int width = c->w * CELL_SIZE;
+  int height = c->h * CELL_SIZE;  // Höhe in Pixel
 
-  lcd.fillRect(screenX, screenY, width, CELL_SIZE, COLOR_ROAD);
+  lcd.fillRect(screenX, screenY, width, height, COLOR_ROAD);
 }
 
 void drawLogs() {
@@ -586,29 +604,31 @@ void drawLogs() {
 void drawLog(int index) {
   Log* l = &logs[index];
   int screenX = (int)l->x * CELL_SIZE;
-  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - l->lane - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - l->lane - l->h) * CELL_SIZE;  // Angepasst für Höhe
   int width = l->w * CELL_SIZE;
+  int height = l->h * CELL_SIZE;  // Höhe in Pixel
 
-  // Baumstamm-Grundfarbe
-  lcd.fillRect(screenX, screenY, width, CELL_SIZE, COLOR_LOG);
+  // Baumstamm-Grundfarbe - mehrere Reihen hoch!
+  lcd.fillRect(screenX, screenY, width, height, COLOR_LOG);
 
   // Jahresringe/Textur (hellere Streifen)
   for (int i = 0; i < width; i += 8) {
-    lcd.drawFastVLine(screenX + i, screenY + 1, CELL_SIZE - 2, 0x9B60);  // Helles Braun
+    lcd.drawFastVLine(screenX + i, screenY + 1, height - 2, 0x9B60);  // Helles Braun
   }
 
   // Rand oben/unten dunkler
   lcd.drawFastHLine(screenX, screenY, width, 0x5280);  // Dunkelbraun
-  lcd.drawFastHLine(screenX, screenY + CELL_SIZE - 1, width, 0x5280);
+  lcd.drawFastHLine(screenX, screenY + height - 1, width, 0x5280);
 }
 
 void eraseLog(int index) {
   Log* l = &logs[index];
   int screenX = (int)l->x * CELL_SIZE;
-  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - l->lane - 1) * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - l->lane - l->h) * CELL_SIZE;  // Angepasst für Höhe
   int width = l->w * CELL_SIZE;
+  int height = l->h * CELL_SIZE;  // Höhe in Pixel
 
-  lcd.fillRect(screenX, screenY, width, CELL_SIZE, COLOR_WATER);
+  lcd.fillRect(screenX, screenY, width, height, COLOR_WATER);
 }
 
 void drawHomes() {
