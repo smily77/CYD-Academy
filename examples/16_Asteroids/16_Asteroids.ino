@@ -3,14 +3,16 @@
 
   Hardware:
   - CYD Display (320x240)
+  - 1x Potentiometer (GPIO 34): Rotation (0-360°)
   - 4x Digitale Buttons:
-    * GPIO 5:  Links drehen
-    * GPIO 16: Rechts drehen
+    * GPIO 5:  Links drehen (Backup)
+    * GPIO 16: Rechts drehen (Backup)
     * GPIO 17: Schießen
     * GPIO 18: Schub (Thrust)
 
   Steuerung:
-  - Links/Rechts: Rotiert Raumschiff
+  - Poti: Direktsteuerung Rotation (0-360°)
+  - Links/Rechts: Buttons als Alternative zur Poti-Steuerung
   - Schub: Beschleunigt in Blickrichtung
   - Schießen: Feuert Geschoss
 
@@ -26,7 +28,8 @@
 #include <CYD_Display_Config.h>
 #include <math.h>
 
-// Button Pins
+// Pins
+#define POT_ROTATION 34  // Potentiometer für Rotation
 #define BTN_LEFT   5
 #define BTN_RIGHT  16
 #define BTN_SHOOT  17
@@ -123,16 +126,21 @@ void setup() {
   pinMode(BTN_SHOOT, INPUT_PULLUP);
   pinMode(BTN_THRUST, INPUT_PULLUP);
 
+  // ADC konfigurieren (0-1V Bereich)
+  analogSetAttenuation(ADC_0db);  // 0-1V Range
+  pinMode(POT_ROTATION, INPUT);
+
   // Zufallsgenerator
-  randomSeed(analogRead(34) + analogRead(35) + micros());
+  randomSeed(analogRead(35) + micros());
 
   // Spiel initialisieren
   initGame();
 
   Serial.println("Asteroids gestartet!");
   Serial.println("Steuerung:");
-  Serial.println("  Links:    GPIO 5");
-  Serial.println("  Rechts:   GPIO 16");
+  Serial.println("  Poti:     GPIO 34 (Rotation 0-360°)");
+  Serial.println("  Links:    GPIO 5 (Backup)");
+  Serial.println("  Rechts:   GPIO 16 (Backup)");
   Serial.println("  Schießen: GPIO 17");
   Serial.println("  Schub:    GPIO 18");
 }
@@ -287,7 +295,16 @@ void spawnAsteroid(float x, float y, int size) {
 void handleInput() {
   static int lastShootState = HIGH;
 
-  // Rotation
+  // Rotation via Poti (Hauptsteuerung)
+  int potValue = analogRead(POT_ROTATION);
+  float targetAngle = map(potValue, 0, 1000, 0, 360);
+
+  // Sanfte Rotation zum Zielwinkel (oder direkt setzen)
+  ship.angle = targetAngle;
+  if (ship.angle < 0) ship.angle += 360;
+  if (ship.angle >= 360) ship.angle -= 360;
+
+  // Rotation via Buttons (Backup/Feinsteuerung)
   if (digitalRead(BTN_LEFT) == LOW) {
     ship.angle -= SHIP_ROTATION_SPEED;
     if (ship.angle < 0) ship.angle += 360;
