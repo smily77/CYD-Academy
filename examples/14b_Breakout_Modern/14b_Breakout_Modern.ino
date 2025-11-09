@@ -149,16 +149,6 @@ void setup() {
   // Zufallsgenerator
   randomSeed(analogRead(POT_PADDLE) + analogRead(35) + micros());
 
-  // Partikel initialisieren
-  for (int i = 0; i < MAX_PARTICLES; i++) {
-    particles[i].active = false;
-  }
-
-  // Trail initialisieren
-  for (int i = 0; i < TRAIL_LENGTH; i++) {
-    trail[i].active = false;
-  }
-
   // Spiel initialisieren
   initGame();
 
@@ -222,19 +212,11 @@ void loop() {
   } else {
     // Ball bewegen
     updateBall();
-    updateTrail();
     checkCollisions();
   }
 
-  // Partikel aktualisieren
-  updateParticles();
-
   // Zeichnen
   drawGame();
-  drawParticles();
-
-  // Bricks neu zeichnen (damit Partikel sie nicht löschen)
-  drawModernBricks();
 
   delay(16);  // ~60 FPS
 }
@@ -369,14 +351,12 @@ void updateBall() {
   if (ball.x <= 0 || ball.x >= SCREEN_WIDTH - ball.size) {
     ball.vx = -ball.vx;
     ball.x = constrain(ball.x, 0, SCREEN_WIDTH - ball.size);
-    spawnParticles(ball.x + ball.size/2, ball.y + ball.size/2, COLOR_BALL, 5);
   }
 
   // Kollision mit oberer Wand
   if (ball.y <= 0) {
     ball.vy = -ball.vy;
     ball.y = 0;
-    spawnParticles(ball.x + ball.size/2, ball.y + ball.size/2, COLOR_BALL, 5);
   }
 
   // Ball unten raus
@@ -413,8 +393,6 @@ void checkCollisions() {
     float hitPos = (ball.x + ball.size/2) - (paddle.x + paddle.w/2);
     ball.vx += hitPos * 0.1;
     ball.vx = constrain(ball.vx, -5, 5);
-
-    spawnParticles(ball.x + ball.size/2, paddle.y, COLOR_PADDLE, 8);
   }
 
   // Kollision mit Steinen
@@ -426,10 +404,12 @@ void checkCollisions() {
         ball.y + ball.size >= bricks[i].y &&
         ball.y <= bricks[i].y + bricks[i].h) {
 
-      // Partikel-Explosion
-      int centerX = bricks[i].x + bricks[i].w / 2;
-      int centerY = bricks[i].y + bricks[i].h / 2;
-      spawnParticles(centerX, centerY, bricks[i].color, 12);
+      // Stein sofort visuell löschen (mit Gradient-Hintergrund)
+      for (int y = 0; y < bricks[i].h; y++) {
+        uint16_t bgColor = lerpColor(COLOR_BG_TOP, COLOR_BG_BOTTOM,
+                                      (float)(bricks[i].y + y) / SCREEN_HEIGHT);
+        lcd.drawFastHLine(bricks[i].x, bricks[i].y + y, bricks[i].w, bgColor);
+      }
 
       // Stein zerstören
       bricks[i].active = false;
@@ -702,48 +682,18 @@ void drawGame() {
 
   // Ball zeichnen - NUR wenn er sich bewegt hat
   if (oldBallX != ball.x || oldBallY != ball.y) {
-    // Ball löschen (alte Position) - SEHR SCHNELLE Methode mit fillCircle()
-    // Nur Ball-Kern löschen, NICHT Glow (sonst Paddle/Bricks gelöscht)
-    int centerX = oldBallX + ball.size/2;
-    int centerY = oldBallY + ball.size/2;
+    // Ball löschen (alte Position) - einfach mit fillCircle
+    int oldCenterX = oldBallX + ball.size/2;
+    int oldCenterY = oldBallY + ball.size/2;
+    uint16_t bgColor = lerpColor(COLOR_BG_TOP, COLOR_BG_BOTTOM, (float)oldCenterY / SCREEN_HEIGHT);
+    lcd.fillCircle(oldCenterX, oldCenterY, ball.size/2, bgColor);
 
-    // Durchschnittliche Hintergrundfarbe an alter Position (Gradient-Mittelwert)
-    uint16_t bgColor = lerpColor(COLOR_BG_TOP, COLOR_BG_BOTTOM, (float)centerY / SCREEN_HEIGHT);
-
-    // Ball-Kern löschen - SEHR KLEIN, nur Hauptball ohne Glow!
-    // fillCircle ist 100x schneller als drawPixel-Schleife!
-    lcd.fillCircle(centerX, centerY, ball.size/2 + 1, bgColor);
-
-    // Trail zeichnen (nur wenn Ball fliegt)
-    if (!ball.stuck) {
-      for (int i = 0; i < TRAIL_LENGTH; i++) {
-        if (trail[i].active) {
-          int age = (trailIndex - i + TRAIL_LENGTH) % TRAIL_LENGTH;
-          float alpha = 1.0 - (float)age / TRAIL_LENGTH;
-          uint16_t color = dimColor(COLOR_BALL, alpha * 0.4);
-          lcd.fillCircle(trail[i].x, trail[i].y, 2, color);
-        }
-      }
-    }
-
-    // Ball mit Glow zeichnen (Variablen wiederverwenden, nicht neu deklarieren)
-    centerX = ball.x + ball.size/2;
-    centerY = ball.y + ball.size/2;
-
-    // Glow-Ringe
-    for (int r = ball.size + 2; r >= ball.size/2; r--) {
-      float intensity = 1.0 - (float)(r - ball.size/2) / (ball.size + 2);
-      uint16_t glowColor = dimColor(COLOR_BALL, intensity * 0.6);
-      lcd.drawCircle(centerX, centerY, r, glowColor);
-    }
-
-    // Haupt-Ball
+    // Ball zeichnen (neu) - einfach, kein Glow, kein Trail
+    int centerX = ball.x + ball.size/2;
+    int centerY = ball.y + ball.size/2;
     lcd.fillCircle(centerX, centerY, ball.size/2, COLOR_BALL);
 
-    // Highlight
-    lcd.fillCircle(centerX - ball.size/4, centerY - ball.size/4, ball.size/4, COLOR_HIGHLIGHT);
-
-    // Position aktualisieren NACH dem Zeichnen (wichtig!)
+    // Position aktualisieren NACH dem Zeichnen
     oldBallX = ball.x;
     oldBallY = ball.y;
   }
