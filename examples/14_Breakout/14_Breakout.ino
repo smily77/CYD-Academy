@@ -307,7 +307,10 @@ void updatePaddle() {
     paddle.x = newX;
 
     // Ball bewegen wenn festgeklebt
+    // WICHTIG: oldBallX/Y MUSS vor ball.x Änderung gesetzt werden!
     if (ball.stuck) {
+      oldBallX = ball.x;  // Alte Position speichern
+      oldBallY = ball.y;  // Alte Position speichern
       ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
       // ball.y bleibt gleich (klebt am Schläger)
     }
