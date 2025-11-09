@@ -16,8 +16,8 @@
   - Bringe den Frosch sicher nach oben zu den Häusern
   - Straße (Y=2-9): Vermeide Autos (4 Spuren mit Verkehr)
   - Erholungsspuren (Y=10-11): Sichere Zone zum Ausruhen
-  - Fluss (Y=12-19): Schwimme durch, VERMEIDE Baumstämme! (4 Spuren)
-  - WICHTIG: Baumstämme TÖTEN den Frosch (sind Hindernisse!)
+  - Fluss (Y=12-19): Springe auf Baumstämme! (4 Spuren)
+  - WICHTIG: Frosch ERTRINKT im Wasser, Baumstämme retten und tragen dich!
   - Erreiche alle 5 Häuser für nächstes Level
   - 3 Leben
   - Punkte: Vorwärts bewegen = +10, Haus erreichen = +50
@@ -59,7 +59,7 @@ LGFX lcd;
 
 // Spieler (Frosch)
 struct Frog {
-  float x, y;            // Grid-Position
+  float x, y;            // Grid-Position (float für smooth movement auf Baumstämmen)
   int maxY;              // Weiteste Y-Position erreicht
   bool alive;
   int invulnerable;      // Frames invulnerabel
@@ -75,7 +75,7 @@ struct Car {
   bool active;
 };
 
-// Baumstamm (WICHTIG: Baumstämme TÖTEN den Frosch!)
+// Baumstamm (WICHTIG: Baumstämme RETTEN den Frosch und bewegen ihn mit!)
 struct Log {
   int lane;              // Reihe (Y=13-16, 4 Spuren)
   float x;               // Position
@@ -96,7 +96,7 @@ Frog frog;
 #define MAX_CARS 8
 Car cars[MAX_CARS];
 
-#define MAX_LOGS 6
+#define MAX_LOGS 12
 Log logs[MAX_LOGS];
 
 #define NUM_HOMES 5
@@ -224,14 +224,14 @@ void initLevel() {
   // Autos initialisieren (4 Fahrspuren: Y=3-6)
   int carCount = 0;
   for (int lane = 3; lane <= 6; lane++) {
-    int numCars = 1;  // 1 Auto pro Spur
+    int numCars = 2;  // 2 Autos pro Spur (mehr Verkehr für breite Straße)
     bool dirRight = (lane % 2 == 0);  // Abwechselnde Richtungen
 
     for (int i = 0; i < numCars; i++) {
       if (carCount < MAX_CARS) {
         cars[carCount].lane = lane;
-        cars[carCount].x = (GRID_WIDTH / numCars) * i + (GRID_WIDTH / 3);  // Versetzt starten
-        cars[carCount].w = 4 + random(0, 3);  // 4-6 Zellen breit (breiter, da weniger Autos)
+        cars[carCount].x = (GRID_WIDTH / numCars) * i;  // Gleichmäßig verteilt
+        cars[carCount].w = 3 + random(0, 2);  // 3-4 Zellen breit
         cars[carCount].speed = (0.15 + level * 0.03) * (dirRight ? 1 : -1);
         cars[carCount].color = (random(0, 2) == 0) ? COLOR_CAR_RED : COLOR_CAR_BLUE;  // Zufällig rot oder blau
         cars[carCount].active = true;
@@ -241,18 +241,18 @@ void initLevel() {
   }
 
   // Baumstämme initialisieren (4 Spuren: Y=13-16)
-  // WICHTIG: Baumstämme TÖTEN den Frosch (kein Mitschwimmen!)
+  // WICHTIG: Baumstämme RETTEN den Frosch und bewegen ihn mit!
   int logCount = 0;
   for (int lane = 13; lane <= 16; lane++) {
-    int numLogs = 1;  // 1 Baumstamm pro Bahn
+    int numLogs = 3;  // 3 Baumstämme pro Bahn (breiter Fluss braucht viele Baumstämme!)
     bool dirRight = (lane % 2 == 0);
 
     for (int i = 0; i < numLogs; i++) {
       if (logCount < MAX_LOGS) {
         logs[logCount].lane = lane;
         logs[logCount].x = (GRID_WIDTH / numLogs) * i;
-        logs[logCount].w = 6 + random(0, 4);  // 6-9 Zellen breit (gefährliche Hindernisse!)
-        logs[logCount].speed = (0.12 + level * 0.02) * (dirRight ? 1 : -1);
+        logs[logCount].w = 5 + random(0, 3);  // 5-7 Zellen breit (breit genug zum Landen)
+        logs[logCount].speed = (0.1 + level * 0.02) * (dirRight ? 1 : -1);
         logs[logCount].active = true;
         logCount++;
       }
@@ -355,8 +355,20 @@ void updateLogs() {
     drawLog(i);
   }
 
-  // WICHTIG: Baumstämme bewegen den Frosch NICHT mit!
-  // Baumstämme sind Hindernisse die töten (siehe checkCollisions)
+  // Frosch auf Baumstamm mitbewegen (Y=13-16 haben Baumstämme)
+  if (frog.alive && (int)frog.y >= 13 && (int)frog.y <= 16) {
+    for (int i = 0; i < MAX_LOGS; i++) {
+      if (!logs[i].active) continue;
+      if (logs[i].lane != (int)frog.y) continue;
+
+      if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
+        // Frosch mitbewegen (WICHTIG: float-Speed verwenden, nicht (int)!)
+        frog.x += logs[i].speed;
+        frog.x = constrain(frog.x, 0, GRID_WIDTH - 1);
+        break;
+      }
+    }
+  }
 }
 
 // ===== KOLLISIONEN =====
@@ -381,22 +393,28 @@ void checkCollisions() {
     }
   }
 
-  // Fluss (Y=12-19): Frosch kann schwimmen, ABER Baumstämme TÖTEN!
+  // Fluss (Y=12-19): Frosch ERTRINKT im Wasser, muss auf Baumstamm sein!
   if ((int)frog.y >= 12 && (int)frog.y <= 19) {
-    // Prüfe ob Baumstamm getroffen (Y=13-16 haben Baumstämme)
+    bool onLog = false;
+
+    // Prüfe ob auf Baumstamm (Y=13-16 haben Baumstämme)
     if ((int)frog.y >= 13 && (int)frog.y <= 16) {
       for (int i = 0; i < MAX_LOGS; i++) {
         if (!logs[i].active) continue;
         if (logs[i].lane != (int)frog.y) continue;
 
         if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
-          // Von Baumstamm getroffen!
-          frogDied();
-          return;
+          onLog = true;
+          break;
         }
       }
     }
-    // Frosch kann im Wasser schwimmen - kein Ertrinken!
+
+    if (!onLog) {
+      // Ertrunken im Wasser!
+      frogDied();
+      return;
+    }
   }
 }
 
