@@ -734,9 +734,9 @@ void drawGame() {
       }
     }
 
-    // Ball mit Glow zeichnen
-    int centerX = ball.x + ball.size/2;
-    int centerY = ball.y + ball.size/2;
+    // Ball mit Glow zeichnen (Variablen wiederverwenden, nicht neu deklarieren)
+    centerX = ball.x + ball.size/2;
+    centerY = ball.y + ball.size/2;
 
     // Glow-Ringe
     for (int r = ball.size + 2; r >= ball.size/2; r--) {
