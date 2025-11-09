@@ -298,13 +298,13 @@ void launchBall() {
 // ===== UPDATE FUNKTIONEN =====
 
 void updatePaddle() {
-  // Analog-Wert lesen (0-4095 vom ESP32 ADC)
+  // Analog-Wert lesen (0-4095 vom ESP32 ADC mit ADC_ATTEN_DB_0 für 0-1V)
   int potValue = analogRead(POT_PADDLE);
-  int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);  // User's mapping
+  int newX = map(potValue, 0, 4095, 0, SCREEN_WIDTH - paddle.w);
   newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
 
-  // Deadzone: Nur bewegen wenn Änderung > 2 Pixel (verhindert Flackern durch ADC-Rauschen)
-  if (abs(newX - paddle.x) > 2) {
+  // Deadzone: Nur bewegen wenn Änderung > 5 Pixel (erhöht wegen mehr ADC-Rauschen bei DB_0)
+  if (abs(newX - paddle.x) > 5) {
     oldPaddleX = paddle.x;
     paddle.x = newX;
 
