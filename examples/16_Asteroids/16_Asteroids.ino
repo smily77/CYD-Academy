@@ -3,16 +3,19 @@
 
   Hardware:
   - CYD Display (320x240)
-  - 1x Potentiometer (GPIO 34): Rotation (0-360°)
+  - 1x Potentiometer (GPIO 34): Optional für Rotation
   - 4x Digitale Buttons:
-    * GPIO 5:  Links drehen (Backup)
-    * GPIO 16: Rechts drehen (Backup)
+    * GPIO 5:  Links drehen
+    * GPIO 16: Rechts drehen
     * GPIO 17: Schießen
     * GPIO 18: Schub (Thrust)
 
+  Konfiguration:
+  - USE_POT_ROTATION: Auskommentiert = Tasten, Einkommentiert = Poti+Tasten
+
   Steuerung:
-  - Poti: Direktsteuerung Rotation (0-360°)
-  - Links/Rechts: Buttons als Alternative zur Poti-Steuerung
+  - Links/Rechts: Rotiert Raumschiff (Tasten-Modus)
+  - Poti: Direktsteuerung Rotation 0-360° (Poti-Modus)
   - Schub: Beschleunigt in Blickrichtung
   - Schießen: Feuert Geschoss
 
@@ -27,6 +30,10 @@
 
 #include <CYD_Display_Config.h>
 #include <math.h>
+
+// ===== KONFIGURATION =====
+// Auskommentieren für Tasten-Steuerung, einkommentieren für Poti-Steuerung
+// #define USE_POT_ROTATION
 
 // Pins
 #define POT_ROTATION 34  // Potentiometer für Rotation
@@ -126,9 +133,11 @@ void setup() {
   pinMode(BTN_SHOOT, INPUT_PULLUP);
   pinMode(BTN_THRUST, INPUT_PULLUP);
 
+#ifdef USE_POT_ROTATION
   // ADC konfigurieren (0-1V Bereich)
   analogSetAttenuation(ADC_0db);  // 0-1V Range
   pinMode(POT_ROTATION, INPUT);
+#endif
 
   // Zufallsgenerator
   randomSeed(analogRead(35) + micros());
@@ -138,9 +147,14 @@ void setup() {
 
   Serial.println("Asteroids gestartet!");
   Serial.println("Steuerung:");
+#ifdef USE_POT_ROTATION
   Serial.println("  Poti:     GPIO 34 (Rotation 0-360°)");
   Serial.println("  Links:    GPIO 5 (Backup)");
   Serial.println("  Rechts:   GPIO 16 (Backup)");
+#else
+  Serial.println("  Links:    GPIO 5");
+  Serial.println("  Rechts:   GPIO 16");
+#endif
   Serial.println("  Schießen: GPIO 17");
   Serial.println("  Schub:    GPIO 18");
 }
@@ -295,11 +309,10 @@ void spawnAsteroid(float x, float y, int size) {
 void handleInput() {
   static int lastShootState = HIGH;
 
+#ifdef USE_POT_ROTATION
   // Rotation via Poti (Hauptsteuerung)
   int potValue = analogRead(POT_ROTATION);
   float targetAngle = map(potValue, 0, 1000, 0, 360);
-
-  // Sanfte Rotation zum Zielwinkel (oder direkt setzen)
   ship.angle = targetAngle;
   if (ship.angle < 0) ship.angle += 360;
   if (ship.angle >= 360) ship.angle -= 360;
@@ -313,6 +326,17 @@ void handleInput() {
     ship.angle += SHIP_ROTATION_SPEED;
     if (ship.angle >= 360) ship.angle -= 360;
   }
+#else
+  // Rotation via Buttons (Hauptsteuerung)
+  if (digitalRead(BTN_LEFT) == LOW) {
+    ship.angle -= SHIP_ROTATION_SPEED;
+    if (ship.angle < 0) ship.angle += 360;
+  }
+  if (digitalRead(BTN_RIGHT) == LOW) {
+    ship.angle += SHIP_ROTATION_SPEED;
+    if (ship.angle >= 360) ship.angle -= 360;
+  }
+#endif
 
   // Schub
   if (digitalRead(BTN_THRUST) == LOW) {
