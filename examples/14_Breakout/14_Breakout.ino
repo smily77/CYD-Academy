@@ -20,13 +20,6 @@
 
 #include <CYD_Display_Config.h>
 
-// Analog Input Pin
-#define POT_PADDLE  34
-
-// Button Pins
-#define BTN_START   17  // Ball starten
-#define BTN_PAUSE   18  // Pause
-
 // Display Objekt
 LGFX lcd;
 

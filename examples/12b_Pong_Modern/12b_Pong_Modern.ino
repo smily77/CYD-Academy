@@ -23,15 +23,6 @@
 
 #include <CYD_Display_Config.h>
 
-// Analog Input Pins
-#define POT_LEFT  34
-#define POT_RIGHT 35
-
-// Taster Pins (Active LOW)
-#define BUTTON_AUTO_ON      16
-#define BUTTON_AUTO_OFF     5
-#define BUTTON_RESET_SCORE  17
-
 // Display Objekt
 LGFX lcd;
 

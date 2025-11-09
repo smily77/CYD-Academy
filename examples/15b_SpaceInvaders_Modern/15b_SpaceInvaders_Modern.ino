@@ -25,12 +25,6 @@
 
 #include <CYD_Display_Config.h>
 
-// Button Pins
-#define BTN_LEFT   5
-#define BTN_RIGHT  16
-#define BTN_SHOOT  17
-#define BTN_PAUSE  18
-
 // Display Objekt
 LGFX lcd;
 
