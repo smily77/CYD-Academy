@@ -24,6 +24,12 @@
 
 #include <CYD_Display_Config.h>
 
+// Pin-Mapping: Physische Pins -> Logische Namen
+#define BTN_LEFT   tasteB
+#define BTN_UP     tasteA
+#define BTN_RIGHT  tasteC
+#define BTN_DOWN   tasteD
+
 // Display Objekt
 LGFX lcd;
 

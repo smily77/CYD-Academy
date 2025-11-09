@@ -19,6 +19,11 @@
 
 #include <CYD_Display_Config.h>
 
+// Pin-Mapping: Physische Pins -> Logische Namen
+#define POT_PADDLE  potiLeft
+#define BTN_START   tasteA
+#define BTN_PAUSE   tasteD
+
 // Display Objekt
 LGFX lcd;
 
