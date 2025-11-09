@@ -99,7 +99,6 @@ float oldBallY = 0;
 void setup() {
   Serial.begin(115200);
   Serial.println("\n=== BREAKOUT GAME ===\n");
-
   // Display initialisieren
   lcd.init();
   lcd.setRotation(1);
@@ -300,7 +299,7 @@ void launchBall() {
 void updatePaddle() {
   // Analog-Wert lesen (0-4095 vom ESP32 ADC mit ADC_ATTEN_DB_0 für 0-1V)
   int potValue = analogRead(POT_PADDLE);
-  int newX = map(potValue, 0, 4095, 0, SCREEN_WIDTH - paddle.w);
+  int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
   newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
 
   // Deadzone: Nur bewegen wenn Änderung > 5 Pixel (erhöht wegen mehr ADC-Rauschen bei DB_0)
