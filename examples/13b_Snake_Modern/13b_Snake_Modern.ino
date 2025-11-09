@@ -197,12 +197,15 @@ void loop() {
   // Wände neu zeichnen (damit Partikel sie nicht löschen)
   drawModernBorder();
 
-  // Score nur neu zeichnen wenn sich etwas geändert hat (verhindert Flackern)
+  // Score immer nach Border neu zeichnen (da Border den Score überschreiben kann)
+  // Aber nur Hintergrund löschen wenn sich der Score geändert hat (verhindert Flackern)
   if (score != lastScore || snakeLength != lastSnakeLength || moveDelay != lastMoveDelay) {
-    drawModernScore();
+    drawModernScore();  // Mit Hintergrund löschen
     lastScore = score;
     lastSnakeLength = snakeLength;
     lastMoveDelay = moveDelay;
+  } else {
+    redrawScoreText();  // Nur Text neu zeichnen (ohne Hintergrund zu löschen)
   }
 
   delay(16);  // ~60 FPS
@@ -553,7 +556,11 @@ void drawModernScore() {
   lcd.fillRect(GRID_SIZE, 1, 100, 8, COLOR_BG_TOP);  // Score und Länge
   lcd.fillRect(SCREEN_WIDTH - 60, 1, 58, 8, COLOR_BG_TOP);  // Speed
 
-  // Text mit Schatten
+  redrawScoreText();  // Text zeichnen
+}
+
+void redrawScoreText() {
+  // Text mit Schatten (ohne Hintergrund zu löschen)
   lcd.setTextSize(1);
 
   lcd.setTextColor(COLOR_SHADOW);
