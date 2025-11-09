@@ -195,17 +195,15 @@ void loop() {
   drawParticles();
 
   // Wände neu zeichnen (damit Partikel sie nicht löschen)
+  // Rahmen hat Aussparung für Score, daher kein Konflikt mehr
   drawModernBorder();
 
-  // Score immer nach Border neu zeichnen (da Border den Score überschreiben kann)
-  // Aber nur Hintergrund löschen wenn sich der Score geändert hat (verhindert Flackern)
+  // Score nur neu zeichnen wenn sich etwas geändert hat
   if (score != lastScore || snakeLength != lastSnakeLength || moveDelay != lastMoveDelay) {
-    drawModernScore();  // Mit Hintergrund löschen
+    drawModernScore();
     lastScore = score;
     lastSnakeLength = snakeLength;
     lastMoveDelay = moveDelay;
-  } else {
-    redrawScoreText();  // Nur Text neu zeichnen (ohne Hintergrund zu löschen)
   }
 
   delay(16);  // ~60 FPS
@@ -529,8 +527,13 @@ void drawGradientBackground() {
 
 void drawModernBorder() {
   // Wände mit Neon-Glow-Effekt
+  // Oberste Zeile mit Aussparung für Score und Speed
+  // Score: x=1 bis x=11, Speed: x=26 bis x=31
   for (int x = 0; x < GRID_WIDTH; x++) {
-    drawModernWall(x, 0);
+    // Aussparungen für Score (x=1-11) und Speed (x=26-31)
+    if (x == 0 || (x >= 12 && x <= 25)) {
+      drawModernWall(x, 0);
+    }
     drawModernWall(x, GRID_HEIGHT - 1);
   }
   for (int y = 1; y < GRID_HEIGHT - 1; y++) {
