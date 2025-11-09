@@ -48,15 +48,16 @@ LGFX lcd;
 #define COLOR_GRASS     0x2444  // Grün
 #define COLOR_WATER     0x001F  // Blau
 #define COLOR_FROG      0x07E0  // Grün
-#define COLOR_CAR       0xF800  // Rot
-#define COLOR_LOG       0x7300  // Braun
+#define COLOR_CAR_RED   0xF800  // Rot
+#define COLOR_CAR_BLUE  0x001F  // Blau
+#define COLOR_LOG       0xD69A  // Hellbraun
 #define COLOR_TURTLE    0x07E0  // Grün
 #define COLOR_HOME      0xFFE0  // Gelb
 #define COLOR_TEXT      0xFFFF  // Weiß
 
 // Spieler (Frosch)
 struct Frog {
-  int x, y;              // Grid-Position
+  float x, y;            // Grid-Position (float für smooth movement auf Baumstämmen)
   int maxY;              // Weiteste Y-Position erreicht
   bool alive;
   int invulnerable;      // Frames invulnerabel
@@ -68,6 +69,7 @@ struct Car {
   float x;               // Position (kann float sein für smooth movement)
   int w;                 // Breite in Zellen
   float speed;           // Geschwindigkeit (Zellen pro Frame)
+  uint16_t color;        // Farbe (rot oder blau)
   bool active;
 };
 
@@ -105,8 +107,8 @@ int level = 1;
 bool gameOver = false;
 
 // Alte Position für Redraw
-int oldFrogX = -1;
-int oldFrogY = -1;
+float oldFrogX = -1;
+float oldFrogY = -1;
 
 // Input Debouncing
 unsigned long lastMoveTime = 0;
@@ -182,9 +184,9 @@ void initGame() {
   gameOver = false;
 
   // Frosch initialisieren
-  frog.x = GRID_WIDTH / 2;
-  frog.y = 1;  // Startposition unten
-  frog.maxY = 1;
+  frog.x = GRID_WIDTH / 2.0;
+  frog.y = 0;  // Startposition unten
+  frog.maxY = 0;
   frog.alive = true;
   frog.invulnerable = 0;
   oldFrogX = -1;
@@ -202,9 +204,9 @@ void initLevel() {
   Serial.printf("Level %d gestartet!\n", level);
 
   // Frosch zurücksetzen
-  frog.x = GRID_WIDTH / 2;
-  frog.y = 1;
-  frog.maxY = 1;
+  frog.x = GRID_WIDTH / 2.0;
+  frog.y = 0;
+  frog.maxY = 0;
   frog.alive = true;
   frog.invulnerable = 30;  // 0.5 Sekunden
   oldFrogX = -1;
@@ -229,17 +231,18 @@ void initLevel() {
         cars[carCount].x = (GRID_WIDTH / numCars) * i + (GRID_WIDTH / 3);  // Versetzt starten
         cars[carCount].w = 3 + random(0, 2);  // 3-4 Zellen breit
         cars[carCount].speed = (0.15 + level * 0.03) * (dirRight ? 1 : -1);  // Langsamer
+        cars[carCount].color = (random(0, 2) == 0) ? COLOR_CAR_RED : COLOR_CAR_BLUE;  // Zufällig rot oder blau
         cars[carCount].active = true;
         carCount++;
       }
     }
   }
 
-  // Baumstämme initialisieren (4 Reihen: Y=8,9,10,11)
+  // Baumstämme initialisieren (4 Reihen: Y=9,10,11,12 - breiterer Fluss)
   int logCount = 0;
-  for (int lane = 8; lane <= 11; lane++) {
-    int numLogs = (lane == 8 || lane == 11) ? 2 : 1;  // Außen mehr Baumstämme
-    bool dirRight = (lane % 2 == 1);
+  for (int lane = 9; lane <= 12; lane++) {
+    int numLogs = (lane == 9 || lane == 12) ? 2 : 1;  // Außen mehr Baumstämme
+    bool dirRight = (lane % 2 == 0);
 
     for (int i = 0; i < numLogs; i++) {
       if (logCount < MAX_LOGS) {
@@ -267,8 +270,8 @@ void handleInput() {
   unsigned long now = millis();
   if (now - lastMoveTime < MOVE_DELAY) return;
 
-  int newX = frog.x;
-  int newY = frog.y;
+  float newX = frog.x;
+  float newY = frog.y;
   bool moved = false;
 
   if (digitalRead(BTN_LEFT) == LOW) {
@@ -292,14 +295,14 @@ void handleInput() {
       frog.y = newY;
 
       // Punkte für Vorwärtsbewegung
-      if (newY > frog.maxY) {
+      if ((int)newY > frog.maxY) {
         score += 10;
-        frog.maxY = newY;
+        frog.maxY = (int)newY;
         drawUI();
       }
 
       lastMoveTime = now;
-      Serial.printf("Frog moved to (%d, %d)\n", frog.x, frog.y);
+      Serial.printf("Frog moved to (%.1f, %.1f)\n", frog.x, frog.y);
     }
   }
 }
@@ -349,16 +352,15 @@ void updateLogs() {
     drawLog(i);
   }
 
-  // Frosch auf Baumstamm bewegen
-  if (frog.alive && frog.y >= 8 && frog.y <= 11) {
+  // Frosch auf Baumstamm bewegen (Y=9-12 in breiterem Fluss)
+  if (frog.alive && (int)frog.y >= 9 && (int)frog.y <= 12) {
     for (int i = 0; i < MAX_LOGS; i++) {
       if (!logs[i].active) continue;
-      if (logs[i].lane != frog.y) continue;
+      if (logs[i].lane != (int)frog.y) continue;
 
-      int logX = (int)logs[i].x;
-      if (frog.x >= logX && frog.x < logX + logs[i].w) {
-        // Frosch mitbewegen
-        frog.x += (int)logs[i].speed;
+      if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
+        // Frosch mitbewegen (WICHTIG: float-Speed verwenden!)
+        frog.x += logs[i].speed;
         frog.x = constrain(frog.x, 0, GRID_WIDTH - 1);
         break;
       }
@@ -375,13 +377,12 @@ void checkCollisions() {
   }
 
   // Straße (Y=2-5): Kollision mit Autos
-  if (frog.y >= 2 && frog.y <= 5) {
+  if ((int)frog.y >= 2 && (int)frog.y <= 5) {
     for (int i = 0; i < MAX_CARS; i++) {
       if (!cars[i].active) continue;
-      if (cars[i].lane != frog.y) continue;
+      if (cars[i].lane != (int)frog.y) continue;
 
-      int carX = (int)cars[i].x;
-      if (frog.x >= carX && frog.x < carX + cars[i].w) {
+      if (frog.x >= cars[i].x && frog.x < cars[i].x + cars[i].w) {
         // Kollision!
         frogDied();
         return;
@@ -389,18 +390,20 @@ void checkCollisions() {
     }
   }
 
-  // Wasser (Y=8-11): Muss auf Baumstamm sein
-  if (frog.y >= 8 && frog.y <= 11) {
+  // Wasser (Y=8-13, breiterer Fluss): Muss auf Baumstamm sein
+  if ((int)frog.y >= 8 && (int)frog.y <= 13) {
     bool onLog = false;
 
-    for (int i = 0; i < MAX_LOGS; i++) {
-      if (!logs[i].active) continue;
-      if (logs[i].lane != frog.y) continue;
+    // Nur bei Y=9-12 gibt es Baumstämme
+    if ((int)frog.y >= 9 && (int)frog.y <= 12) {
+      for (int i = 0; i < MAX_LOGS; i++) {
+        if (!logs[i].active) continue;
+        if (logs[i].lane != (int)frog.y) continue;
 
-      int logX = (int)logs[i].x;
-      if (frog.x >= logX && frog.x < logX + logs[i].w) {
-        onLog = true;
-        break;
+        if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
+          onLog = true;
+          break;
+        }
       }
     }
 
@@ -416,11 +419,11 @@ void checkGoal() {
   if (!frog.alive) return;
 
   // Ziel-Zeile erreicht? (Y=23)
-  if (frog.y == 23) {
+  if ((int)frog.y == 23) {
     // Ist Frosch in einem Haus?
     bool inHome = false;
     for (int i = 0; i < NUM_HOMES; i++) {
-      if (abs(frog.x - homes[i].x) <= 1 && !homes[i].filled) {
+      if (abs((int)frog.x - homes[i].x) <= 1 && !homes[i].filled) {
         // Haus erreicht!
         homes[i].filled = true;
         score += 50;
@@ -429,9 +432,9 @@ void checkGoal() {
         drawUI();
 
         // Frosch zurücksetzen
-        frog.x = GRID_WIDTH / 2;
-        frog.y = 1;
-        frog.maxY = 1;
+        frog.x = GRID_WIDTH / 2.0;
+        frog.y = 0;
+        frog.maxY = 0;
         frog.invulnerable = 30;
         oldFrogX = -1;
         oldFrogY = -1;
@@ -463,9 +466,9 @@ void frogDied() {
     handleGameOver();
   } else {
     // Respawn
-    frog.x = GRID_WIDTH / 2;
-    frog.y = 1;
-    frog.maxY = 1;
+    frog.x = GRID_WIDTH / 2.0;
+    frog.y = 0;
+    frog.maxY = 0;
     frog.alive = true;
     frog.invulnerable = 60;  // 1 Sekunde
     oldFrogX = -1;
@@ -513,20 +516,20 @@ void drawBackground() {
   lcd.fillRect(0, 0, SCREEN_WIDTH, PLAY_OFFSET_Y, COLOR_BG);
 
   // Spielfeld startet ab Y=PLAY_OFFSET_Y
-  // Ziel-Zone (Y=12-23): Gras
-  lcd.fillRect(0, PLAY_OFFSET_Y, SCREEN_WIDTH, (GRID_HEIGHT - 12) * CELL_SIZE, COLOR_GRASS);
+  // Ziel-Zone (Y=14-23): Gras
+  lcd.fillRect(0, PLAY_OFFSET_Y, SCREEN_WIDTH, 10 * CELL_SIZE, COLOR_GRASS);
 
-  // Wasser (Y=8-11): Blau
-  lcd.fillRect(0, PLAY_OFFSET_Y + (GRID_HEIGHT - 12) * CELL_SIZE, SCREEN_WIDTH, 4 * CELL_SIZE, COLOR_WATER);
+  // Wasser (Y=8-13, breiterer Fluss): Blau - 6 Reihen (150% von 4)
+  lcd.fillRect(0, PLAY_OFFSET_Y + 10 * CELL_SIZE, SCREEN_WIDTH, 6 * CELL_SIZE, COLOR_WATER);
 
   // Sichere Zone (Y=6-7): Gras
-  lcd.fillRect(0, PLAY_OFFSET_Y + (GRID_HEIGHT - 8) * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
+  lcd.fillRect(0, PLAY_OFFSET_Y + 16 * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
 
-  // Straße (Y=2-5): Grau
-  lcd.fillRect(0, PLAY_OFFSET_Y + (GRID_HEIGHT - 6) * CELL_SIZE, SCREEN_WIDTH, 4 * CELL_SIZE, COLOR_ROAD);
+  // Straße (Y=2-5): Grau - 4 Reihen
+  lcd.fillRect(0, PLAY_OFFSET_Y + 18 * CELL_SIZE, SCREEN_WIDTH, 4 * CELL_SIZE, COLOR_ROAD);
 
   // Startzone (Y=0-1): Gras
-  lcd.fillRect(0, PLAY_OFFSET_Y + (GRID_HEIGHT - 2) * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
+  lcd.fillRect(0, PLAY_OFFSET_Y + 22 * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
 }
 
 void drawCars() {
@@ -543,12 +546,13 @@ void drawCar(int index) {
   int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - c->lane - 1) * CELL_SIZE;
   int width = c->w * CELL_SIZE;
 
-  // Auto-Karosserie
-  lcd.fillRect(screenX, screenY, width, CELL_SIZE, COLOR_CAR);
+  // Auto-Karosserie (rot oder blau)
+  lcd.fillRect(screenX, screenY, width, CELL_SIZE, c->color);
 
-  // Fenster (heller)
+  // Fenster (heller, Farbe abhängig vom Auto)
   if (width >= 20) {
-    lcd.fillRect(screenX + 3, screenY + 2, width - 6, CELL_SIZE - 4, 0x8000);  // Dunkelrot (Fenster)
+    uint16_t windowColor = (c->color == COLOR_CAR_RED) ? 0x8000 : 0x0010;  // Dunkelrot oder Dunkelblau
+    lcd.fillRect(screenX + 3, screenY + 2, width - 6, CELL_SIZE - 4, windowColor);
   }
 
   // Räder (schwarz, unten)
@@ -624,8 +628,8 @@ void drawFrog() {
     return;
   }
 
-  int screenX = frog.x * CELL_SIZE;
-  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - frog.y - 1) * CELL_SIZE;
+  int screenX = (int)frog.x * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - (int)frog.y - 1) * CELL_SIZE;
 
   // Frosch-Körper (runder)
   lcd.fillCircle(screenX + CELL_SIZE/2, screenY + CELL_SIZE/2, CELL_SIZE/2 - 1, COLOR_FROG);
@@ -644,13 +648,13 @@ void drawFrog() {
 void eraseFrog() {
   if (oldFrogX < 0 || oldFrogY < 0) return;
 
-  int screenX = oldFrogX * CELL_SIZE;
-  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - oldFrogY - 1) * CELL_SIZE;
+  int screenX = (int)oldFrogX * CELL_SIZE;
+  int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - (int)oldFrogY - 1) * CELL_SIZE;
 
   // Hintergrundfarbe abhängig von Zone
   uint16_t bgColor = COLOR_GRASS;
-  if (oldFrogY >= 2 && oldFrogY <= 5) bgColor = COLOR_ROAD;
-  else if (oldFrogY >= 8 && oldFrogY <= 11) bgColor = COLOR_WATER;
+  if ((int)oldFrogY >= 2 && (int)oldFrogY <= 5) bgColor = COLOR_ROAD;
+  else if ((int)oldFrogY >= 8 && (int)oldFrogY <= 13) bgColor = COLOR_WATER;  // Breiterer Fluss
 
   lcd.fillRect(screenX, screenY, CELL_SIZE, CELL_SIZE, bgColor);
 }
