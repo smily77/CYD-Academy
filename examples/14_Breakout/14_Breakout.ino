@@ -283,36 +283,38 @@ void launchBall() {
   float angle = random(30, 150);  // Grad
   float rad = angle * 3.14159 / 180.0;
 
-  // Langsamer Start, wird mit Score schneller
-  float baseSpeed = 2.5;
-  float speedBoost = score / 100.0;  // +1.0 pro 100 Punkte
+  // Langsamer Start, wird mit Level schneller (nicht mit Score)
+  float baseSpeed = 1.5;  // Langsamer Start
+  float speedBoost = (level - 1) * 0.3;  // +0.3 pro Level
   float speed = baseSpeed + speedBoost;
-  speed = constrain(speed, 2.5, 5.0);  // Max 5.0
+  speed = constrain(speed, 1.5, 4.0);  // Max 4.0
 
   ball.vx = cos(rad) * speed;
   ball.vy = -abs(sin(rad)) * speed;  // Immer nach oben
 
-  Serial.printf("Ball gestartet! Speed: %.1f\n", speed);
+  Serial.printf("Ball gestartet! Speed: %.1f (Level %d)\n", speed, level);
 }
 
 // ===== UPDATE FUNKTIONEN =====
 
 void updatePaddle() {
-  oldPaddleX = paddle.x;
-
   // Analog-Wert lesen (0-4095 vom ESP32 ADC)
   int potValue = analogRead(POT_PADDLE);
-  paddle.x = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
+  int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);  // User's mapping
+  newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
 
-  // Grenzen
-  paddle.x = constrain(paddle.x, 0, SCREEN_WIDTH - paddle.w);
+  // Deadzone: Nur bewegen wenn Änderung > 2 Pixel (verhindert Flackern durch ADC-Rauschen)
+  if (abs(newX - paddle.x) > 2) {
+    oldPaddleX = paddle.x;
+    paddle.x = newX;
 
-  // Ball bewegen wenn festgeklebt
-  if (ball.stuck) {
-    oldBallX = ball.x;  // Alte Position merken BEVOR wir bewegen
-    oldBallY = ball.y;  // Auch Y-Position merken
-    ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
-    // ball.y bleibt gleich (klebt am Schläger)
+    // Ball bewegen wenn festgeklebt
+    if (ball.stuck) {
+      oldBallX = ball.x;  // Alte Position merken BEVOR wir bewegen
+      oldBallY = ball.y;  // Auch Y-Position merken
+      ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
+      // ball.y bleibt gleich (klebt am Schläger)
+    }
   }
 }
 
@@ -474,17 +476,17 @@ void drawUI() {
   lcd.setTextSize(2);
   lcd.setTextColor(COLOR_TEXT, COLOR_BG);
 
-  // Score
-  lcd.setCursor(10, 5);
-  lcd.printf("Score:%d", score);
+  // Score (links)
+  lcd.setCursor(5, 5);
+  lcd.printf("S:%d", score);  // Kürzere Bezeichnung für mehr Platz
 
-  // Level
-  lcd.setCursor(SCREEN_WIDTH/2 - 40, 5);
-  lcd.printf("Level:%d", level);
+  // Level (Mitte - mehr Abstand)
+  lcd.setCursor(135, 5);
+  lcd.printf("L:%d", level);
 
-  // Leben
-  lcd.setCursor(SCREEN_WIDTH - 90, 5);
-  lcd.printf("Lives:%d", lives);
+  // Lives (rechts)
+  lcd.setCursor(SCREEN_WIDTH - 70, 5);
+  lcd.printf("Lvs:%d", lives);
 }
 
 void drawGame() {
