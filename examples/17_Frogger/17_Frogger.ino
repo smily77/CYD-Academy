@@ -14,8 +14,10 @@
 
   Spielregeln:
   - Bringe den Frosch sicher nach oben zu den Häusern
-  - Straße: Vermeide Autos
-  - Fluss: Springe auf Baumstämme und Schildkröten
+  - Straße (Y=2-9): Vermeide Autos (4 Spuren mit Verkehr)
+  - Erholungsspuren (Y=10-11): Sichere Zone zum Ausruhen
+  - Fluss (Y=12-19): Schwimme durch, VERMEIDE Baumstämme! (4 Spuren)
+  - WICHTIG: Baumstämme TÖTEN den Frosch (sind Hindernisse!)
   - Erreiche alle 5 Häuser für nächstes Level
   - 3 Leben
   - Punkte: Vorwärts bewegen = +10, Haus erreichen = +50
@@ -57,7 +59,7 @@ LGFX lcd;
 
 // Spieler (Frosch)
 struct Frog {
-  float x, y;            // Grid-Position (float für smooth movement auf Baumstämmen)
+  float x, y;            // Grid-Position
   int maxY;              // Weiteste Y-Position erreicht
   bool alive;
   int invulnerable;      // Frames invulnerabel
@@ -65,17 +67,17 @@ struct Frog {
 
 // Auto
 struct Car {
-  int lane;              // Fahrspur (1-6, breitere Straße)
-  float x;               // Position (kann float sein für smooth movement)
+  int lane;              // Fahrspur (Y=3-6, 4 Spuren)
+  float x;               // Position
   int w;                 // Breite in Zellen
   float speed;           // Geschwindigkeit (Zellen pro Frame)
   uint16_t color;        // Farbe (rot oder blau)
   bool active;
 };
 
-// Baumstamm
+// Baumstamm (WICHTIG: Baumstämme TÖTEN den Frosch!)
 struct Log {
-  int lane;              // Reihe (8-13, alle Wasserbahnen)
+  int lane;              // Reihe (Y=13-16, 4 Spuren)
   float x;               // Position
   int w;                 // Breite in Zellen
   float speed;           // Geschwindigkeit
@@ -219,9 +221,9 @@ void initLevel() {
     homes[i].filled = false;
   }
 
-  // Autos initialisieren (6 Fahrspuren: Y=1,2,3,4,5,6 - breitere Straße)
+  // Autos initialisieren (4 Fahrspuren: Y=3-6)
   int carCount = 0;
-  for (int lane = 1; lane <= 6; lane++) {
+  for (int lane = 3; lane <= 6; lane++) {
     int numCars = 1;  // 1 Auto pro Spur
     bool dirRight = (lane % 2 == 0);  // Abwechselnde Richtungen
 
@@ -229,8 +231,8 @@ void initLevel() {
       if (carCount < MAX_CARS) {
         cars[carCount].lane = lane;
         cars[carCount].x = (GRID_WIDTH / numCars) * i + (GRID_WIDTH / 3);  // Versetzt starten
-        cars[carCount].w = 3 + random(0, 2);  // 3-4 Zellen breit
-        cars[carCount].speed = (0.15 + level * 0.03) * (dirRight ? 1 : -1);  // Langsamer
+        cars[carCount].w = 4 + random(0, 3);  // 4-6 Zellen breit (breiter, da weniger Autos)
+        cars[carCount].speed = (0.15 + level * 0.03) * (dirRight ? 1 : -1);
         cars[carCount].color = (random(0, 2) == 0) ? COLOR_CAR_RED : COLOR_CAR_BLUE;  // Zufällig rot oder blau
         cars[carCount].active = true;
         carCount++;
@@ -238,9 +240,10 @@ void initLevel() {
     }
   }
 
-  // Baumstämme initialisieren (6 Reihen: Y=8-13 - alle Wasserbahnen)
+  // Baumstämme initialisieren (4 Spuren: Y=13-16)
+  // WICHTIG: Baumstämme TÖTEN den Frosch (kein Mitschwimmen!)
   int logCount = 0;
-  for (int lane = 8; lane <= 13; lane++) {
+  for (int lane = 13; lane <= 16; lane++) {
     int numLogs = 1;  // 1 Baumstamm pro Bahn
     bool dirRight = (lane % 2 == 0);
 
@@ -248,8 +251,8 @@ void initLevel() {
       if (logCount < MAX_LOGS) {
         logs[logCount].lane = lane;
         logs[logCount].x = (GRID_WIDTH / numLogs) * i;
-        logs[logCount].w = 5 + random(0, 3);  // 5-7 Zellen breit (breiter als vorher)
-        logs[logCount].speed = (0.1 + level * 0.02) * (dirRight ? 1 : -1);  // Langsamer
+        logs[logCount].w = 6 + random(0, 4);  // 6-9 Zellen breit (gefährliche Hindernisse!)
+        logs[logCount].speed = (0.12 + level * 0.02) * (dirRight ? 1 : -1);
         logs[logCount].active = true;
         logCount++;
       }
@@ -352,20 +355,8 @@ void updateLogs() {
     drawLog(i);
   }
 
-  // Frosch auf Baumstamm bewegen (Y=8-13, alle Wasserbahnen)
-  if (frog.alive && (int)frog.y >= 8 && (int)frog.y <= 13) {
-    for (int i = 0; i < MAX_LOGS; i++) {
-      if (!logs[i].active) continue;
-      if (logs[i].lane != (int)frog.y) continue;
-
-      if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
-        // Frosch mitbewegen (WICHTIG: float-Speed verwenden!)
-        frog.x += logs[i].speed;
-        frog.x = constrain(frog.x, 0, GRID_WIDTH - 1);
-        break;
-      }
-    }
-  }
+  // WICHTIG: Baumstämme bewegen den Frosch NICHT mit!
+  // Baumstämme sind Hindernisse die töten (siehe checkCollisions)
 }
 
 // ===== KOLLISIONEN =====
@@ -376,40 +367,36 @@ void checkCollisions() {
     return;
   }
 
-  // Straße (Y=1-6, breitere Straße): Kollision mit Autos
-  if ((int)frog.y >= 1 && (int)frog.y <= 6) {
+  // Straße (Y=3-6): Kollision mit Autos
+  if ((int)frog.y >= 3 && (int)frog.y <= 6) {
     for (int i = 0; i < MAX_CARS; i++) {
       if (!cars[i].active) continue;
       if (cars[i].lane != (int)frog.y) continue;
 
       if (frog.x >= cars[i].x && frog.x < cars[i].x + cars[i].w) {
-        // Kollision!
+        // Von Auto überfahren!
         frogDied();
         return;
       }
     }
   }
 
-  // Wasser (Y=8-13, breiterer Fluss): Muss auf Baumstamm sein
-  if ((int)frog.y >= 8 && (int)frog.y <= 13) {
-    bool onLog = false;
+  // Fluss (Y=12-19): Frosch kann schwimmen, ABER Baumstämme TÖTEN!
+  if ((int)frog.y >= 12 && (int)frog.y <= 19) {
+    // Prüfe ob Baumstamm getroffen (Y=13-16 haben Baumstämme)
+    if ((int)frog.y >= 13 && (int)frog.y <= 16) {
+      for (int i = 0; i < MAX_LOGS; i++) {
+        if (!logs[i].active) continue;
+        if (logs[i].lane != (int)frog.y) continue;
 
-    // Bei Y=8-13 gibt es Baumstämme (alle Wasserbahnen)
-    for (int i = 0; i < MAX_LOGS; i++) {
-      if (!logs[i].active) continue;
-      if (logs[i].lane != (int)frog.y) continue;
-
-      if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
-        onLog = true;
-        break;
+        if (frog.x >= logs[i].x && frog.x < logs[i].x + logs[i].w) {
+          // Von Baumstamm getroffen!
+          frogDied();
+          return;
+        }
       }
     }
-
-    if (!onLog) {
-      // Ertrunken!
-      frogDied();
-      return;
-    }
+    // Frosch kann im Wasser schwimmen - kein Ertrinken!
   }
 }
 
@@ -514,20 +501,22 @@ void drawBackground() {
   lcd.fillRect(0, 0, SCREEN_WIDTH, PLAY_OFFSET_Y, COLOR_BG);
 
   // Spielfeld startet ab Y=PLAY_OFFSET_Y
-  // Ziel-Zone (Y=14-23): Gras - 10 Reihen
-  lcd.fillRect(0, PLAY_OFFSET_Y, SCREEN_WIDTH, 10 * CELL_SIZE, COLOR_GRASS);
+  // Layout: 1/3 Straße, 1/3 Fluss
 
-  // Wasser (Y=8-13, breiterer Fluss): Blau - 6 Reihen
-  lcd.fillRect(0, PLAY_OFFSET_Y + 10 * CELL_SIZE, SCREEN_WIDTH, 6 * CELL_SIZE, COLOR_WATER);
+  // Ziel-Zone (Y=20-23): Gras - 4 Reihen
+  lcd.fillRect(0, PLAY_OFFSET_Y, SCREEN_WIDTH, 4 * CELL_SIZE, COLOR_GRASS);
 
-  // Sichere Zone (Y=7): Gras - 1 Reihe
-  lcd.fillRect(0, PLAY_OFFSET_Y + 16 * CELL_SIZE, SCREEN_WIDTH, 1 * CELL_SIZE, COLOR_GRASS);
+  // Fluss (Y=12-19): Blau - 8 Reihen = 1/3 der Spielhöhe (80px)
+  lcd.fillRect(0, PLAY_OFFSET_Y + 4 * CELL_SIZE, SCREEN_WIDTH, 8 * CELL_SIZE, COLOR_WATER);
 
-  // Straße (Y=1-6, breitere Straße): Grau - 6 Reihen
-  lcd.fillRect(0, PLAY_OFFSET_Y + 17 * CELL_SIZE, SCREEN_WIDTH, 6 * CELL_SIZE, COLOR_ROAD);
+  // Erholungsspuren (Y=10-11): Gras - 2 Reihen (sichere Zone)
+  lcd.fillRect(0, PLAY_OFFSET_Y + 12 * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
 
-  // Startzone (Y=0): Gras - 1 Reihe
-  lcd.fillRect(0, PLAY_OFFSET_Y + 23 * CELL_SIZE, SCREEN_WIDTH, 1 * CELL_SIZE, COLOR_GRASS);
+  // Straße (Y=2-9): Grau - 8 Reihen = 1/3 der Spielhöhe (80px)
+  lcd.fillRect(0, PLAY_OFFSET_Y + 14 * CELL_SIZE, SCREEN_WIDTH, 8 * CELL_SIZE, COLOR_ROAD);
+
+  // Startzone (Y=0-1): Gras - 2 Reihen
+  lcd.fillRect(0, PLAY_OFFSET_Y + 22 * CELL_SIZE, SCREEN_WIDTH, 2 * CELL_SIZE, COLOR_GRASS);
 }
 
 void drawCars() {
@@ -651,8 +640,8 @@ void eraseFrog() {
 
   // Hintergrundfarbe abhängig von Zone
   uint16_t bgColor = COLOR_GRASS;
-  if ((int)oldFrogY >= 1 && (int)oldFrogY <= 6) bgColor = COLOR_ROAD;  // Breitere Straße
-  else if ((int)oldFrogY >= 8 && (int)oldFrogY <= 13) bgColor = COLOR_WATER;  // Breiterer Fluss
+  if ((int)oldFrogY >= 2 && (int)oldFrogY <= 9) bgColor = COLOR_ROAD;  // Straßenzone
+  else if ((int)oldFrogY >= 12 && (int)oldFrogY <= 19) bgColor = COLOR_WATER;  // Flusszone
 
   lcd.fillRect(screenX, screenY, CELL_SIZE, CELL_SIZE, bgColor);
 }
