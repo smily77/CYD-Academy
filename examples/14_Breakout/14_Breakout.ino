@@ -302,15 +302,12 @@ void updatePaddle() {
   int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
   newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
 
-  // Deadzone: Nur bewegen wenn Änderung > 5 Pixel (erhöht wegen mehr ADC-Rauschen bei DB_0)
+  // Deadzone: Nur bewegen wenn Änderung > 5 Pixel (verhindert Flackern durch ADC-Rauschen)
   if (abs(newX - paddle.x) > 5) {
-    oldPaddleX = paddle.x;
     paddle.x = newX;
 
     // Ball bewegen wenn festgeklebt
     if (ball.stuck) {
-      oldBallX = ball.x;  // Alte Position merken BEVOR wir bewegen
-      oldBallY = ball.y;  // Auch Y-Position merken
       ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
       // ball.y bleibt gleich (klebt am Schläger)
     }
@@ -495,6 +492,8 @@ void drawGame() {
     lcd.fillRect(oldPaddleX, paddle.y, paddle.w, paddle.h, COLOR_BG);
     // Neuen zeichnen
     lcd.fillRect(paddle.x, paddle.y, paddle.w, paddle.h, paddle.color);
+    // Position aktualisieren NACH dem Zeichnen (wichtig!)
+    oldPaddleX = paddle.x;
   }
 
   // Ball zeichnen - NUR wenn er sich bewegt hat
@@ -503,5 +502,8 @@ void drawGame() {
     lcd.fillRect(oldBallX, oldBallY, ball.size, ball.size, COLOR_BG);
     // Neue Position zeichnen
     lcd.fillRect(ball.x, ball.y, ball.size, ball.size, ball.color);
+    // Position aktualisieren NACH dem Zeichnen (wichtig!)
+    oldBallX = ball.x;
+    oldBallY = ball.y;
   }
 }
