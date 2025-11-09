@@ -326,11 +326,13 @@ void handleInput() {
 // ===== UPDATE =====
 
 void updateCars() {
+  lcd.startWrite();  // Batch-Modus für bessere Performance
+
   for (int i = 0; i < MAX_CARS; i++) {
     if (!cars[i].active) continue;
 
-    // Alte Position löschen
-    eraseCar(i);
+    // Alte Position merken
+    float oldX = cars[i].x;
 
     // Bewegen
     cars[i].x += cars[i].speed;
@@ -338,21 +340,45 @@ void updateCars() {
     // Screen wrapping
     if (cars[i].speed > 0 && cars[i].x >= GRID_WIDTH) {
       cars[i].x = -cars[i].w;
+      oldX = cars[i].x;  // Nach wrap keine alte Position löschen
     } else if (cars[i].speed < 0 && cars[i].x + cars[i].w <= 0) {
       cars[i].x = GRID_WIDTH;
+      oldX = cars[i].x;  // Nach wrap keine alte Position löschen
+    }
+
+    // Nur die "Lücke" löschen (alte Position ohne neue Überlappung)
+    int oldScreenX = (int)oldX * CELL_SIZE;
+    int newScreenX = (int)cars[i].x * CELL_SIZE;
+    int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - cars[i].lane - cars[i].h) * CELL_SIZE;
+    int height = cars[i].h * CELL_SIZE;
+
+    // Lücke links/rechts löschen statt ganzes Auto
+    if (cars[i].speed > 0 && newScreenX > oldScreenX) {
+      // Nach rechts: Lücke links löschen
+      int gapWidth = newScreenX - oldScreenX;
+      lcd.fillRect(oldScreenX, screenY, gapWidth, height, COLOR_ROAD);
+    } else if (cars[i].speed < 0 && newScreenX < oldScreenX) {
+      // Nach links: Lücke rechts löschen
+      int width = cars[i].w * CELL_SIZE;
+      int gapWidth = oldScreenX - newScreenX;
+      lcd.fillRect(oldScreenX + width - gapWidth, screenY, gapWidth, height, COLOR_ROAD);
     }
 
     // Neue Position zeichnen
     drawCar(i);
   }
+
+  lcd.endWrite();  // Batch abschließen
 }
 
 void updateLogs() {
+  lcd.startWrite();  // Batch-Modus für bessere Performance
+
   for (int i = 0; i < MAX_LOGS; i++) {
     if (!logs[i].active) continue;
 
-    // Alte Position löschen
-    eraseLog(i);
+    // Alte Position merken
+    float oldX = logs[i].x;
 
     // Bewegen
     logs[i].x += logs[i].speed;
@@ -360,13 +386,35 @@ void updateLogs() {
     // Screen wrapping
     if (logs[i].speed > 0 && logs[i].x >= GRID_WIDTH) {
       logs[i].x = -logs[i].w;
+      oldX = logs[i].x;  // Nach wrap keine alte Position löschen
     } else if (logs[i].speed < 0 && logs[i].x + logs[i].w <= 0) {
       logs[i].x = GRID_WIDTH;
+      oldX = logs[i].x;  // Nach wrap keine alte Position löschen
+    }
+
+    // Nur die "Lücke" löschen (alte Position ohne neue Überlappung)
+    int oldScreenX = (int)oldX * CELL_SIZE;
+    int newScreenX = (int)logs[i].x * CELL_SIZE;
+    int screenY = PLAY_OFFSET_Y + (GRID_HEIGHT - logs[i].lane - logs[i].h) * CELL_SIZE;
+    int height = logs[i].h * CELL_SIZE;
+
+    // Lücke links/rechts löschen statt ganzen Baumstamm
+    if (logs[i].speed > 0 && newScreenX > oldScreenX) {
+      // Nach rechts: Lücke links löschen
+      int gapWidth = newScreenX - oldScreenX;
+      lcd.fillRect(oldScreenX, screenY, gapWidth, height, COLOR_WATER);
+    } else if (logs[i].speed < 0 && newScreenX < oldScreenX) {
+      // Nach links: Lücke rechts löschen
+      int width = logs[i].w * CELL_SIZE;
+      int gapWidth = oldScreenX - newScreenX;
+      lcd.fillRect(oldScreenX + width - gapWidth, screenY, gapWidth, height, COLOR_WATER);
     }
 
     // Neue Position zeichnen
     drawLog(i);
   }
+
+  lcd.endWrite();  // Batch abschließen
 
   // Frosch auf Baumstamm mitbewegen (Y=12-19)
   if (frog.alive && (int)frog.y >= 12 && (int)frog.y <= 19) {
