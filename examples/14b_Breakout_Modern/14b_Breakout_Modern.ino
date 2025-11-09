@@ -254,7 +254,7 @@ void initGame() {
   paddle.x = SCREEN_WIDTH / 2 - paddle.w / 2;
   paddle.y = SCREEN_HEIGHT - 25;
   paddle.color = COLOR_PADDLE;
-  oldPaddleX = paddle.x;
+  oldPaddleX = -1;  // Ungültiger Wert damit Schläger beim ersten Frame gezeichnet wird
 
   // Ball
   resetBall();
@@ -312,8 +312,9 @@ void resetBall() {
   ball.vx = 0;
   ball.vy = 0;
 
-  oldBallX = ball.x;
-  oldBallY = ball.y;
+  // Ungültige Werte damit Ball beim ersten Frame gezeichnet wird
+  oldBallX = -1;
+  oldBallY = -1;
 }
 
 void launchBall() {
@@ -322,31 +323,38 @@ void launchBall() {
   float angle = random(30, 150);
   float rad = angle * 3.14159 / 180.0;
 
-  // Langsamer Start, wird mit Score schneller
-  float baseSpeed = 2.5;
-  float speedBoost = score / 100.0;  // +1.0 pro 100 Punkte
+  // Langsamer Start, wird mit Level schneller (nicht mit Score)
+  float baseSpeed = 1.5;  // Langsamer Start
+  float speedBoost = (level - 1) * 0.3;  // +0.3 pro Level
   float speed = baseSpeed + speedBoost;
-  speed = constrain(speed, 2.5, 5.0);  // Max 5.0
+  speed = constrain(speed, 1.5, 4.0);  // Max 4.0
 
   ball.vx = cos(rad) * speed;
   ball.vy = -abs(sin(rad)) * speed;
 
-  Serial.printf("Ball gestartet! Speed: %.1f\n", speed);
+  Serial.printf("Ball gestartet! Speed: %.1f (Level %d)\n", speed, level);
 }
 
 // ===== UPDATE FUNKTIONEN =====
 
 void updatePaddle() {
-  oldPaddleX = paddle.x;
-
-  // Analog-Wert lesen (Mapping wie in Pong)
+  // Analog-Wert lesen (0-4095 vom ESP32 ADC mit ADC_ATTEN_DB_0 für 0-1V)
   int potValue = analogRead(POT_PADDLE);
-  paddle.x = map(potValue, 1000, 0, 0, SCREEN_WIDTH - paddle.w);
-  paddle.x = constrain(paddle.x, 0, SCREEN_WIDTH - paddle.w);
+  int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
+  newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
 
-  if (ball.stuck) {
-    ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
-    oldBallX = ball.x;
+  // Deadzone: Nur bewegen wenn Änderung > 5 Pixel (verhindert Flackern durch ADC-Rauschen)
+  if (abs(newX - paddle.x) > 5) {
+    paddle.x = newX;
+
+    // Ball bewegen wenn festgeklebt
+    // WICHTIG: oldBallX/Y MUSS vor ball.x Änderung gesetzt werden!
+    if (ball.stuck) {
+      oldBallX = ball.x;  // Alte Position speichern
+      oldBallY = ball.y;  // Alte Position speichern
+      ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
+      // ball.y bleibt gleich (klebt am Schläger)
+    }
   }
 }
 
@@ -625,32 +633,32 @@ void drawModernUI() {
 
   lcd.setTextSize(2);
 
-  // Score
+  // Score (kompakter für hohe Werte)
   lcd.setTextColor(COLOR_SHADOW);
-  lcd.setCursor(12, 7);
-  lcd.printf("Score:%d", score);
+  lcd.setCursor(7, 7);
+  lcd.printf("S:%d", score);  // Kürzere Bezeichnung für mehr Platz
 
   lcd.setTextColor(COLOR_NEON_YELLOW);
-  lcd.setCursor(10, 5);
-  lcd.printf("Score:%d", score);
+  lcd.setCursor(5, 5);
+  lcd.printf("S:%d", score);
 
-  // Level
+  // Level (Mitte - mehr Abstand)
   lcd.setTextColor(COLOR_SHADOW);
-  lcd.setCursor(SCREEN_WIDTH/2 - 38, 7);
-  lcd.printf("Lv:%d", level);
+  lcd.setCursor(137, 7);
+  lcd.printf("L:%d", level);
 
   lcd.setTextColor(COLOR_NEON_CYAN);
-  lcd.setCursor(SCREEN_WIDTH/2 - 40, 5);
-  lcd.printf("Lv:%d", level);
+  lcd.setCursor(135, 5);
+  lcd.printf("L:%d", level);
 
   // Lives
   lcd.setTextColor(COLOR_SHADOW);
-  lcd.setCursor(SCREEN_WIDTH - 78, 7);
-  lcd.printf("x%d", lives);
+  lcd.setCursor(SCREEN_WIDTH - 68, 7);
+  lcd.printf("Lvs:%d", lives);
 
   lcd.setTextColor(COLOR_NEON_RED);
-  lcd.setCursor(SCREEN_WIDTH - 80, 5);
-  lcd.printf("x%d", lives);
+  lcd.setCursor(SCREEN_WIDTH - 70, 5);
+  lcd.printf("Lvs:%d", lives);
 
   // Leben-Symbole (Herzen)
   for (int i = 0; i < lives; i++) {
@@ -659,8 +667,8 @@ void drawModernUI() {
 }
 
 void drawGame() {
-  // Schläger zeichnen
-  if (oldPaddleX != paddle.x || ball.stuck) {
+  // Schläger zeichnen - NUR wenn er sich bewegt hat (verhindert Flackern)
+  if (oldPaddleX != paddle.x) {
     // Alten Schläger löschen
     for (int y = 0; y < paddle.h + 4; y++) {
       uint16_t bgColor = lerpColor(COLOR_BG_TOP, COLOR_BG_BOTTOM, (float)(paddle.y + y) / SCREEN_HEIGHT);
@@ -688,23 +696,25 @@ void drawGame() {
       lcd.drawRect(paddle.x - 1, paddle.y - 1, paddle.w + 2, paddle.h + 2, glowColor);
     }
 
+    // Position aktualisieren NACH dem Zeichnen (wichtig!)
     oldPaddleX = paddle.x;
   }
 
-  // Trail zeichnen
-  if (!ball.stuck) {
-    for (int i = 0; i < TRAIL_LENGTH; i++) {
-      if (trail[i].active) {
-        int age = (trailIndex - i + TRAIL_LENGTH) % TRAIL_LENGTH;
-        float alpha = 1.0 - (float)age / TRAIL_LENGTH;
-        uint16_t color = dimColor(COLOR_BALL, alpha * 0.4);
-        lcd.fillCircle(trail[i].x, trail[i].y, 2, color);
+  // Ball zeichnen - NUR wenn er sich bewegt hat
+  if (oldBallX != ball.x || oldBallY != ball.y) {
+    // Trail zeichnen
+    if (!ball.stuck) {
+      for (int i = 0; i < TRAIL_LENGTH; i++) {
+        if (trail[i].active) {
+          int age = (trailIndex - i + TRAIL_LENGTH) % TRAIL_LENGTH;
+          float alpha = 1.0 - (float)age / TRAIL_LENGTH;
+          uint16_t color = dimColor(COLOR_BALL, alpha * 0.4);
+          lcd.fillCircle(trail[i].x, trail[i].y, 2, color);
+        }
       }
     }
-  }
 
-  // Ball löschen (alte Position)
-  if (!ball.stuck) {
+    // Ball löschen (alte Position) - IMMER, auch wenn am Schläger
     int r = ball.size + 3;
     for (int dy = -r; dy <= r; dy++) {
       for (int dx = -r; dx <= r; dx++) {
@@ -716,24 +726,28 @@ void drawGame() {
         }
       }
     }
+
+    // Ball mit Glow zeichnen
+    int centerX = ball.x + ball.size/2;
+    int centerY = ball.y + ball.size/2;
+
+    // Glow-Ringe
+    for (int r = ball.size + 2; r >= ball.size/2; r--) {
+      float intensity = 1.0 - (float)(r - ball.size/2) / (ball.size + 2);
+      uint16_t glowColor = dimColor(COLOR_BALL, intensity * 0.6);
+      lcd.drawCircle(centerX, centerY, r, glowColor);
+    }
+
+    // Haupt-Ball
+    lcd.fillCircle(centerX, centerY, ball.size/2, COLOR_BALL);
+
+    // Highlight
+    lcd.fillCircle(centerX - ball.size/4, centerY - ball.size/4, ball.size/4, COLOR_HIGHLIGHT);
+
+    // Position aktualisieren NACH dem Zeichnen (wichtig!)
+    oldBallX = ball.x;
+    oldBallY = ball.y;
   }
-
-  // Ball mit Glow zeichnen
-  int centerX = ball.x + ball.size/2;
-  int centerY = ball.y + ball.size/2;
-
-  // Glow-Ringe
-  for (int r = ball.size + 2; r >= ball.size/2; r--) {
-    float intensity = 1.0 - (float)(r - ball.size/2) / (ball.size + 2);
-    uint16_t glowColor = dimColor(COLOR_BALL, intensity * 0.6);
-    lcd.drawCircle(centerX, centerY, r, glowColor);
-  }
-
-  // Haupt-Ball
-  lcd.fillCircle(centerX, centerY, ball.size/2, COLOR_BALL);
-
-  // Highlight
-  lcd.fillCircle(centerX - ball.size/4, centerY - ball.size/4, ball.size/4, COLOR_HIGHLIGHT);
 }
 
 // ===== HELPER FUNKTIONEN =====
