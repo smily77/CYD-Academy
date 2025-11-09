@@ -35,12 +35,12 @@
 // Auskommentieren für Tasten-Steuerung, einkommentieren für Poti-Steuerung
 // #define USE_POT_ROTATION
 
-// Pins
-#define POT_ROTATION 34  // Potentiometer für Rotation
-#define BTN_LEFT   5
-#define BTN_RIGHT  16
-#define BTN_SHOOT  17
-#define BTN_THRUST 18
+// Pin-Mapping: Physische Pins -> Logische Namen
+#define POT_ROTATION  potiLeft
+#define BTN_LEFT      tasteB
+#define BTN_RIGHT     tasteC
+#define BTN_SHOOT     tasteA
+#define BTN_THRUST    tasteD
 
 // Display Objekt
 LGFX lcd;

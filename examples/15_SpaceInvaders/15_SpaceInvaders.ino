@@ -24,11 +24,11 @@
 
 #include <CYD_Display_Config.h>
 
-// Button Pins
-#define BTN_LEFT   5
-#define BTN_RIGHT  16
-#define BTN_SHOOT  17
-#define BTN_PAUSE  18
+// Pin-Mapping: Physische Pins -> Logische Namen
+#define BTN_LEFT   tasteB
+#define BTN_RIGHT  tasteC
+#define BTN_SHOOT  tasteA
+#define BTN_PAUSE  tasteD
 
 // Display Objekt
 LGFX lcd;

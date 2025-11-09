@@ -23,14 +23,12 @@
 
 #include <CYD_Display_Config.h>
 
-// Analog Input Pins
-#define POT_LEFT  34
-#define POT_RIGHT 35
-
-// Taster Pins (Active LOW)
-#define BUTTON_AUTO_ON      16
-#define BUTTON_AUTO_OFF     5
-#define BUTTON_RESET_SCORE  17
+// Pin-Mapping: Physische Pins -> Logische Namen
+#define POT_LEFT            potiLeft
+#define POT_RIGHT           potiRight
+#define BUTTON_AUTO_ON      tasteC
+#define BUTTON_AUTO_OFF     tasteB
+#define BUTTON_RESET_SCORE  tasteA
 
 // Display Objekt
 LGFX lcd;
