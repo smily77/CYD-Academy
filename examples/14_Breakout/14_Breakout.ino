@@ -302,7 +302,7 @@ void updatePaddle() {
 
   // Analog-Wert lesen (0-4095 vom ESP32 ADC)
   int potValue = analogRead(POT_PADDLE);
-  paddle.x = map(potValue, 0, 4095, 0, SCREEN_WIDTH - paddle.w);
+  paddle.x = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
 
   // Grenzen
   paddle.x = constrain(paddle.x, 0, SCREEN_WIDTH - paddle.w);

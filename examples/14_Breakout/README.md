@@ -275,7 +275,7 @@ lives = 5;  // statt 3
 - Software-Filter hinzufügen:
   ```cpp
   static int lastPos = 0;
-  int newPos = map(potValue, 0, 4095, 0, SCREEN_WIDTH - paddle.w);
+  int newPos = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
   paddle.x = (lastPos * 3 + newPos) / 4;  // Glättung
   lastPos = paddle.x;
   ```
