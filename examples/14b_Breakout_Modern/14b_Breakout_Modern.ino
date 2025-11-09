@@ -702,25 +702,17 @@ void drawGame() {
 
   // Ball zeichnen - NUR wenn er sich bewegt hat
   if (oldBallX != ball.x || oldBallY != ball.y) {
-    // Ball löschen (alte Position) - IMMER, aber nur kleiner Bereich
-    // Nur Ball selbst löschen, NICHT Glow-Bereich (sonst Paddle/Bricks gelöscht)
+    // Ball löschen (alte Position) - SEHR SCHNELLE Methode mit fillCircle()
+    // Nur Ball-Kern löschen, NICHT Glow (sonst Paddle/Bricks gelöscht)
     int centerX = oldBallX + ball.size/2;
     int centerY = oldBallY + ball.size/2;
-    int r = ball.size/2 + 2;  // Nur Ball + kleiner Puffer
 
-    // Ball-Bereich löschen (kreisförmig, klein)
-    for (int dy = -r; dy <= r; dy++) {
-      for (int dx = -r; dx <= r; dx++) {
-        if (dx*dx + dy*dy <= r*r) {  // Nur im Kreis
-          int px = centerX + dx;
-          int py = centerY + dy;
-          if (px >= 0 && px < SCREEN_WIDTH && py >= 0 && py < SCREEN_HEIGHT) {
-            uint16_t bgColor = lerpColor(COLOR_BG_TOP, COLOR_BG_BOTTOM, (float)py / SCREEN_HEIGHT);
-            lcd.drawPixel(px, py, bgColor);
-          }
-        }
-      }
-    }
+    // Durchschnittliche Hintergrundfarbe an alter Position (Gradient-Mittelwert)
+    uint16_t bgColor = lerpColor(COLOR_BG_TOP, COLOR_BG_BOTTOM, (float)centerY / SCREEN_HEIGHT);
+
+    // Ball-Kern löschen - SEHR KLEIN, nur Hauptball ohne Glow!
+    // fillCircle ist 100x schneller als drawPixel-Schleife!
+    lcd.fillCircle(centerX, centerY, ball.size/2 + 1, bgColor);
 
     // Trail zeichnen (nur wenn Ball fliegt)
     if (!ball.stuck) {
