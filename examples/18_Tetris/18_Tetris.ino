@@ -23,11 +23,16 @@
 
 #include <CYD_Display_Config.h>
 
-// Pin-Mapping: Physische Pins -> Logische Namen
-#define BTN_LEFT   tasteB
-#define BTN_DOWN   tasteD
-#define BTN_RIGHT  tasteC
-#define BTN_ROTATE tasteA
+// Pin-Mapping: Physische Pins -> Logische Namen (Portrait-Modus!)
+// Im Portrait-Modus (setRotation(0)) sind die Tasten um 90° gedreht:
+// - tasteA (war oben) → jetzt links
+// - tasteB (war links) → jetzt unten
+// - tasteC (war rechts) → jetzt oben (Rotate)
+// - tasteD (war unten) → jetzt rechts
+#define BTN_LEFT   tasteA
+#define BTN_DOWN   tasteB
+#define BTN_RIGHT  tasteD
+#define BTN_ROTATE tasteC
 
 // Display Objekt
 LGFX lcd;
