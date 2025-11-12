@@ -23,7 +23,7 @@
   Hinweis:
   - Alle Spiele sind in der CYD_Games Library gekapselt
   - Du kannst jedes Spiel auch einzeln kompilieren (siehe examples/12_Pong/, 13_Snake/, etc.)
-  - ACHTUNG: Tetris ist Portrait-Modus und kann nur standalone gespielt werden!
+  - Tetris wechselt automatisch zu Portrait-Modus (240x320)
 */
 
 #include <CYD_Display_Config.h>
@@ -33,7 +33,7 @@
 #include <SpaceInvadersGame.h>
 #include <AsteroidsGame.h>
 #include <FroggerGame.h>
-// Tetris nicht inkludiert - Portrait-Modus inkompatibel
+#include <TetrisGame.h>
 
 // Display Objekt
 LGFX lcd;
@@ -45,7 +45,7 @@ BreakoutGame breakoutGame;
 SpaceInvadersGame spaceInvadersGame;
 AsteroidsGame asteroidsGame;
 FroggerGame froggerGame;
-// Tetris Game nicht hier - Portrait-Modus inkompatibel
+TetrisGame tetrisGame;
 
 // Game State
 enum GameState {
@@ -55,10 +55,12 @@ enum GameState {
   GAME_BREAKOUT,
   GAME_SPACEINVADERS,
   GAME_ASTEROIDS,
-  GAME_FROGGER
+  GAME_FROGGER,
+  GAME_TETRIS
 };
 
 GameState currentState = MENU;
+GameState lastState = MENU;
 bool lastTouchState = false;
 
 // Menu-Layout
@@ -66,9 +68,9 @@ bool lastTouchState = false;
 #define SCREEN_HEIGHT 240
 
 #define MENU_ITEM_WIDTH  280
-#define MENU_ITEM_HEIGHT 30  // Kleiner für mehr Spiele
-#define MENU_ITEM_SPACING 5  // Weniger Abstand
-#define MENU_START_Y 35
+#define MENU_ITEM_HEIGHT 26  // Optimiert für 7 Spiele
+#define MENU_ITEM_SPACING 3  // Minimaler Abstand
+#define MENU_START_Y 33
 
 // Farben
 #define COLOR_BG        0x0000  // Schwarz
@@ -91,7 +93,8 @@ MenuItem menuItems[] = {
   {"BREAKOUT", "Zerstöre alle Steine!", 0xF800, GAME_BREAKOUT},
   {"SPACE INVADERS", "Verteidige gegen Aliens!", 0xF81F, GAME_SPACEINVADERS},
   {"ASTEROIDS", "Zerstöre Asteroids!", 0x07FF, GAME_ASTEROIDS},
-  {"FROGGER", "Überquere die Strasse!", 0xFFE0, GAME_FROGGER}
+  {"FROGGER", "Überquere die Strasse!", 0xFFE0, GAME_FROGGER},
+  {"TETRIS", "Puzzle-Klassiker!", 0xF81F, GAME_TETRIS}
 };
 
 const int menuItemCount = sizeof(menuItems) / sizeof(menuItems[0]);
@@ -123,6 +126,22 @@ void setup() {
 }
 
 void loop() {
+  // Bei Wechsel von/zu Tetris: Rotation ändern
+  if (currentState != lastState) {
+    if (currentState == GAME_TETRIS && lastState != GAME_TETRIS) {
+      // Wechsel ZU Tetris: Portrait-Modus
+      lcd.setRotation(0);
+      lcd.fillScreen(COLOR_BG);
+      tetrisGame.init(&lcd);
+    } else if (lastState == GAME_TETRIS && currentState == MENU) {
+      // Wechsel VON Tetris zurück zum Menu: Landscape-Modus
+      lcd.setRotation(1);
+      lcd.fillScreen(COLOR_BG);
+      drawMenu();
+    }
+    lastState = currentState;
+  }
+
   switch (currentState) {
     case MENU:
       handleMenu();
@@ -177,7 +196,14 @@ void loop() {
       if (froggerGame.isGameOver()) {
         delay(2000);
         currentState = MENU;
-        drawMenu();
+      }
+      break;
+
+    case GAME_TETRIS:
+      tetrisGame.update();
+      if (tetrisGame.isGameOver()) {
+        delay(2000);
+        currentState = MENU;
       }
       break;
   }
@@ -267,7 +293,13 @@ void handleMenuTouch(int x, int y) {
       // Spiel starten
       currentState = menuItems[i].state;
 
-      // Display löschen und Spiel initialisieren
+      // Tetris wird in loop() mit Rotation-Wechsel behandelt
+      if (currentState == GAME_TETRIS) {
+        delay(300);  // Debounce
+        return;
+      }
+
+      // Display löschen und Spiel initialisieren (für Landscape-Spiele)
       lcd.fillScreen(COLOR_BG);
 
       switch (currentState) {
