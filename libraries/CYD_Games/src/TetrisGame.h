@@ -2,14 +2,17 @@
   TetrisGame.h - Encapsulated Tetris Game
   Teil der CYD_Games Library
 
-  WICHTIG: Dieses Spiel verwendet Portrait-Modus (setRotation(0))!
+  WICHTIG:
+  - Dieses Spiel verwendet Portrait-Modus (setRotation(0))!
+  - CYD_Display_Config.h muss VOR diesem Header inkludiert werden!
 */
 
 #ifndef TETRISGAME_H
 #define TETRISGAME_H
 
 #include <Arduino.h>
-#include <CYD_Display_Config.h>
+// Forward declaration - LGFX muss bereits definiert sein
+class LGFX;
 
 // Pin-Mapping (muss VOR der Klasse definiert sein)
 // Portrait-Modus: Tasten um 90° gegen Uhrzeigersinn gedreht

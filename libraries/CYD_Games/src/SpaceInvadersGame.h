@@ -1,13 +1,16 @@
 /*
   SpaceInvadersGame.h - Encapsulated Space Invaders Game
   Teil der CYD_Games Library
+
+  WICHTIG: CYD_Display_Config.h muss VOR diesem Header inkludiert werden!
 */
 
 #ifndef SPACEINVADERSGAME_H
 #define SPACEINVADERSGAME_H
 
 #include <Arduino.h>
-#include <CYD_Display_Config.h>
+// Forward declaration - LGFX muss bereits definiert sein
+class LGFX;
 
 // Pin-Mapping (muss VOR der Klasse definiert sein)
 #define SI_BTN_LEFT   tasteB

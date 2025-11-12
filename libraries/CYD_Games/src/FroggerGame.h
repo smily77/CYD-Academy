@@ -1,13 +1,16 @@
 /*
   FroggerGame.h - Encapsulated Frogger Game
   Teil der CYD_Games Library
+
+  WICHTIG: CYD_Display_Config.h muss VOR diesem Header inkludiert werden!
 */
 
 #ifndef FROGGERGAME_H
 #define FROGGERGAME_H
 
 #include <Arduino.h>
-#include <CYD_Display_Config.h>
+// Forward declaration - LGFX muss bereits definiert sein
+class LGFX;
 
 // Pin-Mapping (muss VOR der Klasse definiert sein)
 #define FRG_BTN_LEFT   tasteB
