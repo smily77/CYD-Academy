@@ -16,6 +16,13 @@
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
 
+// Pin-Mapping (muss VOR der Klasse definiert sein)
+#define POT_LEFT            potiLeft
+#define POT_RIGHT           potiRight
+#define BUTTON_AUTO_ON      tasteC
+#define BUTTON_AUTO_OFF     tasteB
+#define BUTTON_RESET_SCORE  tasteA
+
 class PongGame {
 public:
   // Konstruktor
@@ -112,13 +119,6 @@ private:
   static const uint16_t COLOR_PADDLE_AUTO = 0xF800;
   static const uint16_t COLOR_BALL = 0xFFE0;
   static const uint16_t COLOR_LINE = 0x4208;
-
-  // Pin-Mapping
-  #define POT_LEFT            potiLeft
-  #define POT_RIGHT           potiRight
-  #define BUTTON_AUTO_ON      tasteC
-  #define BUTTON_AUTO_OFF     tasteB
-  #define BUTTON_RESET_SCORE  tasteA
 
   // Strukturen
   struct Paddle {

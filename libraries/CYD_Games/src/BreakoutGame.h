@@ -16,6 +16,11 @@
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
 
+// Pin-Mapping (muss VOR der Klasse definiert sein)
+#define POT_PADDLE  potiLeft
+#define BTN_START   tasteA
+#define BTN_PAUSE   tasteD
+
 class BreakoutGame {
 public:
   // Konstruktor
@@ -149,11 +154,6 @@ private:
   static const uint16_t COLOR_BRICK_GREEN = 0x07E0;
   static const uint16_t COLOR_BRICK_CYAN = 0x07FF;
   static const uint16_t COLOR_BRICK_BLUE = 0x001F;
-
-  // Pin-Mapping
-  #define POT_PADDLE  potiLeft
-  #define BTN_START   tasteA
-  #define BTN_PAUSE   tasteD
 
   // Strukturen
   struct Paddle {

@@ -16,6 +16,12 @@
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
 
+// Pin-Mapping (muss VOR der Klasse definiert sein)
+#define BTN_LEFT   tasteB
+#define BTN_UP     tasteA
+#define BTN_RIGHT  tasteC
+#define BTN_DOWN   tasteD
+
 class SnakeGame {
 public:
   // Konstruktor
@@ -123,12 +129,6 @@ private:
   static const uint16_t COLOR_FOOD = 0xF800;    // Rot
   static const uint16_t COLOR_WALL = 0x4208;    // Dunkelgrau
   static const uint16_t COLOR_TEXT = 0xFFFF;    // Weiß
-
-  // Button Pins (über CYD_Display_Config.h definiert)
-  #define BTN_LEFT   tasteB
-  #define BTN_UP     tasteA
-  #define BTN_RIGHT  tasteC
-  #define BTN_DOWN   tasteD
 
   // Richtungen
   enum Direction {
