@@ -10,6 +10,10 @@
   - Pong (Klassisches 2-Spieler Paddle-Spiel)
   - Snake (Klassische Schlange)
   - Breakout (Brick-Breaker)
+  - Space Invaders (Alien-Shooter)
+  - Asteroids (Weltraum-Shooter)
+  - Frogger (Straßen-Überquerungs-Klassiker)
+  - Tetris (Puzzle-Klassiker - Portrait-Modus!)
 
   Verwendung:
   1. Touch ein Spiel im Menu
@@ -18,13 +22,18 @@
 
   Hinweis:
   - Alle Spiele sind in der CYD_Games Library gekapselt
-  - Du kannst jedes Spiel auch einzeln kompilieren (siehe examples/12_Pong/, 13_Snake/, 14_Breakout/)
+  - Du kannst jedes Spiel auch einzeln kompilieren (siehe examples/12_Pong/, 13_Snake/, etc.)
+  - ACHTUNG: Tetris ist Portrait-Modus und kann nur standalone gespielt werden!
 */
 
 #include <CYD_Display_Config.h>
 #include <SnakeGame.h>
 #include <PongGame.h>
 #include <BreakoutGame.h>
+#include <SpaceInvadersGame.h>
+#include <AsteroidsGame.h>
+#include <FroggerGame.h>
+// Tetris nicht inkludiert - Portrait-Modus inkompatibel
 
 // Display Objekt
 LGFX lcd;
@@ -33,13 +42,20 @@ LGFX lcd;
 SnakeGame snakeGame;
 PongGame pongGame;
 BreakoutGame breakoutGame;
+SpaceInvadersGame spaceInvadersGame;
+AsteroidsGame asteroidsGame;
+FroggerGame froggerGame;
+// Tetris Game nicht hier - Portrait-Modus inkompatibel
 
 // Game State
 enum GameState {
   MENU,
   GAME_SNAKE,
   GAME_PONG,
-  GAME_BREAKOUT
+  GAME_BREAKOUT,
+  GAME_SPACEINVADERS,
+  GAME_ASTEROIDS,
+  GAME_FROGGER
 };
 
 GameState currentState = MENU;
@@ -50,9 +66,9 @@ bool lastTouchState = false;
 #define SCREEN_HEIGHT 240
 
 #define MENU_ITEM_WIDTH  280
-#define MENU_ITEM_HEIGHT 50
-#define MENU_ITEM_SPACING 15
-#define MENU_START_Y 40
+#define MENU_ITEM_HEIGHT 30  // Kleiner für mehr Spiele
+#define MENU_ITEM_SPACING 5  // Weniger Abstand
+#define MENU_START_Y 35
 
 // Farben
 #define COLOR_BG        0x0000  // Schwarz
@@ -72,7 +88,10 @@ struct MenuItem {
 MenuItem menuItems[] = {
   {"PONG", "2-Spieler Paddle-Klassiker", 0x07FF, GAME_PONG},
   {"SNAKE", "Sammle Food, werde länger!", 0x07E0, GAME_SNAKE},
-  {"BREAKOUT", "Zerstöre alle Steine!", 0xF800, GAME_BREAKOUT}
+  {"BREAKOUT", "Zerstöre alle Steine!", 0xF800, GAME_BREAKOUT},
+  {"SPACE INVADERS", "Verteidige gegen Aliens!", 0xF81F, GAME_SPACEINVADERS},
+  {"ASTEROIDS", "Zerstöre Asteroids!", 0x07FF, GAME_ASTEROIDS},
+  {"FROGGER", "Überquere die Strasse!", 0xFFE0, GAME_FROGGER}
 };
 
 const int menuItemCount = sizeof(menuItems) / sizeof(menuItems[0]);
@@ -128,8 +147,34 @@ void loop() {
 
     case GAME_BREAKOUT:
       breakoutGame.update();
-      // Zurück zum Menu bei Game Over
       if (breakoutGame.isGameOver()) {
+        delay(2000);
+        currentState = MENU;
+        drawMenu();
+      }
+      break;
+
+    case GAME_SPACEINVADERS:
+      spaceInvadersGame.update();
+      if (spaceInvadersGame.isGameOver()) {
+        delay(2000);
+        currentState = MENU;
+        drawMenu();
+      }
+      break;
+
+    case GAME_ASTEROIDS:
+      asteroidsGame.update();
+      if (asteroidsGame.isGameOver()) {
+        delay(2000);
+        currentState = MENU;
+        drawMenu();
+      }
+      break;
+
+    case GAME_FROGGER:
+      froggerGame.update();
+      if (froggerGame.isGameOver()) {
         delay(2000);
         currentState = MENU;
         drawMenu();
@@ -162,20 +207,20 @@ void drawMenu() {
     lcd.fillRect(x, y, MENU_ITEM_WIDTH, MENU_ITEM_HEIGHT, COLOR_MENU_ITEM);
     lcd.drawRect(x, y, MENU_ITEM_WIDTH, MENU_ITEM_HEIGHT, COLOR_BORDER);
 
-    // Farbiges Symbol
-    lcd.fillRect(x + 10, y + 10, 30, 30, menuItems[i].color);
-    lcd.drawRect(x + 10, y + 10, 30, 30, COLOR_TEXT);
+    // Farbiges Symbol (kleiner)
+    lcd.fillRect(x + 5, y + 5, 20, 20, menuItems[i].color);
+    lcd.drawRect(x + 5, y + 5, 20, 20, COLOR_TEXT);
 
     // Spiel-Name
-    lcd.setTextSize(2);
+    lcd.setTextSize(1);
     lcd.setTextColor(COLOR_TEXT, COLOR_MENU_ITEM);
-    lcd.setCursor(x + 50, y + 8);
+    lcd.setCursor(x + 30, y + 5);
     lcd.println(menuItems[i].name);
 
     // Beschreibung
     lcd.setTextSize(1);
     lcd.setTextColor(0xBDF7, COLOR_MENU_ITEM);  // Hellgrau
-    lcd.setCursor(x + 50, y + 28);
+    lcd.setCursor(x + 30, y + 17);
     lcd.println(menuItems[i].description);
 
     y += MENU_ITEM_HEIGHT + MENU_ITEM_SPACING;
@@ -234,6 +279,15 @@ void handleMenuTouch(int x, int y) {
           break;
         case GAME_BREAKOUT:
           breakoutGame.init(&lcd);
+          break;
+        case GAME_SPACEINVADERS:
+          spaceInvadersGame.init(&lcd);
+          break;
+        case GAME_ASTEROIDS:
+          asteroidsGame.init(&lcd, false);  // Ohne Potentiometer
+          break;
+        case GAME_FROGGER:
+          froggerGame.init(&lcd);
           break;
         default:
           break;
