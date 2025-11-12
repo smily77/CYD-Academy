@@ -3,11 +3,11 @@
 
   Hardware:
   - CYD Display (240x320 im Portrait-Modus!)
-  - 4x Digitale Buttons:
-    * GPIO 5:  Links
-    * GPIO 16: Rechts
-    * GPIO 17: Drehen
-    * GPIO 18: Runter (Schnell-Fall)
+  - 4x Digitale Buttons (im Portrait-Modus):
+    * GPIO 5 (tasteB):  Drehen (oben)
+    * GPIO 16 (tasteC): Runter (unten, Schnell-Fall)
+    * GPIO 17 (tasteA): Rechts (rechts)
+    * GPIO 18 (tasteD): Links (links)
 
   Steuerung:
   - Links/Rechts: Stein bewegen
@@ -24,15 +24,15 @@
 #include <CYD_Display_Config.h>
 
 // Pin-Mapping: Physische Pins -> Logische Namen (Portrait-Modus!)
-// Im Portrait-Modus (setRotation(0)) sind die Tasten um 90° gedreht:
-// - tasteA (war oben) → jetzt links
-// - tasteB (war links) → jetzt unten
-// - tasteC (war rechts) → jetzt oben (Rotate)
-// - tasteD (war unten) → jetzt rechts
-#define BTN_LEFT   tasteA
-#define BTN_DOWN   tasteB
-#define BTN_RIGHT  tasteD
-#define BTN_ROTATE tasteC
+// Im Portrait-Modus (setRotation(0)) sind die Tasten um 90° GEGEN Uhrzeigersinn gedreht:
+// - tasteA (war oben im Landscape) → jetzt rechts im Portrait
+// - tasteB (war links im Landscape) → jetzt oben im Portrait (Rotate)
+// - tasteC (war rechts im Landscape) → jetzt unten im Portrait
+// - tasteD (war unten im Landscape) → jetzt links im Portrait
+#define BTN_LEFT   tasteD
+#define BTN_RIGHT  tasteA
+#define BTN_DOWN   tasteC
+#define BTN_ROTATE tasteB
 
 // Display Objekt
 LGFX lcd;
