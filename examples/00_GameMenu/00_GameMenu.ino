@@ -30,9 +30,6 @@
 // Display Objekt
 LGFX lcd;
 
-// Touch-Objekt
-lgfx::Touch_XPT2046 touch;
-
 // Display-Konfiguration
 #define SCREEN_WIDTH  320
 #define SCREEN_HEIGHT 240
@@ -87,9 +84,6 @@ void setup() {
   lcd.fillScreen(COLOR_BG);
   lcd.setBrightness(255);
 
-  // Touch initialisieren
-  touch.init();
-
   // Hauptmenü zeichnen
   drawMenu();
 
@@ -99,15 +93,13 @@ void setup() {
 
 void loop() {
   // Touch-Input prüfen
-  lgfx::touch_point_t tp[1];
-  int touchCount = touch.getCount();
+  uint16_t x, y;
+  bool touched = lcd.getTouch(&x, &y);
 
-  if (touchCount > 0) {
-    touch.read(tp, touchCount);
-
+  if (touched) {
     // Nur auf neuen Touch reagieren (nicht gedrückt halten)
     if (!lastTouchState) {
-      handleTouch(tp[0].x, tp[0].y);
+      handleTouch(x, y);
       lastTouchState = true;
     }
   } else {
