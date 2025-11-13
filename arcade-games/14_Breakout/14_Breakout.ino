@@ -4,10 +4,12 @@
   Hardware:
   - CYD Display (320x240)
   - 1x Analog-Regler (Potentiometer):
-    * GPIO 34 (potiLeft): Schläger-Steuerung (Links/Rechts)
+    * potiLeft: Schläger-Steuerung (Links/Rechts)
   - 2x Taster:
-    * GPIO 17 (tasteA): Ball-Start
-    * GPIO 18 (tasteD): Pause
+    * tasteA: Ball-Start
+    * tasteD: Pause
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Steuerung:
   - Analog-Regler: Bewegt Schläger horizontal

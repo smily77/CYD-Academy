@@ -9,9 +9,9 @@ Klassisches Breakout-Spiel für CYD mit **Analog-Regler Steuerung**.
 - ILI9341 Display
 
 ### Spezielle Hardware: Analog-Regler
-- **GPIO 34**: Schläger-Steuerung (Potentiometer)
+- **potiLeft**: Schläger-Steuerung (Potentiometer)
 
-> **Hinweis**: Dieses Beispiel benötigt ein **spezielles CYD-Board** mit Analog-Regler (Potentiometer).
+> **Hinweis**: Dieses Beispiel benötigt ein **spezielles CYD-Board** mit Analog-Regler (Potentiometer). Der Pin ist in `CYD_Display_Config.h` definiert.
 
 ## Spielprinzip
 
@@ -24,8 +24,8 @@ Klassisches Breakout-Spiel für CYD mit **Analog-Regler Steuerung**.
 
 ### Steuerung
 ```
-Analog-Regler GPIO 34: Schläger Links/Rechts bewegen
-Touch Screen:          Ball starten (wenn am Schläger)
+Analog-Regler potiLeft: Schläger Links/Rechts bewegen
+Touch Screen:           Ball starten (wenn am Schläger)
 ```
 
 ## Features
@@ -190,27 +190,28 @@ Score:120   Level:2   Lives:2
 
 ### Potentiometer anschließen
 
-#### Schläger-Regler (GPIO 34)
+#### Schläger-Regler (potiLeft)
 ```
 Potentiometer:
   [VCC] ──── 3.3V
-  [SIG] ──── GPIO 34
+  [SIG] ──── potiLeft (siehe CYD_Display_Config.h)
   [GND] ──── GND
 ```
 
 > **Wichtig**: Verwende 3.3V, **NICHT** 5V!
 
 ### GPIO-Eigenschaften
-- GPIO 34 ist **Input-Only** Pin
+- potiLeft ist typischerweise ein **Input-Only** Pin
 - Hat **keinen** internen Pull-Up/Pull-Down
 - Perfekt für Analog-Input
 - 12-bit ADC (0-4095)
+- Die physische GPIO-Nummer ist in `CYD_Display_Config.h` gemappt
 
 ## Installation
 
 1. **CYD_Display_Config.h** im Root-Verzeichnis vorhanden?
 2. **LovyanGFX** Library installiert?
-3. **Potentiometer** an GPIO 34 angeschlossen?
+3. **Potentiometer** an potiLeft angeschlossen?
 4. **Sketch hochladen**
 5. **Spielen!** 🎮
 
@@ -266,7 +267,7 @@ lives = 5;  // statt 3
 
 ### Schläger bewegt sich nicht
 - ✅ Potentiometer richtig angeschlossen?
-- ✅ GPIO 34 verwendet?
+- ✅ Korrekter Pin (potiLeft) verwendet?
 - ✅ 3.3V (nicht 5V)?
 - ✅ Seriellen Monitor prüfen
 

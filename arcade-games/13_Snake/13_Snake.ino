@@ -4,10 +4,12 @@
   Hardware:
   - CYD Display (320x240)
   - 4x Hardware-Buttons:
-    * GPIO 5 (tasteB):  Links
-    * GPIO 17 (tasteA): Oben
-    * GPIO 16 (tasteC): Rechts
-    * GPIO 18 (tasteD): Unten
+    * tasteB: Links
+    * tasteA: Oben
+    * tasteC: Rechts
+    * tasteD: Unten
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Steuerung:
   - Buttons steuern die Bewegungsrichtung

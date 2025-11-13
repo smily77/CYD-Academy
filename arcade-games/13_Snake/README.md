@@ -6,11 +6,13 @@ Klassisches Snake-Spiel für das CYD Display mit Hardware-Button-Steuerung.
 
 - **CYD Display** (320x240 Pixel)
 - **4x Hardware-Buttons:**
-  - GPIO 5: Links
-  - GPIO 16: Oben
-  - GPIO 17: Rechts
-  - GPIO 18: Unten
+  - tasteB: Links
+  - tasteA: Oben
+  - tasteC: Rechts
+  - tasteD: Unten
   - (Buttons sind LOW wenn gedrückt)
+
+**Hinweis:** Alle Pins (tasteA, tasteB, tasteC, tasteD) sind in `CYD_Display_Config.h` definiert.
 
 ## Steuerung
 

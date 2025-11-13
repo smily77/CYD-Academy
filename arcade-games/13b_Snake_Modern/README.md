@@ -57,8 +57,10 @@ Identisch mit 13_Snake:
 ## Hardware
 
 Identisch mit 13_Snake:
-- **4x Taster**: GPIO 5 (Links), 17 (Oben), 16 (Rechts), 18 (Unten)
+- **4x Taster**: tasteB (Links), tasteA (Oben), tasteC (Rechts), tasteD (Unten)
 - Siehe 13_Snake README für Details
+
+**Hinweis:** Alle Pins sind in `CYD_Display_Config.h` definiert.
 
 ## Design-Philosophie
 

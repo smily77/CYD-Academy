@@ -3,8 +3,10 @@
 
   Hardware:
   - CYD Display (320x240)
-  - 2x Analog-Regler (Potentiometer): GPIO 34 (links), GPIO 35 (rechts)
-  - 3x Taster: GPIO 16 (Auto ON), GPIO 5 (Auto OFF), GPIO 17 (Reset)
+  - 2x Analog-Regler (Potentiometer): potiLeft (links), potiRight (rechts)
+  - 3x Taster: tasteC (Auto ON), tasteB (Auto OFF), tasteA (Reset)
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Design-Features:
   - Gradient-Hintergrund, Neon-Glüheffekte, 3D-Schläger

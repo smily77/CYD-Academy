@@ -4,10 +4,12 @@
   Hardware:
   - CYD Display (240x320 im Portrait-Modus!)
   - 4x Digitale Buttons:
-    * GPIO 5 (tasteB):  Drehen (oben)
-    * GPIO 16 (tasteC): Runter (unten, Schnell-Fall)
-    * GPIO 17 (tasteA): Rechts (rechts)
-    * GPIO 18 (tasteD): Links (links)
+    * tasteB:  Drehen (oben)
+    * tasteC: Runter (unten, Schnell-Fall)
+    * tasteA: Rechts (rechts)
+    * tasteD: Links (links)
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Steuerung:
   - Links/Rechts: Stein bewegen

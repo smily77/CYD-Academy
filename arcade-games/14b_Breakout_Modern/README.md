@@ -53,9 +53,11 @@ Identisch mit 14_Breakout:
 ## Hardware
 
 Identisch mit 14_Breakout:
-- **1x Potentiometer**: GPIO 34
+- **1x Potentiometer**: potiLeft
 - **Touch Screen**: Ball-Start
 - Siehe 14_Breakout README für Details
+
+**Hinweis:** Der Pin ist in `CYD_Display_Config.h` definiert.
 
 ## Design-Philosophie
 

@@ -4,8 +4,10 @@
   Hardware:
   - CYD Display (320x240)
   - 1x Analog-Regler (Potentiometer):
-    * GPIO 34: Schläger-Steuerung
+    * potiLeft: Schläger-Steuerung
   - Optional: Touch zum Ball-Start
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Design-Features:
   - Gradient-Hintergrund (Dunkelblau bis Schwarz)

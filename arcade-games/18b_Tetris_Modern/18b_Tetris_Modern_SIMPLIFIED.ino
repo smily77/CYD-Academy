@@ -4,10 +4,12 @@
   Hardware:
   - CYD Display (240x320 im Portrait-Modus!)
   - 4x Digitale Buttons:
-    * GPIO 5 (tasteB): Drehen
-    * GPIO 16 (tasteC): Runter
-    * GPIO 17 (tasteA): Rechts
-    * GPIO 18 (tasteD): Links
+    * tasteB: Drehen
+    * tasteC: Runter
+    * tasteA: Rechts
+    * tasteD: Links
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Moderne Features:
   - Gradient-Hintergrund, Glow-Effekte, Ghost-Piece Preview

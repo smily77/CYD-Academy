@@ -4,11 +4,13 @@
   Hardware:
   - CYD Display (320x240)
   - 4x Hardware-Buttons:
-    * GPIO 5:  Links
-    * GPIO 17: Oben
-    * GPIO 16: Rechts
-    * GPIO 18: Unten
+    * tasteB: Links
+    * tasteA: Oben
+    * tasteC: Rechts
+    * tasteD: Unten
     (Buttons sind LOW wenn gedrückt)
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Design-Features:
   - Gradient-Hintergrund (Dunkelgrün bis Schwarz)

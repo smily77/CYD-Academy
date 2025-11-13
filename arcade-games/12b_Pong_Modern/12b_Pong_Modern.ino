@@ -4,12 +4,14 @@
   Hardware:
   - CYD Display (320x240)
   - 2x Analog-Regler (Potentiometer):
-    * GPIO 34: Linker Spieler
-    * GPIO 35: Rechter Spieler
+    * potiLeft: Linker Spieler
+    * potiRight: Rechter Spieler
   - 3x Taster:
-    * GPIO 16: Auto-Modus linker Spieler EIN (Active LOW)
-    * GPIO 5: Auto-Modus linker Spieler AUS (Active LOW)
-    * GPIO 17: Spielstand auf 0 setzen (Active LOW)
+    * tasteC: Auto-Modus linker Spieler EIN (Active LOW)
+    * tasteB: Auto-Modus linker Spieler AUS (Active LOW)
+    * tasteA: Spielstand auf 0 setzen (Active LOW)
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Design-Features:
   - Gradient-Hintergrund (Dunkelblau bis Schwarz)

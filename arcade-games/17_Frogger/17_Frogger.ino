@@ -7,10 +7,12 @@
   Hardware:
   - CYD Display (320x240)
   - 4x Digitale Buttons:
-    * GPIO 5:  Links
-    * GPIO 16: Rechts
-    * GPIO 17: Oben
-    * GPIO 18: Unten
+    * tasteB:  Links
+    * tasteC: Rechts
+    * tasteA: Oben
+    * tasteD: Unten
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Steuerung:
   - Tasten: Bewege Frosch hoch/runter/links/rechts

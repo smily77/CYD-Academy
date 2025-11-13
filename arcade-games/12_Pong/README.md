@@ -9,13 +9,13 @@ Klassisches 2-Spieler Pong-Spiel für CYD mit **Analog-Regler Steuerung**.
 - ILI9341 Display
 
 ### Spezielle Hardware: 2x Analog-Regler + 3x Taster
-- **GPIO 34**: Linker Spieler (Potentiometer)
-- **GPIO 35**: Rechter Spieler (Potentiometer)
-- **GPIO 16**: Auto-Modus EIN (Taster, Active LOW)
-- **GPIO 5**: Auto-Modus AUS (Taster, Active LOW)
-- **GPIO 17**: Spielstand zurücksetzen (Taster, Active LOW)
+- **potiLeft**: Linker Spieler (Potentiometer)
+- **potiRight**: Rechter Spieler (Potentiometer)
+- **tasteC**: Auto-Modus EIN (Taster, Active LOW)
+- **tasteB**: Auto-Modus AUS (Taster, Active LOW)
+- **tasteA**: Spielstand zurücksetzen (Taster, Active LOW)
 
-> **Hinweis**: Dieses Beispiel benötigt ein **spezielles CYD-Board** mit zwei analogen Reglern (Potentiometern) und drei Tastern.
+> **Hinweis**: Dieses Beispiel benötigt ein **spezielles CYD-Board** mit zwei analogen Reglern (Potentiometern) und drei Tastern. Alle Pins sind in `CYD_Display_Config.h` definiert.
 
 ## Spielprinzip
 
@@ -28,12 +28,12 @@ Klassisches 2-Spieler Pong-Spiel für CYD mit **Analog-Regler Steuerung**.
 
 ### Steuerung
 ```
-Linker Spieler    : Analog-Regler GPIO 34 (oder AI im Auto-Modus)
-Rechter Spieler   : Analog-Regler GPIO 35
+Linker Spieler    : Analog-Regler potiLeft (oder AI im Auto-Modus)
+Rechter Spieler   : Analog-Regler potiRight
 
-Taster GPIO 16    : Auto-Modus EIN (AI spielt links)
-Taster GPIO 5     : Auto-Modus AUS (manuell links)
-Taster GPIO 17    : Spielstand auf 0 setzen
+Taster tasteC     : Auto-Modus EIN (AI spielt links)
+Taster tasteB     : Auto-Modus AUS (manuell links)
+Taster tasteA     : Spielstand auf 0 setzen
 
 Regler drehen → Schläger bewegt sich vertikal
 ```
@@ -128,7 +128,7 @@ void loop() {
 │          :                       │
 └──────────────────────────────────┘
   ↑                               ↑
-  GPIO 34                    GPIO 35
+  potiLeft                   potiRight
   (Linker Regler)      (Rechter Regler)
 ```
 
@@ -159,19 +159,19 @@ void loop() {
 
 ### Potentiometer anschließen
 
-#### Linker Regler (GPIO 34)
+#### Linker Regler (potiLeft)
 ```
 Potentiometer:
   [VCC] ──── 3.3V
-  [SIG] ──── GPIO 34
+  [SIG] ──── potiLeft (siehe CYD_Display_Config.h)
   [GND] ──── GND
 ```
 
-#### Rechter Regler (GPIO 35)
+#### Rechter Regler (potiRight)
 ```
 Potentiometer:
   [VCC] ──── 3.3V
-  [SIG] ──── GPIO 35
+  [SIG] ──── potiRight (siehe CYD_Display_Config.h)
   [GND] ──── GND
 ```
 
@@ -179,31 +179,31 @@ Potentiometer:
 
 ### Taster anschließen
 
-#### Auto-Modus EIN (GPIO 16)
+#### Auto-Modus EIN (tasteC)
 ```
 Taster:
-  [PIN 1] ──── GPIO 16
+  [PIN 1] ──── tasteC (siehe CYD_Display_Config.h)
   [PIN 2] ──── GND
 ```
 
-#### Auto-Modus AUS (GPIO 5)
+#### Auto-Modus AUS (tasteB)
 ```
 Taster:
-  [PIN 1] ──── GPIO 5
+  [PIN 1] ──── tasteB (siehe CYD_Display_Config.h)
   [PIN 2] ──── GND
 ```
 
-#### Score Reset (GPIO 17)
+#### Score Reset (tasteA)
 ```
 Taster:
-  [PIN 1] ──── GPIO 17
+  [PIN 1] ──── tasteA (siehe CYD_Display_Config.h)
   [PIN 2] ──── GND
 ```
 
-> **Hinweis**: Alle Taster nutzen INPUT_PULLUP, daher keine externen Pull-Up-Widerstände nötig!
+> **Hinweis**: Alle Taster nutzen INPUT_PULLUP, daher keine externen Pull-Up-Widerstände nötig! Die physischen GPIO-Pins sind in `CYD_Display_Config.h` gemappt.
 
 ### GPIO-Eigenschaften
-- GPIO 34 & 35 sind **Input-Only** Pins
+- potiLeft & potiRight sind typischerweise **Input-Only** Pins
 - Haben **keinen** internen Pull-Up/Pull-Down
 - Perfekt für Analog-Inputs
 - 12-bit ADC (0-4095)
@@ -223,7 +223,7 @@ Taster:
 - Paddle in der **Mitte** halten
 - Ball mit **Paddle-Mitte** treffen
 - Nicht zu schnell bewegen
-- **Auto-Modus** nutzen zum Üben (GPIO 16)
+- **Auto-Modus** nutzen zum Üben (tasteC)
 
 ### Für Profis
 - Winkel mit **Paddle-Rand** ändern
@@ -268,7 +268,7 @@ if (scoreLeft >= 10) {
 
 ### Schläger bewegt sich nicht
 - ✅ Potentiometer richtig angeschlossen?
-- ✅ GPIO 34 & 35 verwendet?
+- ✅ Korrekte Pins (potiLeft & potiRight) verwendet?
 - ✅ 3.3V (nicht 5V)?
 - ✅ Seriellen Monitor öffnen - Analog-Werte ausgeben lassen
 

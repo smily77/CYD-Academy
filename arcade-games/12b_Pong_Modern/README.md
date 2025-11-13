@@ -50,9 +50,11 @@ Identisch mit 12_Pong:
 ## Hardware
 
 Identisch mit 12_Pong:
-- **2x Potentiometer**: GPIO 34 & 35
-- **3x Taster**: GPIO 16, 5, 17
+- **2x Potentiometer**: potiLeft & potiRight
+- **3x Taster**: tasteC, tasteB, tasteA
 - Siehe 12_Pong README für Details
+
+**Hinweis:** Alle Pins sind in `CYD_Display_Config.h` definiert.
 
 ## Design-Philosophie
 

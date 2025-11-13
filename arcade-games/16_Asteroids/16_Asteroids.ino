@@ -6,12 +6,14 @@
 
   Hardware:
   - CYD Display (320x240)
-  - 1x Potentiometer (GPIO 34): Optional für Rotation
+  - 1x Potentiometer (potiLeft): Optional für Rotation
   - 4x Digitale Buttons:
-    * GPIO 5:  Links drehen
-    * GPIO 16: Rechts drehen
-    * GPIO 17: Schießen
-    * GPIO 18: Schub (Thrust)
+    * tasteB:  Links drehen
+    * tasteC: Rechts drehen
+    * tasteA: Schießen
+    * tasteD: Schub (Thrust)
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Konfiguration:
   - USE_POT_ROTATION: Auskommentiert = Tasten, Einkommentiert = Poti+Tasten

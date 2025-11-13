@@ -4,12 +4,14 @@
   Hardware:
   - CYD Display (320x240)
   - 2x Analog-Regler (Potentiometer):
-    * GPIO 34 (potiLeft): Linker Spieler
-    * GPIO 35 (potiRight): Rechter Spieler
+    * potiLeft: Linker Spieler
+    * potiRight: Rechter Spieler
   - 3x Taster:
-    * GPIO 16 (tasteC): Auto-Modus linker Spieler EIN
-    * GPIO 5 (tasteB): Auto-Modus linker Spieler AUS
-    * GPIO 17 (tasteA): Spielstand auf 0 setzen
+    * tasteC: Auto-Modus linker Spieler EIN
+    * tasteB: Auto-Modus linker Spieler AUS
+    * tasteA: Spielstand auf 0 setzen
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Steuerung:
   - Linker Regler: Bewegt linken Schläger (oder AI im Auto-Modus)

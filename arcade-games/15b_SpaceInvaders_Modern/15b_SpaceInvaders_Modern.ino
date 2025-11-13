@@ -4,10 +4,12 @@
   Hardware:
   - CYD Display (320x240)
   - 4x Digitale Buttons:
-    * GPIO 5:  Links
-    * GPIO 16: Rechts
-    * GPIO 17: Schießen
-    * GPIO 18: Pause
+    * tasteB:  Links
+    * tasteC: Rechts
+    * tasteA: Schießen
+    * tasteD: Pause
+
+  Hinweis: Alle Pins sind in CYD_Display_Config.h definiert.
 
   Steuerung:
   - Links/Rechts: Bewegt Raumschiff horizontal
