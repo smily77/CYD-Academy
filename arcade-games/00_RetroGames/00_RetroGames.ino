@@ -95,24 +95,35 @@ int menuItemCount = 0;
 void buildMenu() {
   menuItemCount = 0;
   bool hasPoti = CYD_Input::hasPotis();
+  bool hasEncoder = CYD_Input::hasEncoder();
 
-  // Pong (mit Potis oder Tastatur)
+  // Pong (mit Potis, Tasten oder Encoder)
   menuItems[menuItemCount++] = {"PONG", "2-Spieler Paddle-Klassiker", 0x07FF, GAME_PONG};
 
-  // Snake braucht keine Potis
-  menuItems[menuItemCount++] = {"SNAKE", "Sammle Food, werde länger!", 0x07E0, GAME_SNAKE};
+  // Snake (NICHT mit Encoder)
+  if (!hasEncoder) {
+    menuItems[menuItemCount++] = {"SNAKE", "Sammle Food, werde länger!", 0x07E0, GAME_SNAKE};
+  }
 
-  // Breakout (mit Potis oder Tastatur)
+  // Breakout (mit Potis, Tasten oder Encoder)
   menuItems[menuItemCount++] = {"BREAKOUT", "Zerstöre alle Steine!", 0xF800, GAME_BREAKOUT};
 
-  // Restliche Spiele brauchen keine Potis
+  // Space Invaders (mit Tasten oder Encoder)
   menuItems[menuItemCount++] = {"SPACE INVADERS", "Verteidige gegen Aliens!", 0xF81F, GAME_SPACEINVADERS};
-  menuItems[menuItemCount++] = {"ASTEROIDS", "Zerstöre Asteroids!", 0x07FF, GAME_ASTEROIDS};
+
+  // Asteroids (NICHT mit Encoder)
+  if (!hasEncoder) {
+    menuItems[menuItemCount++] = {"ASTEROIDS", "Zerstöre Asteroids!", 0x07FF, GAME_ASTEROIDS};
+  }
+
+  // Frogger (mit Tasten oder Encoder)
   menuItems[menuItemCount++] = {"FROGGER", "Überquere die Strasse!", 0xFFE0, GAME_FROGGER};
+
+  // Tetris (mit Tasten oder Encoder)
   menuItems[menuItemCount++] = {"TETRIS", "Puzzle-Klassiker!", 0xF81F, GAME_TETRIS};
 
-  Serial.printf("Menu aufgebaut: %d Spiele verfügbar (Potis: %s)\n",
-                menuItemCount, hasPoti ? "JA" : "NEIN");
+  Serial.printf("Menu aufgebaut: %d Spiele verfügbar (Potis: %s, Encoder: %s)\n",
+                menuItemCount, hasPoti ? "JA" : "NEIN", hasEncoder ? "JA" : "NEIN");
 }
 
 void setup() {

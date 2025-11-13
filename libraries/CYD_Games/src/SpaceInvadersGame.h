@@ -165,8 +165,11 @@ public:
     // Spieler bewegen
     updatePlayer();
 
-    // Spieler schießen
-    if (CYD_Input::readButton(CYD_BTN_A)) {
+    // Spieler schießen (Taste A oder Encoder-Button)
+    bool hasEncoder = CYD_Input::hasEncoder();
+    bool shootPressed = hasEncoder ? CYD_Input::readEncoderButton() : CYD_Input::readButton(CYD_BTN_A);
+
+    if (shootPressed) {
       shootPlayerBullet();
       delay(100);  // Entprellen
     }
@@ -301,11 +304,20 @@ private:
   void updatePlayer() {
     int newX = player.x;
 
-    if (CYD_Input::readButton(CYD_BTN_B)) {
-      newX -= 1;
-    }
-    if (CYD_Input::readButton(CYD_BTN_C)) {
-      newX += 1;
+    bool hasEncoder = CYD_Input::hasEncoder();
+
+    if (hasEncoder) {
+      // Mit Encoder: Drehung steuert Bewegung
+      int delta = CYD_Input::readEncoderDelta();
+      newX += delta * 3;  // Schneller als 1 Pixel
+    } else {
+      // Mit Buttons: B = links, C = rechts
+      if (CYD_Input::readButton(CYD_BTN_B)) {
+        newX -= 1;
+      }
+      if (CYD_Input::readButton(CYD_BTN_C)) {
+        newX += 1;
+      }
     }
 
     newX = constrain(newX, 0, SI_SCREEN_WIDTH - player.w);
