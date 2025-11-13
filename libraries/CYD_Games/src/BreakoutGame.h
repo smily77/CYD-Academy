@@ -265,12 +265,33 @@ private:
   }
 
   void updatePaddle() {
-    int potValue = CYD_Input::readPoti(CYD_POTI_LEFT);
-    int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
-    newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
+    bool hasPoti = CYD_Input::hasPotis();
 
-    if (abs(newX - paddle.x) > 5) {
-      paddle.x = newX;
+    if (hasPoti) {
+      // Mit Poti
+      int potValue = CYD_Input::readPoti(CYD_POTI_LEFT);
+      int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
+      newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
+
+      if (abs(newX - paddle.x) > 5) {
+        paddle.x = newX;
+
+        if (ball.stuck) {
+          oldBallX = ball.x;
+          oldBallY = ball.y;
+          ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
+        }
+      }
+    } else {
+      // Ohne Poti: Tastatur (B = links, C = rechts)
+      if (CYD_Input::readButton(CYD_BTN_B)) {
+        paddle.x -= 5;  // Nach links
+      }
+      if (CYD_Input::readButton(CYD_BTN_C)) {
+        paddle.x += 5;  // Nach rechts
+      }
+
+      paddle.x = constrain(paddle.x, 0, SCREEN_WIDTH - paddle.w);
 
       if (ball.stuck) {
         oldBallX = ball.x;
