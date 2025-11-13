@@ -1,156 +1,234 @@
-# CYD Academy - Arduino Beispiele
+# CYD Academy - Arduino Beispiele & Arcade Games
 
-Dieses Repository enthält Arduino IDE Beispiele für das **CYD (Cheap Yellow Display)** mit der **LovyanGFX** Library.
+Dieses Repository enthält Arduino IDE Beispiele und eine vollständige Arcade-Spielesammlung für das **CYD (Cheap Yellow Display)** mit der **LovyanGFX** Library.
 
-## Hardware
-- CYD 2.8" ESP32 Display (USB-C Variante) - 320x240px
-- CYD 3.5" ESP32 Display (USB-C Variante) - 480x320px
+## 📦 Inhalt
+
+### 🎮 [Arcade Games](arcade-games/)
+Vollständige Sammlung klassischer Arcade-Spiele in Retro- und Modern-Versionen:
+- **14 Spiele:** Pong, Snake, Breakout, Space Invaders, Asteroids, Frogger, Tetris (je 2 Versionen)
+- **2 Touch-Menüs:** Retro Games & Modern Games für einfache Spielauswahl
+- **CYD_Games Library:** Alle Spiele als wiederverwendbare Klassen gekapselt
+- Mehr Details: [arcade-games/README.md](arcade-games/README.md)
+
+### 📚 [Examples](examples/)
+11 grundlegende Beispiele zum Lernen der Display-Programmierung:
+- Hello World, Touch Demo, Grafik, Text-Effekte
+- WiFi-Uhren (Digital & Analog)
+- Taschenrechner, Touch-Buttons
+- Live-Daten-Visualisierung
+
+## 🖥️ Hardware
+
+- **CYD 2.8" ESP32 Display** (USB-C) - 320x240px
+- **CYD 3.5" ESP32 Display** (USB-C) - 480x320px
 - ESP32 basiertes Board mit TFT Display und Touch-Screen
-- Optionale Hardware: RGB LED und Photoresistor
+- **Optionale Hardware:**
+  - RGB LED (für visuelle Effekte)
+  - Photoresistor (für Helligkeitssteuerung)
+  - 2x Potentiometer (für Spiele-Steuerung)
+  - 4x Digitale Buttons (für Spiele-Steuerung)
 
-## Setup
-
-### Benötigte Libraries
-1. **LovyanGFX** - Installiere über den Arduino Library Manager
-
-### Display-Konfiguration
-Die Beispiele verwenden `CYD_Display_Config.h` für die Display-Konfiguration. Diese Datei enthält:
-- LGFX Display-Setup für CYD Boards
-- Optionale Pin-Definitionen:
-  - `LED_PIN_R`, `LED_PIN_G`, `LED_PIN_B` (RGB LED)
-  - `photoR_PIN` (Photoresistor)
-
-Die Pins werden automatisch initialisiert, wenn sie definiert sind. Um Features zu deaktivieren, kommentiere die entsprechenden `#define` Zeilen in `CYD_Display_Config.h` aus.
-
-### Automatische Display-Anpassung
-Alle Beispiele erkennen automatisch die Display-Auflösung und passen sich an:
-- ✓ Vollständig skalierbar: **Alle 11 Beispiele**
-- Funktionieren auf 2.8" (320x240) und 3.5" (480x320) Displays
-- Alle Koordinaten und Größen werden dynamisch berechnet
+## 🚀 Quick Start
 
 ### Installation
-1. Öffne die Arduino IDE
-2. Installiere die ESP32 Board-Unterstützung über den Board Manager
-3. Installiere die LovyanGFX Library über den Library Manager
-4. Öffne die gewünschte Beispieldatei (.ino)
-5. Wähle das richtige Board: "ESP32 Dev Module"
-6. Kompiliere und lade das Programm hoch
 
-## Beispiele
+1. **Arduino IDE** installieren
+2. **ESP32 Board-Unterstützung** über Board Manager installieren
+3. **LovyanGFX Library** über Library Manager installieren
+4. Repository klonen oder als ZIP herunterladen
+5. **CYD_Games Library** in Arduino/libraries/ Ordner kopieren
+6. Beispiel oder Spiel öffnen und hochladen
 
-### 01_HelloWorld
-Einfaches "Hello World" Beispiel - zeigt Text auf dem Display an.
+### Display-Konfiguration
 
-### 02_BasicShapes
-Demonstriert das Zeichnen von Grundformen (Rechtecke, Kreise, Linien, Dreiecke).
+Die Beispiele verwenden `CYD_Display_Config.h` aus der MyLGFXConfigs Library für die Display-Konfiguration:
+- LGFX Display-Setup für CYD Boards
+- Pin-Definitionen für RGB LED, Photoresistor, Buttons, Potentiometer
+- Automatische Display-Erkennung (2.8" / 3.5")
 
-### 03_TouchDemo
-Zeigt wie man Touch-Input verarbeitet und auf dem Display visualisiert.
+**Installation MyLGFXConfigs:**
+```bash
+# In Arduino/libraries/ Verzeichnis:
+git clone https://github.com/dein-repo/MyLGFXConfigs.git
+```
 
-### 04_Colors
-Demonstriert verschiedene Farben und Farbverläufe.
+### Board-Einstellungen
 
-### 05_ScrollText
-Zeigt verschiedene Text-Scroll-Effekte (horizontal, vertikal, Ticker-Style).
+**Arduino IDE:**
+- Board: "ESP32 Dev Module"
+- Upload Speed: 921600
+- Flash Frequency: 80MHz
+- Partition Scheme: "Default 4MB with spiffs"
 
-### 06_BouncingBall
-Physik-Simulation mit springenden Bällen, Touch-Interaktion und FPS-Anzeige.
+## 📖 Dokumentation
 
-### 07_WiFiClock
-Digitale Uhr mit WiFi und NTP (Network Time Protocol) - zeigt die aktuelle Zeit vom Internet.
+### Beispiele (examples/)
 
-**Wichtig:** Erstelle eine `Credentials.h` Datei mit deinen WiFi-Zugangsdaten:
+Jedes Beispiel demonstriert spezifische Features:
+
+| # | Name | Beschreibung |
+|---|------|--------------|
+| 01 | HelloWorld | Einfache Textausgabe |
+| 02 | BasicShapes | Grundformen zeichnen |
+| 03 | TouchDemo | Touch-Input verarbeiten |
+| 04 | Colors | Farben und Farbverläufe |
+| 05 | ScrollText | Text-Scroll-Effekte |
+| 06 | BouncingBall | Physik-Simulation mit Touch |
+| 07 | WiFiClock | Digitale Uhr mit NTP |
+| 08 | AnalogClock | Analoge Uhr mit NTP |
+| 09 | Calculator | Touch-Taschenrechner |
+| 10 | TouchButtons | Button-Verhaltensweisen |
+| 11 | ScrollingChart | Live-Daten-Visualisierung |
+
+Alle Beispiele sind **vollständig skalierbar** und funktionieren auf 2.8" und 3.5" Displays.
+
+### Arcade Games (arcade-games/)
+
+**Retro-Versionen (12-18):**
+- Klassisches Retro-Design mit einfachen Farben
+- Optimiert für Performance
+- Original-Arcade-Feeling
+
+**Modern-Versionen (12b-18b):**
+- Gradient-Hintergründe
+- Glow-Effekte & Partikel-Systeme
+- 3D-Rendering & Animationen
+- Ghost-Piece (Tetris), Bullet-Trails (Asteroids), etc.
+
+**Spiele-Menüs:**
+- `00_RetroGames` - Touch-Menü für alle Retro-Spiele
+- `01_ModernGames` - Touch-Menü für alle Modern-Spiele
+- Automatischer Portrait/Landscape-Wechsel für Tetris
+
+Siehe [arcade-games/README.md](arcade-games/README.md) für Details zu jedem Spiel.
+
+## 🎯 Features
+
+### Automatische Display-Anpassung
+- ✓ **Alle Beispiele und Spiele** passen sich automatisch an
+- Funktionieren auf 2.8" (320x240) und 3.5" (480x320) Displays
+- Dynamische Koordinaten- und Größenberechnung
+
+### CYD_Games Library
+Alle Arcade-Spiele sind als wiederverwendbare C++-Klassen gekapselt:
+- **Header-Only:** Vollständige Inline-Implementierung
+- **Einfache API:** `init()`, `update()`, `isGameOver()`, `getScore()`
+- **Keine Abhängigkeiten:** Nur Arduino.h und LovyanGFX.hpp
+- **Namespace-Clean:** Alle Defines und Structs mit Prefix
+
+**Verwendung:**
+```cpp
+#include <CYD_Display_Config.h>
+#include <SnakeGame.h>
+
+LGFX lcd;
+SnakeGame game;
+
+void setup() {
+  lcd.init();
+  lcd.setRotation(1);
+  game.init(&lcd);
+}
+
+void loop() {
+  game.update();
+}
+```
+
+### Optional: Hardware-Features
+- **RGB LED Feedback:** Farbige Rückmeldung bei Aktionen
+- **Photoresistor:** Automatische Helligkeitsanpassung & Live-Daten
+- **Buttons & Potentiometer:** Spiele-Steuerung
+
+Deaktiviere Features durch Auskommentieren der entsprechenden `#define` Zeilen in `CYD_Display_Config.h`.
+
+## 📂 Struktur
+
+```
+CYD-Academy/
+├── README.md                      # Diese Datei
+├── arcade-games/                  # Alle Arcade-Spiele
+│   ├── README.md                  # Spiele-Dokumentation
+│   ├── 00_RetroGames/            # Retro-Spiele-Menü
+│   ├── 01_ModernGames/           # Modern-Spiele-Menü
+│   ├── 12_Pong/                  # Retro Pong
+│   ├── 12b_Pong_Modern/          # Modern Pong
+│   ├── 13_Snake/                 # Retro Snake
+│   ├── 13b_Snake_Modern/         # Modern Snake
+│   ├── 14_Breakout/              # Retro Breakout
+│   ├── 14b_Breakout_Modern/      # Modern Breakout
+│   ├── 15_SpaceInvaders/         # Retro Space Invaders
+│   ├── 15b_SpaceInvaders_Modern/ # Modern Space Invaders
+│   ├── 16_Asteroids/             # Retro Asteroids
+│   ├── 16b_Asteroids_Modern/     # Modern Asteroids
+│   ├── 17_Frogger/               # Retro Frogger
+│   ├── 17b_Frogger_Modern/       # Modern Frogger
+│   ├── 18_Tetris/                # Retro Tetris
+│   └── 18b_Tetris_Modern/        # Modern Tetris
+├── examples/                      # Grundlegende Beispiele
+│   ├── 01_HelloWorld/
+│   ├── 02_BasicShapes/
+│   ├── ...
+│   └── 11_ScrollingChart/
+└── libraries/
+    └── CYD_Games/                 # Spiele-Library
+        ├── src/
+        │   ├── PongGame.h         # Retro-Versionen
+        │   ├── SnakeGame.h
+        │   ├── BreakoutGame.h
+        │   ├── SpaceInvadersGame.h
+        │   ├── AsteroidsGame.h
+        │   ├── FroggerGame.h
+        │   ├── TetrisGame.h
+        │   ├── PongGameModern.h   # Modern-Versionen
+        │   ├── SnakeGameModern.h
+        │   ├── BreakoutGameModern.h
+        │   ├── SpaceInvadersGameModern.h
+        │   ├── AsteroidsGameModern.h
+        │   ├── FroggerGameModern.h
+        │   └── TetrisGameModern.h
+        └── library.properties
+```
+
+## 🎓 Lernpfad
+
+1. **Basics:** Starte mit `examples/01_HelloWorld` bis `examples/04_Colors`
+2. **Interaktion:** Lerne Touch-Input mit `examples/03_TouchDemo` und `examples/10_TouchButtons`
+3. **Grafik:** Fortgeschrittene Techniken in `examples/06_BouncingBall` und `examples/11_ScrollingChart`
+4. **Projekte:** Baue eigene Apps mit `examples/09_Calculator` als Vorlage
+5. **Games:** Erkunde die Arcade-Spiele in `arcade-games/`
+6. **Library:** Lerne die CYD_Games Library kennen für eigene Spiele
+
+## 🛠️ WiFi-Konfiguration
+
+Für WiFi-basierte Beispiele (07_WiFiClock, 08_AnalogClock):
+
+**Option 1:** Erstelle `Credentials.h` im Beispiel-Ordner:
 ```cpp
 const char* ssid = "DeinWiFiName";
 const char* password = "DeinWiFiPasswort";
 ```
 
-Oder kopiere `Credentials.h.example` zu `Credentials.h` und trage deine Daten ein.
+**Option 2:** Kopiere `Credentials.h.example` zu `Credentials.h` und trage deine Daten ein.
 
-### 08_AnalogClock
-Analoge Uhr mit WiFi und NTP - zeigt die aktuelle Zeit mit klassischen Zeigern (Stunden, Minuten, Sekunden).
+## 📊 Statistiken
 
-Features:
-- Analoges Zifferblatt mit Stundenmarkierungen
-- Automatische Zeit-Synchronisation über WiFi/NTP
-- Timezone: Zürich (CET/CEST mit automatischer Sommer-/Winterzeit)
-- Optional: Automatische Helligkeitssteuerung über Photoresistor
+- **📚 11 Basis-Beispiele** zum Lernen
+- **🎮 14 Arcade-Spiele** (7 Retro + 7 Modern)
+- **🎯 2 Touch-Menüs** für einfachen Zugriff
+- **📦 14 Klassen** in der CYD_Games Library
+- **~15.000 Zeilen Code** vollständig dokumentiert
+- **✓ 100% Skalierbar** für alle CYD Displays
 
-**Wichtig:** Benötigt ebenfalls eine `Credentials.h` Datei (siehe 07_WiFiClock).
+## 🤝 Beitragen
 
-### 09_Calculator
-Taschenrechner mit Touch-Eingabe im Portrait-Modus (Hochformat).
+Feedback, Bug-Reports und Pull Requests sind willkommen!
 
-Features:
-- Touch-Bedienung mit Button-Grid
-- Grundrechenarten: Addition, Subtraktion, Multiplikation, Division
-- Dezimalpunkt-Unterstützung
-- Clear-Funktion (C)
-- Display-Bereich für Anzeige von Zahlen und Ergebnissen
-- Farbcodierte Buttons (Ziffern, Operatoren, Clear, Equals)
-- Visuelles Feedback bei Button-Druck
-- Division durch Null Fehlerbehandlung
-- Optional: LED-Feedback bei Berechnungen und Fehlern
+## 📄 Lizenz
 
-### 10_TouchButtons
-Demonstriert verschiedene Touch-Button-Verhaltensweisen.
+MIT License - siehe LICENSE Datei für Details.
 
-Features:
-- **Button 1 (Momentary):** Aktiv solange gedrückt (wie Klingeltaster)
-- **Button 2 (Toggle):** Ein/Aus beim Drücken (wie Lichtschalter)
-- **Button 3-5 (Radio Group):** Nur einer kann aktiv sein (wie Radio-Buttons)
-- Visuelle Rückmeldung: Grün = aktiv, Grau = inaktiv
-- Status-Indikator auf jedem Button (gelb/rot)
-- Doppelter Rahmen für aktive Buttons
-- Serial Monitor Output für Debugging
-- Optional: RGB LED Feedback (Rot = Momentary, Grün = Toggle, Blau = Radio)
+---
 
-### 11_ScrollingChart
-Klassisches scrollendes Liniendiagramm für Live-Daten-Visualisierung.
-
-Features:
-- Neue Datenpunkte kommen links herein
-- Chart scrollt kontinuierlich nach rechts
-- Y-Achse mit Skala (0-100)
-- Horizontale Grid-Linien für bessere Lesbarkeit
-- Farbgradient: Blau (niedrig) → Cyan → Grün → Rot (hoch)
-- Neuester Punkt (links) wird hervorgehoben
-- Datenquelle:
-  - Mit Photoresistor: Echtzeit-Lichtwerte
-  - Ohne Photoresistor: Simulierte Sinus-Welle mit Rauschen
-- Dynamische Chart-Breite: Passt sich an Display-Größe an
-  - 2.8" Display: ~280 Datenpunkte
-  - 3.5" Display: ~430 Datenpunkte
-- Update-Rate anzeigbar
-- Optional: RGB LED Feedback (Blau = niedrig, Grün = mittel, Rot = hoch)
-
-## Verwendung
-
-Jedes Beispiel befindet sich in einem eigenen Verzeichnis mit dem gleichnamigen .ino File:
-```
-examples/
-  01_HelloWorld/
-    01_HelloWorld.ino
-  02_BasicShapes/
-    02_BasicShapes.ino
-  ...
-```
-
-Öffne die .ino Datei in der Arduino IDE und lade sie auf dein CYD hoch.
-
-## Konfiguration
-
-Alle Beispiele verwenden die gemeinsame Konfiguration:
-```cpp
-#include <CYD_Display_Config.h>
-```
-
-Die Display-Auflösung wird dynamisch ermittelt:
-```cpp
-int SCREEN_WIDTH = lcd.width();
-int SCREEN_HEIGHT = lcd.height();
-```
-
-## Lizenz
-
-MIT License
+**Happy Coding! 🚀** Viel Spaß beim Experimentieren mit dem CYD Display und den Arcade-Spielen!
