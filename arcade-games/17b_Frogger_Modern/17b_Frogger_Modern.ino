@@ -34,6 +34,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 
 // Pin-Mapping: Physische Pins -> Logische Namen
 #define BTN_UP     tasteA
@@ -205,14 +206,11 @@ void setup() {
   lcd.fillScreen(COLOR_BG);
   lcd.setBrightness(255);
 
-  // Button Inputs konfigurieren
-  pinMode(BTN_LEFT, INPUT_PULLUP);
-  pinMode(BTN_RIGHT, INPUT_PULLUP);
-  pinMode(BTN_UP, INPUT_PULLUP);
-  pinMode(BTN_DOWN, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(34) + analogRead(35) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_LEFT) + CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Spiel initialisieren
   initGame();
@@ -228,7 +226,7 @@ void setup() {
 void loop() {
   if (gameOver) {
     // Warte auf Neustart
-    if (digitalRead(BTN_UP) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_A)) {
       initGame();
       gameOver = false;
       delay(300);
@@ -384,16 +382,16 @@ void handleInput() {
   float newY = frog.y;
   bool moved = false;
 
-  if (digitalRead(BTN_LEFT) == LOW) {
+  if (CYD_Input::readButton(CYD_BTN_B)) {
     newX--;
     moved = true;
-  } else if (digitalRead(BTN_RIGHT) == LOW) {
+  } else if (CYD_Input::readButton(CYD_BTN_C)) {
     newX++;
     moved = true;
-  } else if (digitalRead(BTN_UP) == LOW) {
+  } else if (CYD_Input::readButton(CYD_BTN_A)) {
     newY++;
     moved = true;
-  } else if (digitalRead(BTN_DOWN) == LOW) {
+  } else if (CYD_Input::readButton(CYD_BTN_D)) {
     newY--;
     moved = true;
   }

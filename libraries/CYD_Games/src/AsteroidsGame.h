@@ -10,6 +10,7 @@
 
 #include <Arduino.h>
 #include <math.h>
+#include <CYD_Input.h>
 // Forward declaration - LGFX muss bereits definiert sein
 class LGFX;
 
@@ -88,7 +89,7 @@ public:
     level(1),
     gameOver(false),
     lastFrame(0),
-    lastShootState(HIGH),
+    lastShootState(false),
     usePotRotation(false)
   {
     // Konstruktor - Arrays werden in init() initialisiert
@@ -125,11 +126,8 @@ public:
       asteroids[i].active = false;
     }
 
-    // Button Inputs konfigurieren
-    pinMode(AST_BTN_LEFT, INPUT_PULLUP);
-    pinMode(AST_BTN_RIGHT, INPUT_PULLUP);
-    pinMode(AST_BTN_SHOOT, INPUT_PULLUP);
-    pinMode(AST_BTN_THRUST, INPUT_PULLUP);
+    // Input initialisieren
+    CYD_Input::init();
 
     if (usePotRotation) {
       analogSetAttenuation(ADC_0db);  // 0-1V Range
@@ -156,7 +154,7 @@ public:
 
     if (gameOver) {
       // Warte auf Neustart-Button
-      if (digitalRead(AST_BTN_SHOOT) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_A)) {
         init(lcd, usePotRotation);
         delay(300);
       }
@@ -208,7 +206,7 @@ private:
   bool usePotRotation;
 
   unsigned long lastFrame;
-  int lastShootState;
+  bool lastShootState;
 
   // ===== INITIALISIERUNG =====
 
@@ -290,28 +288,28 @@ private:
       if (ship.angle >= 360) ship.angle -= 360;
 
       // Rotation via Buttons (Backup/Feinsteuerung)
-      if (digitalRead(AST_BTN_LEFT) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_B)) {
         ship.angle -= AST_SHIP_ROTATION_SPEED;
         if (ship.angle < 0) ship.angle += 360;
       }
-      if (digitalRead(AST_BTN_RIGHT) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_C)) {
         ship.angle += AST_SHIP_ROTATION_SPEED;
         if (ship.angle >= 360) ship.angle -= 360;
       }
     } else {
       // Rotation via Buttons (Hauptsteuerung)
-      if (digitalRead(AST_BTN_LEFT) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_B)) {
         ship.angle -= AST_SHIP_ROTATION_SPEED;
         if (ship.angle < 0) ship.angle += 360;
       }
-      if (digitalRead(AST_BTN_RIGHT) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_C)) {
         ship.angle += AST_SHIP_ROTATION_SPEED;
         if (ship.angle >= 360) ship.angle -= 360;
       }
     }
 
     // Schub
-    if (digitalRead(AST_BTN_THRUST) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_D)) {
       float rad = (ship.angle - 90) * PI / 180.0;  // -90 weil 0° = nach oben
       ship.vx += cos(rad) * AST_SHIP_ACCELERATION;
       ship.vy += sin(rad) * AST_SHIP_ACCELERATION;
@@ -325,8 +323,8 @@ private:
     }
 
     // Schießen (mit Entprellen)
-    int shootState = digitalRead(AST_BTN_SHOOT);
-    if (shootState == LOW && lastShootState == HIGH) {
+    bool shootState = CYD_Input::readButton(CYD_BTN_A);
+    if (shootState && !lastShootState) {
       shootBullet();
     }
     lastShootState = shootState;
@@ -589,7 +587,7 @@ private:
     lcd->drawLine(x3, y3, x1, y1, AST_COLOR_SHIP);
 
     // Schub-Flamme wenn Thrust gedrückt
-    if (digitalRead(AST_BTN_THRUST) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_D)) {
       int fx1 = ship.x + cos(rad + PI) * (AST_SHIP_SIZE - 2);
       int fy1 = ship.y + sin(rad + PI) * (AST_SHIP_SIZE - 2);
 

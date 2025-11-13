@@ -24,6 +24,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 
 // Pin-Mapping: Physische Pins -> Logische Namen
 #define POT_LEFT            potiLeft
@@ -121,9 +122,9 @@ float oldBallY = 0;
 bool autoModeLeftPaddle = false;
 
 // Taster-Variablen
-int lastButtonStateAutoOn = HIGH;
-int lastButtonStateAutoOff = HIGH;
-int lastButtonStateResetScore = HIGH;
+bool lastButtonStateAutoOn = false;
+bool lastButtonStateAutoOff = false;
+bool lastButtonStateResetScore = false;
 
 // Animationen
 unsigned long lastParticleSpawn = 0;
@@ -138,17 +139,11 @@ void setup() {
   lcd.setRotation(1);
   lcd.setBrightness(255);
 
-  // Analog Inputs konfigurieren
-  pinMode(POT_LEFT, INPUT);
-  pinMode(POT_RIGHT, INPUT);
-
-  // Taster Inputs konfigurieren
-  pinMode(BUTTON_AUTO_ON, INPUT_PULLUP);
-  pinMode(BUTTON_AUTO_OFF, INPUT_PULLUP);
-  pinMode(BUTTON_RESET_SCORE, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallszahlengenerator
-  randomSeed(analogRead(POT_LEFT) + analogRead(POT_RIGHT) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_LEFT) + CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Partikel initialisieren
   for (int i = 0; i < MAX_PARTICLES; i++) {
@@ -249,8 +244,8 @@ void resetBall() {
 // ===== BUTTON HANDLING =====
 
 void handleButtons() {
-  int currentButtonStateAutoOn = digitalRead(BUTTON_AUTO_ON);
-  if (currentButtonStateAutoOn == LOW && lastButtonStateAutoOn == HIGH) {
+  bool currentButtonStateAutoOn = CYD_Input::readButton(CYD_BTN_C);
+  if (currentButtonStateAutoOn && !lastButtonStateAutoOn) {
     if (!autoModeLeftPaddle) {
       autoModeLeftPaddle = true;
       paddleLeft.color = COLOR_PADDLE_AUTO;
@@ -259,8 +254,8 @@ void handleButtons() {
   }
   lastButtonStateAutoOn = currentButtonStateAutoOn;
 
-  int currentButtonStateAutoOff = digitalRead(BUTTON_AUTO_OFF);
-  if (currentButtonStateAutoOff == LOW && lastButtonStateAutoOff == HIGH) {
+  bool currentButtonStateAutoOff = CYD_Input::readButton(CYD_BTN_B);
+  if (currentButtonStateAutoOff && !lastButtonStateAutoOff) {
     if (autoModeLeftPaddle) {
       autoModeLeftPaddle = false;
       paddleLeft.color = COLOR_PADDLE_MANUAL;
@@ -269,8 +264,8 @@ void handleButtons() {
   }
   lastButtonStateAutoOff = currentButtonStateAutoOff;
 
-  int currentButtonStateResetScore = digitalRead(BUTTON_RESET_SCORE);
-  if (currentButtonStateResetScore == LOW && lastButtonStateResetScore == HIGH) {
+  bool currentButtonStateResetScore = CYD_Input::readButton(CYD_BTN_A);
+  if (currentButtonStateResetScore && !lastButtonStateResetScore) {
     Serial.println("Spielstand zurückgesetzt!");
     initGame();
   }
@@ -289,12 +284,12 @@ void updatePaddles() {
     int targetY = ball.y - (paddleLeft.h / 2);
     paddleLeft.y += (targetY - paddleLeft.y) * 0.1;
   } else {
-    int potLeftValue = analogRead(POT_LEFT);
+    int potLeftValue = CYD_Input::readPoti(CYD_POTI_LEFT);
     paddleLeft.y = map(potLeftValue, 1000, 0, 0, SCREEN_HEIGHT - paddleLeft.h);
   }
 
   // Rechter Schläger (immer manuell)
-  int potRightValue = analogRead(POT_RIGHT);
+  int potRightValue = CYD_Input::readPoti(CYD_POTI_RIGHT);
   paddleRight.y = map(potRightValue, 1000, 0, 0, SCREEN_HEIGHT - paddleRight.h);
 
   // Grenzen

@@ -292,21 +292,47 @@ void loop() {
 ### Minimal (für alle Spiele):
 - CYD Display (2.8" oder 3.5")
 - ESP32 Board
+- 4x Buttons (GPIO oder I2C über PCF8574)
 
-### Empfohlen (für volle Funktionalität):
-- **4x Digitale Buttons:**
-  - tasteA (GPIO 17)
-  - tasteB (GPIO 5)
-  - tasteC (GPIO 16)
-  - tasteD (GPIO 18)
+### Hardware-Konfiguration
 
-- **2x Potentiometer:** (für Pong & Breakout)
-  - potiLeft (GPIO 34)
-  - potiRight (GPIO 35)
+Die Spiele unterstützen flexible Hardware-Konfiguration über `CYD_Display_Config.h`:
 
-- **Optional: RGB LED** (für visuelles Feedback)
+**Option 1: GPIO-Buttons (direkt am ESP32)**
+```cpp
+#define gpioSwitch
+#define tasteA 17
+#define tasteB 5
+#define tasteC 16
+#define tasteD 18
+```
 
-Alle Spiele funktionieren auch ohne optionale Hardware - verwenden dann alternative Steuerung.
+**Option 2: I2C-Buttons (über PCF8574 Portextender)**
+```cpp
+#define i2cSwitch
+#define tasteA 0        // PCF8574 Pin 0
+#define tasteB 1        // PCF8574 Pin 1
+#define tasteC 2        // PCF8574 Pin 2
+#define tasteD 3        // PCF8574 Pin 3
+#define pcfAddress 0x20
+#define switchInterrupt 22  // Optional
+```
+
+**Potentiometer (optional für Pong & Breakout)**
+```cpp
+#define gpioPoti
+#define potiLeft 34
+#define potiRight 35
+```
+
+**Optional:**
+- RGB LED (für visuelles Feedback)
+
+**Wichtig:**
+- Pong und Breakout benötigen Potentiometer (`gpioPoti` muss definiert sein)
+- Ohne Potentiometer werden diese Spiele automatisch aus den Menüs ausgeblendet
+- Alle anderen Spiele funktionieren nur mit Buttons (GPIO oder I2C)
+- Bei I2C-Buttons muss die PCF8574 Library installiert sein
 
 ## 📊 Spiel-Statistiken
 

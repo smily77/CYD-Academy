@@ -28,6 +28,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 #include <SpaceInvadersGame.h>
 
 // Display Objekt
@@ -46,14 +47,11 @@ void setup() {
   lcd.fillScreen(0x0000);
   lcd.setBrightness(255);
 
-  // Button Inputs konfigurieren (wird auch in game.init() gemacht, aber schadet nicht)
-  pinMode(tasteA, INPUT_PULLUP);
-  pinMode(tasteB, INPUT_PULLUP);
-  pinMode(tasteC, INPUT_PULLUP);
-  pinMode(tasteD, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(34) + analogRead(35) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_LEFT) + CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Spiel initialisieren
   game.init(&lcd);

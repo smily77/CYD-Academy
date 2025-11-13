@@ -15,6 +15,7 @@
 
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
+#include <CYD_Input.h>
 
 // Forward declaration
 class LGFX;
@@ -98,6 +99,9 @@ public:
     lcd = display;
 
     Serial.println("Initialisiere Modern Snake...");
+
+    // Input initialisieren
+    CYD_Input::init();
 
     // Partikel initialisieren
     for (int i = 0; i < MAX_PARTICLES; i++) {
@@ -272,22 +276,22 @@ private:
     }
 
     // Verhindere 180-Grad Wendungen
-    if (digitalRead(SNAKE_BTN_UP) == LOW && currentDirection != SNAKE_DIR_DOWN) {
+    if (CYD_Input::readButton(CYD_BTN_A) && currentDirection != SNAKE_DIR_DOWN) {
       nextDirection = SNAKE_DIR_UP;
       lastButtonPress = now;
       Serial.println("Button: UP");
     }
-    else if (digitalRead(SNAKE_BTN_DOWN) == LOW && currentDirection != SNAKE_DIR_UP) {
+    else if (CYD_Input::readButton(CYD_BTN_D) && currentDirection != SNAKE_DIR_UP) {
       nextDirection = SNAKE_DIR_DOWN;
       lastButtonPress = now;
       Serial.println("Button: DOWN");
     }
-    else if (digitalRead(SNAKE_BTN_LEFT) == LOW && currentDirection != SNAKE_DIR_RIGHT) {
+    else if (CYD_Input::readButton(CYD_BTN_B) && currentDirection != SNAKE_DIR_RIGHT) {
       nextDirection = SNAKE_DIR_LEFT;
       lastButtonPress = now;
       Serial.println("Button: LEFT");
     }
-    else if (digitalRead(SNAKE_BTN_RIGHT) == LOW && currentDirection != SNAKE_DIR_LEFT) {
+    else if (CYD_Input::readButton(CYD_BTN_C) && currentDirection != SNAKE_DIR_LEFT) {
       nextDirection = SNAKE_DIR_RIGHT;
       lastButtonPress = now;
       Serial.println("Button: RIGHT");
@@ -295,10 +299,10 @@ private:
   }
 
   bool checkAnyButton() {
-    return (digitalRead(SNAKE_BTN_UP) == LOW ||
-            digitalRead(SNAKE_BTN_DOWN) == LOW ||
-            digitalRead(SNAKE_BTN_LEFT) == LOW ||
-            digitalRead(SNAKE_BTN_RIGHT) == LOW);
+    return (CYD_Input::readButton(CYD_BTN_A) ||
+            CYD_Input::readButton(CYD_BTN_D) ||
+            CYD_Input::readButton(CYD_BTN_B) ||
+            CYD_Input::readButton(CYD_BTN_C));
   }
 
   void moveSnake() {

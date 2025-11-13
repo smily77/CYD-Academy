@@ -20,6 +20,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 
 // Pin-Mapping: Physische Pins -> Logische Namen
 #define POT_PADDLE  potiLeft
@@ -139,15 +140,11 @@ void setup() {
   lcd.setRotation(1);
   lcd.setBrightness(255);
 
-  // Analog Input konfigurieren
-  pinMode(POT_PADDLE, INPUT);
-
-  // Button Inputs konfigurieren
-  pinMode(BTN_START, INPUT_PULLUP);
-  pinMode(BTN_PAUSE, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(POT_PADDLE) + analogRead(35) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_LEFT) + CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Spiel initialisieren
   initGame();
@@ -161,7 +158,7 @@ void loop() {
   if (glowPhase > 6.28) glowPhase = 0;
 
   if (gameOver) {
-    if (digitalRead(BTN_START) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_A)) {
       initGame();
       gameOver = false;
       delay(300);
@@ -170,9 +167,9 @@ void loop() {
   }
 
   // Pause-Button
-  static int lastPauseState = HIGH;
-  int pauseState = digitalRead(BTN_PAUSE);
-  if (pauseState == LOW && lastPauseState == HIGH) {
+  static bool lastPauseState = false;
+  bool pauseState = CYD_Input::readButton(CYD_BTN_D);
+  if (pauseState && !lastPauseState) {
     paused = !paused;
     Serial.println(paused ? "PAUSE" : "WEITER");
     delay(200);
@@ -205,7 +202,7 @@ void loop() {
 
   // Ball-Start mit Button
   if (ball.stuck) {
-    if (digitalRead(BTN_START) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_A)) {
       launchBall();
       delay(200);
     }
@@ -321,7 +318,7 @@ void launchBall() {
 
 void updatePaddle() {
   // Analog-Wert lesen (0-4095 vom ESP32 ADC mit ADC_ATTEN_DB_0 für 0-1V)
-  int potValue = analogRead(POT_PADDLE);
+  int potValue = CYD_Input::readPoti(CYD_POTI_LEFT);
   int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
   newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
 

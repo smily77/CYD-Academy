@@ -13,6 +13,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 #include <SnakeGameModern.h>
 
 LGFX lcd;
@@ -27,14 +28,11 @@ void setup() {
   lcd.setRotation(1);
   lcd.setBrightness(255);
 
-  // Button Pins konfigurieren
-  pinMode(tasteB, INPUT_PULLUP);
-  pinMode(tasteA, INPUT_PULLUP);
-  pinMode(tasteC, INPUT_PULLUP);
-  pinMode(tasteD, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(34) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_LEFT) + micros());
 
   // Spiel initialisieren
   game.init(&lcd);

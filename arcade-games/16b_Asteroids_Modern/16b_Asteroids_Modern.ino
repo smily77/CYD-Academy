@@ -34,6 +34,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 
 // Pin-Mapping: Physische Pins -> Logische Namen
 #define BTN_LEFT   tasteB
@@ -137,7 +138,7 @@ int lives = 3;
 int level = 1;
 bool gameOver = false;
 unsigned long lastFrame = 0;
-int lastShootState = HIGH;
+bool lastShootState = false;
 bool backgroundDrawn = false;
 
 // ===== HILFSFUNKTIONEN =====
@@ -176,14 +177,11 @@ void setup() {
   lcd.fillScreen(COLOR_BG_BOTTOM);
   lcd.setBrightness(255);
 
-  // Button Inputs konfigurieren
-  pinMode(BTN_LEFT, INPUT_PULLUP);
-  pinMode(BTN_RIGHT, INPUT_PULLUP);
-  pinMode(BTN_SHOOT, INPUT_PULLUP);
-  pinMode(BTN_THRUST, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(34) + analogRead(35) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_LEFT) + CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Spiel initialisieren
   initGame();
@@ -206,7 +204,7 @@ void loop() {
 
   if (gameOver) {
     // Warte auf Neustart-Button
-    if (digitalRead(BTN_SHOOT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_A)) {
       initGame();
       gameOver = false;
       delay(300);
@@ -249,7 +247,7 @@ void initGame() {
   gameOver = false;
   backgroundDrawn = false;
   lastFrame = 0;
-  lastShootState = HIGH;
+  lastShootState = false;
 
   // Schiff initialisieren
   ship.x = SCREEN_WIDTH / 2;
@@ -362,17 +360,17 @@ void spawnAsteroid(float x, float y, int size) {
 
 void handleInput() {
   // Rotation via Buttons
-  if (digitalRead(BTN_LEFT) == LOW) {
+  if (CYD_Input::readButton(CYD_BTN_B)) {
     ship.angle -= SHIP_ROTATION_SPEED;
     if (ship.angle < 0) ship.angle += 360;
   }
-  if (digitalRead(BTN_RIGHT) == LOW) {
+  if (CYD_Input::readButton(CYD_BTN_C)) {
     ship.angle += SHIP_ROTATION_SPEED;
     if (ship.angle >= 360) ship.angle -= 360;
   }
 
   // Schub
-  if (digitalRead(BTN_THRUST) == LOW) {
+  if (CYD_Input::readButton(CYD_BTN_D)) {
     float rad = (ship.angle - 90) * PI / 180.0;  // -90 weil 0° = nach oben
     ship.vx += cos(rad) * SHIP_ACCELERATION;
     ship.vy += sin(rad) * SHIP_ACCELERATION;
@@ -386,8 +384,8 @@ void handleInput() {
   }
 
   // Schießen (mit Entprellen)
-  int shootState = digitalRead(BTN_SHOOT);
-  if (shootState == LOW && lastShootState == HIGH) {
+  bool shootState = CYD_Input::readButton(CYD_BTN_A);
+  if (shootState && !lastShootState) {
     shootBullet();
   }
   lastShootState = shootState;
@@ -719,7 +717,7 @@ void drawShip() {
   lcd.drawLine(x3+1, y3, x1+1, y1, COLOR_SHIP);
 
   // Schub-Flamme wenn Thrust gedrückt
-  if (digitalRead(BTN_THRUST) == LOW) {
+  if (CYD_Input::readButton(CYD_BTN_D)) {
     int fx1 = ship.x + cos(rad + PI) * (SHIP_SIZE - 2);
     int fy1 = ship.y + sin(rad + PI) * (SHIP_SIZE - 2);
 

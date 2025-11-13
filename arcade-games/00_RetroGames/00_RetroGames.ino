@@ -27,6 +27,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 #include <SnakeGame.h>
 #include <PongGame.h>
 #include <BreakoutGame.h>
@@ -87,17 +88,36 @@ struct MenuItem {
   GameState state;
 };
 
-MenuItem menuItems[] = {
-  {"PONG", "2-Spieler Paddle-Klassiker", 0x07FF, GAME_PONG},
-  {"SNAKE", "Sammle Food, werde länger!", 0x07E0, GAME_SNAKE},
-  {"BREAKOUT", "Zerstöre alle Steine!", 0xF800, GAME_BREAKOUT},
-  {"SPACE INVADERS", "Verteidige gegen Aliens!", 0xF81F, GAME_SPACEINVADERS},
-  {"ASTEROIDS", "Zerstöre Asteroids!", 0x07FF, GAME_ASTEROIDS},
-  {"FROGGER", "Überquere die Strasse!", 0xFFE0, GAME_FROGGER},
-  {"TETRIS", "Puzzle-Klassiker!", 0xF81F, GAME_TETRIS}
-};
+// Menu wird dynamisch basierend auf Hardware-Verfügbarkeit aufgebaut
+MenuItem menuItems[7];  // Maximal 7 Spiele
+int menuItemCount = 0;
 
-const int menuItemCount = sizeof(menuItems) / sizeof(menuItems[0]);
+void buildMenu() {
+  menuItemCount = 0;
+  bool hasPoti = CYD_Input::hasPotis();
+
+  // Pong nur mit Potentiometern
+  if (hasPoti) {
+    menuItems[menuItemCount++] = {"PONG", "2-Spieler Paddle-Klassiker", 0x07FF, GAME_PONG};
+  }
+
+  // Snake braucht keine Potis
+  menuItems[menuItemCount++] = {"SNAKE", "Sammle Food, werde länger!", 0x07E0, GAME_SNAKE};
+
+  // Breakout nur mit Potentiometern
+  if (hasPoti) {
+    menuItems[menuItemCount++] = {"BREAKOUT", "Zerstöre alle Steine!", 0xF800, GAME_BREAKOUT};
+  }
+
+  // Restliche Spiele brauchen keine Potis
+  menuItems[menuItemCount++] = {"SPACE INVADERS", "Verteidige gegen Aliens!", 0xF81F, GAME_SPACEINVADERS};
+  menuItems[menuItemCount++] = {"ASTEROIDS", "Zerstöre Asteroids!", 0x07FF, GAME_ASTEROIDS};
+  menuItems[menuItemCount++] = {"FROGGER", "Überquere die Strasse!", 0xFFE0, GAME_FROGGER};
+  menuItems[menuItemCount++] = {"TETRIS", "Puzzle-Klassiker!", 0xF81F, GAME_TETRIS};
+
+  Serial.printf("Menu aufgebaut: %d Spiele verfügbar (Potis: %s)\n",
+                menuItemCount, hasPoti ? "JA" : "NEIN");
+}
 
 void setup() {
   Serial.begin(115200);
@@ -109,14 +129,14 @@ void setup() {
   lcd.fillScreen(COLOR_BG);
   lcd.setBrightness(255);
 
-  // Button Pins konfigurieren (für alle Spiele)
-  pinMode(tasteA, INPUT_PULLUP);
-  pinMode(tasteB, INPUT_PULLUP);
-  pinMode(tasteC, INPUT_PULLUP);
-  pinMode(tasteD, INPUT_PULLUP);
+  // Input-System initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
   randomSeed(analogRead(35) + micros());
+
+  // Menu basierend auf verfügbarer Hardware aufbauen
+  buildMenu();
 
   // Menu zeichnen
   drawMenu();

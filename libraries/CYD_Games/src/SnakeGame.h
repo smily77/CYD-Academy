@@ -15,6 +15,7 @@
 
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
+#include <CYD_Input.h>
 
 // Pin-Mapping (muss VOR der Klasse definiert sein)
 #define BTN_LEFT   tasteB
@@ -42,6 +43,9 @@ public:
     lcd = display;
 
     Serial.println("Initialisiere Snake...");
+
+    // Input initialisieren
+    CYD_Input::init();
 
     // Snake in der Mitte starten
     snakeLength = 3;
@@ -186,29 +190,29 @@ private:
     }
 
     // Verhindere 180-Grad Wendungen
-    if (digitalRead(BTN_UP) == LOW && currentDirection != DIR_DOWN) {
+    if (CYD_Input::readButton(CYD_BTN_A) && currentDirection != DIR_DOWN) {
       nextDirection = DIR_UP;
       lastButtonPress = now;
     }
-    else if (digitalRead(BTN_DOWN) == LOW && currentDirection != DIR_UP) {
+    else if (CYD_Input::readButton(CYD_BTN_D) && currentDirection != DIR_UP) {
       nextDirection = DIR_DOWN;
       lastButtonPress = now;
     }
-    else if (digitalRead(BTN_LEFT) == LOW && currentDirection != DIR_RIGHT) {
+    else if (CYD_Input::readButton(CYD_BTN_B) && currentDirection != DIR_RIGHT) {
       nextDirection = DIR_LEFT;
       lastButtonPress = now;
     }
-    else if (digitalRead(BTN_RIGHT) == LOW && currentDirection != DIR_LEFT) {
+    else if (CYD_Input::readButton(CYD_BTN_C) && currentDirection != DIR_LEFT) {
       nextDirection = DIR_RIGHT;
       lastButtonPress = now;
     }
   }
 
   bool checkAnyButton() {
-    return (digitalRead(BTN_UP) == LOW ||
-            digitalRead(BTN_DOWN) == LOW ||
-            digitalRead(BTN_LEFT) == LOW ||
-            digitalRead(BTN_RIGHT) == LOW);
+    return (CYD_Input::readButton(CYD_BTN_A) ||
+            CYD_Input::readButton(CYD_BTN_D) ||
+            CYD_Input::readButton(CYD_BTN_B) ||
+            CYD_Input::readButton(CYD_BTN_C));
   }
 
   void moveSnake() {

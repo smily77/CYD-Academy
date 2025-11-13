@@ -15,6 +15,7 @@
 
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
+#include <CYD_Input.h>
 
 // Pin-Mapping (muss VOR der Klasse definiert sein)
 #define POT_PADDLE  potiLeft
@@ -42,6 +43,9 @@ public:
     lcd = display;
 
     Serial.println("Initialisiere Breakout...");
+
+    // Input initialisieren
+    CYD_Input::init();
 
     score = 0;
     lives = 3;
@@ -74,7 +78,7 @@ public:
   // Haupt-Update
   void update() {
     if (gameOver) {
-      if (digitalRead(BTN_START) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_A)) {
         init(lcd);  // Neu starten
         delay(300);
       }
@@ -82,9 +86,9 @@ public:
     }
 
     // Pause-Button
-    static int lastPauseState = HIGH;
-    int pauseState = digitalRead(BTN_PAUSE);
-    if (pauseState == LOW && lastPauseState == HIGH) {
+    static bool lastPauseState = false;
+    bool pauseState = CYD_Input::readButton(CYD_BTN_D);
+    if (pauseState && !lastPauseState) {
       paused = !paused;
       delay(200);
     }
@@ -111,7 +115,7 @@ public:
 
     // Ball-Start
     if (ball.stuck) {
-      if (digitalRead(BTN_START) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_A)) {
         launchBall();
         delay(200);
       }
@@ -261,7 +265,7 @@ private:
   }
 
   void updatePaddle() {
-    int potValue = analogRead(POT_PADDLE);
+    int potValue = CYD_Input::readPoti(CYD_POTI_LEFT);
     int newX = map(potValue, 0, 1000, 0, SCREEN_WIDTH - paddle.w);
     newX = constrain(newX, 0, SCREEN_WIDTH - paddle.w);
 

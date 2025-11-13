@@ -9,6 +9,7 @@
 #define SPACEINVADERSGAME_H
 
 #include <Arduino.h>
+#include <CYD_Input.h>
 // Forward declaration - LGFX muss bereits definiert sein
 class LGFX;
 
@@ -85,7 +86,7 @@ public:
     lastAlienMove(0),
     alienMoveDelay(1000),
     lastAlienShot(0),
-    lastPauseState(HIGH),
+    lastPauseState(false),
     oldPlayerX(-1)
   {
     // Konstruktor - Arrays werden in init() initialisiert
@@ -122,11 +123,8 @@ public:
     // Level initialisieren
     initLevel();
 
-    // Button Inputs konfigurieren
-    pinMode(SI_BTN_LEFT, INPUT_PULLUP);
-    pinMode(SI_BTN_RIGHT, INPUT_PULLUP);
-    pinMode(SI_BTN_SHOOT, INPUT_PULLUP);
-    pinMode(SI_BTN_PAUSE, INPUT_PULLUP);
+    // Input initialisieren
+    CYD_Input::init();
 
     // Bildschirm aufbauen
     lcd->fillScreen(SI_COLOR_BG);
@@ -139,7 +137,7 @@ public:
   void update() {
     if (gameOver) {
       // Warte auf Neustart-Button
-      if (digitalRead(SI_BTN_SHOOT) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_A)) {
         init(lcd);
         delay(300);
       }
@@ -147,8 +145,8 @@ public:
     }
 
     // Pause-Button
-    int pauseState = digitalRead(SI_BTN_PAUSE);
-    if (pauseState == LOW && lastPauseState == HIGH) {
+    bool pauseState = CYD_Input::readButton(CYD_BTN_D);
+    if (pauseState && !lastPauseState) {
       paused = !paused;
       delay(200);
     }
@@ -168,7 +166,7 @@ public:
     updatePlayer();
 
     // Spieler schießen
-    if (digitalRead(SI_BTN_SHOOT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_A)) {
       shootPlayerBullet();
       delay(100);  // Entprellen
     }
@@ -232,7 +230,7 @@ private:
   int level;
   bool gameOver;
   bool paused;
-  int lastPauseState;
+  bool lastPauseState;
   int oldPlayerX;
 
   // ===== INITIALISIERUNG =====
@@ -303,10 +301,10 @@ private:
   void updatePlayer() {
     int newX = player.x;
 
-    if (digitalRead(SI_BTN_LEFT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_B)) {
       newX -= 1;
     }
-    if (digitalRead(SI_BTN_RIGHT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_C)) {
       newX += 1;
     }
 

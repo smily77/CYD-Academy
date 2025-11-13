@@ -15,6 +15,7 @@
 
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
+#include <CYD_Input.h>
 
 // Forward declaration
 class LGFX;
@@ -105,15 +106,11 @@ public:
 
     Serial.println("Initialisiere Modern Breakout...");
 
-    // Analog Input konfigurieren
-    pinMode(BREAKOUT_POT_PADDLE, INPUT);
-
-    // Button Inputs konfigurieren
-    pinMode(BREAKOUT_BTN_START, INPUT_PULLUP);
-    pinMode(BREAKOUT_BTN_PAUSE, INPUT_PULLUP);
+    // Input initialisieren
+    CYD_Input::init();
 
     // Zufallsgenerator
-    randomSeed(analogRead(BREAKOUT_POT_PADDLE) + analogRead(35) + micros());
+    randomSeed(analogRead(35) + micros());
 
     // Partikel initialisieren
     for (int i = 0; i < MAX_PARTICLES; i++) {
@@ -136,7 +133,7 @@ public:
     if (glowPhase > 6.28) glowPhase = 0;
 
     if (gameOver) {
-      if (digitalRead(BREAKOUT_BTN_START) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_A)) {
         initGame();
         gameOver = false;
         delay(300);
@@ -145,8 +142,9 @@ public:
     }
 
     // Pause-Button
-    int pauseState = digitalRead(BREAKOUT_BTN_PAUSE);
-    if (pauseState == LOW && lastPauseState == HIGH) {
+    static bool lastPauseState = false;
+    bool pauseState = CYD_Input::readButton(CYD_BTN_D);
+    if (pauseState && !lastPauseState) {
       paused = !paused;
       Serial.println(paused ? "PAUSE" : "WEITER");
       delay(200);
@@ -179,7 +177,7 @@ public:
 
     // Ball-Start mit Button
     if (ball.stuck) {
-      if (digitalRead(BREAKOUT_BTN_START) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_A)) {
         launchBall();
         delay(200);
       }
@@ -339,7 +337,7 @@ private:
 
   void updatePaddle() {
     // Analog-Wert lesen
-    int potValue = analogRead(BREAKOUT_POT_PADDLE);
+    int potValue = CYD_Input::readPoti(CYD_POTI_LEFT);
     int newX = map(potValue, 0, 1000, 0, BREAKOUT_SCREEN_WIDTH - paddle.w);
     newX = constrain(newX, 0, BREAKOUT_SCREEN_WIDTH - paddle.w);
 

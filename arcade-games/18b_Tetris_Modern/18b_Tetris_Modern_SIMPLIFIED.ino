@@ -17,6 +17,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 #include <TetrisGameModern.h>
 
 LGFX lcd;
@@ -31,14 +32,11 @@ void setup() {
   lcd.setRotation(0);  // Portrait-Modus!
   lcd.setBrightness(255);
 
-  // Button Inputs konfigurieren
-  pinMode(tasteD, INPUT_PULLUP);
-  pinMode(tasteA, INPUT_PULLUP);
-  pinMode(tasteB, INPUT_PULLUP);
-  pinMode(tasteC, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(35) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Spiel initialisieren
   game.init(&lcd);

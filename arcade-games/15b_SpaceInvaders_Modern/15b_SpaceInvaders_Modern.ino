@@ -26,6 +26,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 
 // Pin-Mapping: Physische Pins -> Logische Namen
 #define BTN_LEFT   tasteB
@@ -179,14 +180,11 @@ void setup() {
   lcd.fillScreen(COLOR_BG_BOTTOM);
   lcd.setBrightness(255);
 
-  // Button Inputs konfigurieren
-  pinMode(BTN_LEFT, INPUT_PULLUP);
-  pinMode(BTN_RIGHT, INPUT_PULLUP);
-  pinMode(BTN_SHOOT, INPUT_PULLUP);
-  pinMode(BTN_PAUSE, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(34) + analogRead(35) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_LEFT) + CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Spiel initialisieren
   initGame();
@@ -202,7 +200,7 @@ void setup() {
 void loop() {
   if (gameOver) {
     // Warte auf Neustart-Button
-    if (digitalRead(BTN_SHOOT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_A)) {
       initGame();
       gameOver = false;
       delay(300);
@@ -211,9 +209,9 @@ void loop() {
   }
 
   // Pause-Button
-  static int lastPauseState = HIGH;
-  int pauseState = digitalRead(BTN_PAUSE);
-  if (pauseState == LOW && lastPauseState == HIGH) {
+  static bool lastPauseState = false;
+  bool pauseState = CYD_Input::readButton(CYD_BTN_D);
+  if (pauseState && !lastPauseState) {
     paused = !paused;
     Serial.println(paused ? "PAUSE" : "WEITER");
     delay(200);
@@ -234,7 +232,7 @@ void loop() {
   updatePlayer();
 
   // Spieler schießen
-  if (digitalRead(BTN_SHOOT) == LOW) {
+  if (CYD_Input::readButton(CYD_BTN_A)) {
     shootPlayerBullet();
     delay(100);  // Entprellen
   }
@@ -387,10 +385,10 @@ void initShields() {
 void updatePlayer() {
   int newX = player.x;
 
-  if (digitalRead(BTN_LEFT) == LOW) {
+  if (CYD_Input::readButton(CYD_BTN_B)) {
     newX -= 1;
   }
-  if (digitalRead(BTN_RIGHT) == LOW) {
+  if (CYD_Input::readButton(CYD_BTN_C)) {
     newX += 1;
   }
 

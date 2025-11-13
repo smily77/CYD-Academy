@@ -15,6 +15,7 @@
 
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
+#include <CYD_Input.h>
 
 // Forward declaration
 class LGFX;
@@ -152,7 +153,7 @@ public:
   void update() {
     if (gameOver) {
       // Warte auf Neustart
-      if (digitalRead(FROG_BTN_UP) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_A)) {
         initGame();
         gameOver = false;
         delay(300);
@@ -336,16 +337,16 @@ private:
     float newY = frog.y;
     bool moved = false;
 
-    if (digitalRead(FROG_BTN_LEFT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_B)) {
       newX--;
       moved = true;
-    } else if (digitalRead(FROG_BTN_RIGHT) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_C)) {
       newX++;
       moved = true;
-    } else if (digitalRead(FROG_BTN_UP) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_A)) {
       newY++;
       moved = true;
-    } else if (digitalRead(FROG_BTN_DOWN) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_D)) {
       newY--;
       moved = true;
     }

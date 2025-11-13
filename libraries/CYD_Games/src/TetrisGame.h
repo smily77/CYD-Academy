@@ -11,6 +11,7 @@
 #define TETRISGAME_H
 
 #include <Arduino.h>
+#include <CYD_Input.h>
 // Forward declaration - LGFX muss bereits definiert sein
 class LGFX;
 
@@ -151,11 +152,8 @@ public:
       }
     }
 
-    // Button Inputs konfigurieren
-    pinMode(TET_BTN_LEFT, INPUT_PULLUP);
-    pinMode(TET_BTN_RIGHT, INPUT_PULLUP);
-    pinMode(TET_BTN_ROTATE, INPUT_PULLUP);
-    pinMode(TET_BTN_DOWN, INPUT_PULLUP);
+    // Input initialisieren
+    CYD_Input::init();
 
     // UI zeichnen
     drawBackground();
@@ -174,7 +172,7 @@ public:
   void update() {
     if (gameOver) {
       // Warte auf Neustart
-      if (digitalRead(TET_BTN_ROTATE) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_B)) {
         init(lcd);
         delay(300);
       }
@@ -255,14 +253,14 @@ private:
 
     bool moved = false;
 
-    if (digitalRead(TET_BTN_LEFT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_D)) {
       moved = movePiece(-1, 0);
-    } else if (digitalRead(TET_BTN_RIGHT) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_A)) {
       moved = movePiece(1, 0);
-    } else if (digitalRead(TET_BTN_DOWN) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_C)) {
       moved = movePiece(0, 1);
       if (moved) score += 1;  // Bonus für schnelles Fallen
-    } else if (digitalRead(TET_BTN_ROTATE) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_B)) {
       moved = rotatePiece();
     }
 
