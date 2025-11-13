@@ -4,7 +4,9 @@
   Unterstützt:
   - GPIO-Buttons (direkt am ESP32)
   - I2C-Buttons (über PCF8574 Portextender)
-  - GPIO-Potentiometer (optional)
+  - GPIO-Encoder (Rotary Encoder direkt am ESP32)
+  - I2C-Encoder (Rotary Encoder über PCF8574)
+  - GPIO-Potentiometer (optional, nur mit Buttons)
 
   Konfiguration erfolgt in CYD_Display_Config.h:
 
@@ -24,7 +26,20 @@
     #define pcfAddress 0x20
     #define switchInterrupt 22  // Optional: Interrupt Pin
 
-  Potentiometer (optional):
+  Option 3: Encoder direkt an GPIO
+    #define gpioEnc
+    #define encA 17
+    #define encB 5
+    #define encSW 16
+
+  Option 4: Encoder über I2C Portextender PCF8574
+    #define i2cEnc
+    #define encA 0      // PCF8574 Pin 0
+    #define encB 1      // PCF8574 Pin 1
+    #define encSW 2     // PCF8574 Pin 2
+    #define pcfAddress 0x20
+
+  Potentiometer (optional, nur mit gpioSwitch/i2cSwitch):
     #define gpioPoti
     #define potiLeft 34
     #define potiRight 35
@@ -33,6 +48,7 @@
     CYD_Input::init();
     if (CYD_Input::readButton(CYD_BTN_A)) { ... }
     int value = CYD_Input::readPoti(CYD_POTI_LEFT);
+    int delta = CYD_Input::readEncoderDelta();
 */
 
 #ifndef CYD_INPUT_H
@@ -40,17 +56,17 @@
 
 #include <Arduino.h>
 
-// Konfigurationsprüfung
-#if defined(gpioSwitch) && defined(i2cSwitch)
-  #error "FEHLER: gpioSwitch und i2cSwitch können nicht gleichzeitig definiert sein!"
+// Konfigurationsprüfung - nur EINE Methode darf definiert sein
+#if (defined(gpioSwitch) + defined(i2cSwitch) + defined(gpioEnc) + defined(i2cEnc)) > 1
+  #error "FEHLER: Nur EINE von gpioSwitch, i2cSwitch, gpioEnc, i2cEnc darf definiert sein!"
 #endif
 
-#if !defined(gpioSwitch) && !defined(i2cSwitch)
-  #error "FEHLER: Entweder gpioSwitch oder i2cSwitch muss in CYD_Display_Config.h definiert sein!"
+#if !defined(gpioSwitch) && !defined(i2cSwitch) && !defined(gpioEnc) && !defined(i2cEnc)
+  #error "FEHLER: Genau EINE von gpioSwitch, i2cSwitch, gpioEnc, i2cEnc muss definiert sein!"
 #endif
 
-// PCF8574 Library nur laden wenn i2cSwitch aktiv
-#ifdef i2cSwitch
+// PCF8574 Library nur laden wenn i2cSwitch oder i2cEnc aktiv
+#if defined(i2cSwitch) || defined(i2cEnc)
   #include <PCF8574.h>
 #endif
 
@@ -114,6 +130,54 @@ public:
         pinMode(switchInterrupt, INPUT_PULLUP);
         Serial.printf("  Interrupt: GPIO %d\n", switchInterrupt);
       #endif
+    #endif
+
+    #ifdef gpioEnc
+      // GPIO-Encoder initialisieren
+      pinMode(encA, INPUT_PULLUP);
+      pinMode(encB, INPUT_PULLUP);
+      pinMode(encSW, INPUT_PULLUP);
+
+      // Initialen Status lesen
+      lastEncA = digitalRead(encA);
+      lastEncB = digitalRead(encB);
+      encoderPos = 0;
+
+      Serial.println("CYD_Input: GPIO-Encoder initialisiert");
+      Serial.printf("  encA:  GPIO %d\n", encA);
+      Serial.printf("  encB:  GPIO %d\n", encB);
+      Serial.printf("  encSW: GPIO %d\n", encSW);
+    #endif
+
+    #ifdef i2cEnc
+      // PCF8574 initialisieren
+      #ifndef pcfAddress
+        #error "FEHLER: pcfAddress muss definiert sein wenn i2cEnc aktiv ist!"
+      #endif
+
+      pcf = PCF8574(pcfAddress);
+
+      // Encoder-Pins als Input
+      pcf.pinMode(encA, INPUT);
+      pcf.pinMode(encB, INPUT);
+      pcf.pinMode(encSW, INPUT);
+
+      // PCF8574 starten
+      if (!pcf.begin()) {
+        Serial.println("FEHLER: PCF8574 nicht gefunden!");
+        return false;
+      }
+
+      // Initialen Status lesen
+      lastEncA = pcf.digitalRead(encA);
+      lastEncB = pcf.digitalRead(encB);
+      encoderPos = 0;
+
+      Serial.println("CYD_Input: I2C-Encoder (PCF8574) initialisiert");
+      Serial.printf("  I2C-Adresse: 0x%02X\n", pcfAddress);
+      Serial.printf("  encA:  PCF Pin %d\n", encA);
+      Serial.printf("  encB:  PCF Pin %d\n", encB);
+      Serial.printf("  encSW: PCF Pin %d\n", encSW);
     #endif
 
     #ifdef gpioPoti
@@ -198,12 +262,75 @@ public:
       // ESP32 ADC: Angepasst für 1V-Potis (1V / 3,3V * 4095 ≈ 1241)
       // Statt 0-4095 verwenden wir 0-1241 für 1V-Potis
       // constrain() stellt sicher, dass auch Werte > 1241 korrekt auf max 1000 gemappt werden
-      int mappedValue = map(rawValue, 0, 1000, 0, 1000);
+      int mappedValue = map(rawValue, 0, 1241, 0, 1000);
       return constrain(mappedValue, 0, 1000);
     #else
       // Keine Potis verfügbar
       return 500;  // Mittelwert zurückgeben
     #endif
+  }
+
+  // ===== ENCODER-INPUT =====
+
+  // Prüft ob Encoder verfügbar ist
+  static bool hasEncoder() {
+    #if defined(gpioEnc) || defined(i2cEnc)
+      return true;
+    #else
+      return false;
+    #endif
+  }
+
+  // Liest Encoder-Drehung und gibt Delta zurück (-1 = links, 0 = keine Änderung, +1 = rechts)
+  static int readEncoderDelta() {
+    #if defined(gpioEnc) || defined(i2cEnc)
+      // Aktuelle Werte lesen
+      #ifdef gpioEnc
+        int currentA = digitalRead(encA);
+        int currentB = digitalRead(encB);
+      #else
+        int currentA = pcf.digitalRead(encA);
+        int currentB = pcf.digitalRead(encB);
+      #endif
+
+      int delta = 0;
+
+      // Prüfe auf Flanke von A
+      if (currentA != lastEncA) {
+        // Bei fallender Flanke von A
+        if (currentA == LOW) {
+          // Wenn B auch LOW ist, dann Drehung im Uhrzeigersinn (rechts)
+          if (currentB == LOW) {
+            encoderPos++;
+            delta = 1;
+          } else {
+            // Sonst gegen Uhrzeigersinn (links)
+            encoderPos--;
+            delta = -1;
+          }
+        }
+      }
+
+      lastEncA = currentA;
+      lastEncB = currentB;
+
+      return delta;
+    #else
+      return 0;
+    #endif
+  }
+
+  // Liest Encoder-Button (LOW = gedrückt)
+  static bool readEncoderButton() {
+    #ifdef gpioEnc
+      return digitalRead(encSW) == LOW;
+    #endif
+
+    #ifdef i2cEnc
+      return pcf.digitalRead(encSW) == LOW;
+    #endif
+
+    return false;
   }
 
   // ===== DEBUG-FUNKTIONEN =====
@@ -238,14 +365,26 @@ public:
   }
 
 private:
-  #ifdef i2cSwitch
+  #if defined(i2cSwitch) || defined(i2cEnc)
     static PCF8574 pcf;
+  #endif
+
+  #if defined(gpioEnc) || defined(i2cEnc)
+    static int lastEncA;
+    static int lastEncB;
+    static int encoderPos;
   #endif
 };
 
 // Statische Member initialisieren
-#ifdef i2cSwitch
+#if defined(i2cSwitch) || defined(i2cEnc)
   PCF8574 CYD_Input::pcf(0x20);  // Wird in init() mit richtiger Adresse überschrieben
+#endif
+
+#if defined(gpioEnc) || defined(i2cEnc)
+  int CYD_Input::lastEncA = 0;
+  int CYD_Input::lastEncB = 0;
+  int CYD_Input::encoderPos = 0;
 #endif
 
 #endif // CYD_INPUT_H

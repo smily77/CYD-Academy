@@ -266,6 +266,7 @@ private:
 
   void updatePaddle() {
     bool hasPoti = CYD_Input::hasPotis();
+    bool hasEncoder = CYD_Input::hasEncoder();
 
     if (hasPoti) {
       // Mit Poti
@@ -282,8 +283,19 @@ private:
           ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
         }
       }
+    } else if (hasEncoder) {
+      // Mit Encoder: Drehung steuert Paddle (links/rechts)
+      int delta = CYD_Input::readEncoderDelta();
+      paddle.x += delta * 5;  // delta positiv = rechts
+      paddle.x = constrain(paddle.x, 0, SCREEN_WIDTH - paddle.w);
+
+      if (ball.stuck) {
+        oldBallX = ball.x;
+        oldBallY = ball.y;
+        ball.x = paddle.x + paddle.w / 2 - ball.size / 2;
+      }
     } else {
-      // Ohne Poti: Tastatur (B = links, C = rechts)
+      // Ohne Poti/Encoder: Tastatur (B = links, C = rechts)
       if (CYD_Input::readButton(CYD_BTN_B)) {
         paddle.x -= 5;  // Nach links
       }

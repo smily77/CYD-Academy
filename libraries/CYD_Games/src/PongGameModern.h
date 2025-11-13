@@ -246,6 +246,12 @@ private:
 
   void handleButtons() {
     bool hasPoti = CYD_Input::hasPotis();
+    bool hasEncoder = CYD_Input::hasEncoder();
+
+    // Encoder: Keine Menü-Rückkehr möglich
+    if (hasEncoder) {
+      return;  // Keine Button-Aktionen mit Encoder
+    }
 
     // Taste D: Zurück zum Menü (NUR mit Potis!)
     if (hasPoti && CYD_Input::readButton(CYD_BTN_D)) {
@@ -300,9 +306,16 @@ private:
     oldPaddleRightY = paddleRight.y;
 
     bool hasPoti = CYD_Input::hasPotis();
+    bool hasEncoder = CYD_Input::hasEncoder();
 
-    // Linker Schläger
-    if (hasPoti) {
+    // Linker Schläger (immer AI mit Encoder)
+    if (hasEncoder || !hasPoti) {
+      // Encoder oder ohne Potis: Immer AI-Modus für linken Schläger
+      autoModeLeftPaddle = true;
+      paddleLeft.color = PONG_COLOR_PADDLE_AUTO;
+      int targetY = ball.y - (paddleLeft.h / 2);
+      paddleLeft.y += (targetY - paddleLeft.y) * 0.1;
+    } else if (hasPoti) {
       // Mit Potis: AI oder manuell
       if (autoModeLeftPaddle) {
         int targetY = ball.y - (paddleLeft.h / 2);
@@ -311,21 +324,19 @@ private:
         int potLeftValue = CYD_Input::readPoti(CYD_POTI_LEFT);
         paddleLeft.y = map(potLeftValue, 1000, 0, 0, PONG_SCREEN_HEIGHT - paddleLeft.h);
       }
-    } else {
-      // Ohne Potis: Immer AI-Modus für linken Schläger
-      autoModeLeftPaddle = true;
-      paddleLeft.color = PONG_COLOR_PADDLE_AUTO;
-      int targetY = ball.y - (paddleLeft.h / 2);
-      paddleLeft.y += (targetY - paddleLeft.y) * 0.1;
     }
 
     // Rechter Schläger
-    if (hasPoti) {
+    if (hasEncoder) {
+      // Mit Encoder: Drehung steuert Paddle
+      int delta = CYD_Input::readEncoderDelta();
+      paddleRight.y -= delta * 4;  // Invertiert: delta positiv = runter
+    } else if (hasPoti) {
       // Mit Poti
       int potRightValue = CYD_Input::readPoti(CYD_POTI_RIGHT);
       paddleRight.y = map(potRightValue, 1000, 0, 0, PONG_SCREEN_HEIGHT - paddleRight.h);
     } else {
-      // Ohne Poti: Tastatur (A = hoch, D = runter)
+      // Ohne Poti/Encoder: Tastatur (A = hoch, D = runter)
       if (CYD_Input::readButton(CYD_BTN_A)) {
         paddleRight.y -= 4;  // Nach oben
       }
