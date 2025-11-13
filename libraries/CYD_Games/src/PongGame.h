@@ -208,8 +208,8 @@ private:
   void handleButtons() {
     bool hasPoti = CYD_Input::hasPotis();
 
-    // Taste D: Zurück zum Menü
-    if (CYD_Input::readButton(CYD_BTN_D)) {
+    // Taste D: Zurück zum Menü (NUR mit Potis!)
+    if (hasPoti && CYD_Input::readButton(CYD_BTN_D)) {
       returnToMenu = true;
       Serial.println("Zurück zum Menü!");
       return;
