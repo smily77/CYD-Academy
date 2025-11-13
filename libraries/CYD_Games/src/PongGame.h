@@ -34,7 +34,10 @@ public:
     autoModeLeftPaddle(false),
     lastButtonStateAutoOn(false),
     lastButtonStateAutoOff(false),
-    lastButtonStateResetScore(false)
+    lastButtonStateResetScore(false),
+    returnToMenu(false),
+    lastButtonStateLeft(false),
+    lastButtonStateRight(false)
   {}
 
   // Initialisierung
@@ -107,6 +110,7 @@ public:
   int getScoreLeft() { return scoreLeft; }
   int getScoreRight() { return scoreRight; }
   bool isAutoMode() { return autoModeLeftPaddle; }
+  bool shouldReturnToMenu() { return returnToMenu; }
 
 private:
   // Display-Referenz
@@ -157,6 +161,11 @@ private:
   bool lastButtonStateAutoOn;
   bool lastButtonStateAutoOff;
   bool lastButtonStateResetScore;
+  bool returnToMenu;
+
+  // Tastatur-Steuerung (wenn keine Potis)
+  bool lastButtonStateLeft;
+  bool lastButtonStateRight;
 
   // === METHODEN ===
 
@@ -197,35 +206,55 @@ private:
   }
 
   void handleButtons() {
-    // Auto-Modus EIN
-    bool currentButtonStateAutoOn = CYD_Input::readButton(CYD_BTN_C);
-    if (currentButtonStateAutoOn && !lastButtonStateAutoOn) {
-      if (!autoModeLeftPaddle) {
-        autoModeLeftPaddle = true;
-        paddleLeft.color = COLOR_PADDLE_AUTO;
-        Serial.println("Auto-Modus EIN");
+    bool hasPoti = CYD_Input::hasPotis();
+
+    // Taste D: Zurück zum Menü (NUR mit Potis!)
+    if (hasPoti && CYD_Input::readButton(CYD_BTN_D)) {
+      returnToMenu = true;
+      Serial.println("Zurück zum Menü!");
+      return;
+    }
+
+    // Ohne Potis: B&C gleichzeitig für Menü-Rückkehr
+    if (!hasPoti) {
+      if (CYD_Input::readButton(CYD_BTN_B) && CYD_Input::readButton(CYD_BTN_C)) {
+        returnToMenu = true;
+        Serial.println("Zurück zum Menü! (B+C)");
+        return;
       }
     }
-    lastButtonStateAutoOn = currentButtonStateAutoOn;
 
-    // Auto-Modus AUS
-    bool currentButtonStateAutoOff = CYD_Input::readButton(CYD_BTN_B);
-    if (currentButtonStateAutoOff && !lastButtonStateAutoOff) {
-      if (autoModeLeftPaddle) {
-        autoModeLeftPaddle = false;
-        paddleLeft.color = COLOR_PADDLE;
-        Serial.println("Auto-Modus AUS");
+    // Auto-Modus EIN (nur mit Potis)
+    if (hasPoti) {
+      bool currentButtonStateAutoOn = CYD_Input::readButton(CYD_BTN_C);
+      if (currentButtonStateAutoOn && !lastButtonStateAutoOn) {
+        if (!autoModeLeftPaddle) {
+          autoModeLeftPaddle = true;
+          paddleLeft.color = COLOR_PADDLE_AUTO;
+          Serial.println("Auto-Modus EIN");
+        }
       }
-    }
-    lastButtonStateAutoOff = currentButtonStateAutoOff;
+      lastButtonStateAutoOn = currentButtonStateAutoOn;
 
-    // Spielstand RESET
-    bool currentButtonStateResetScore = CYD_Input::readButton(CYD_BTN_A);
-    if (currentButtonStateResetScore && !lastButtonStateResetScore) {
-      Serial.println("Spielstand wird zurückgesetzt!");
-      init(lcd);  // Neu starten
+      // Auto-Modus AUS (nur mit Potis)
+      bool currentButtonStateAutoOff = CYD_Input::readButton(CYD_BTN_B);
+      if (currentButtonStateAutoOff && !lastButtonStateAutoOff) {
+        if (autoModeLeftPaddle) {
+          autoModeLeftPaddle = false;
+          paddleLeft.color = COLOR_PADDLE;
+          Serial.println("Auto-Modus AUS");
+        }
+      }
+      lastButtonStateAutoOff = currentButtonStateAutoOff;
+
+      // Spielstand RESET (nur mit Potis)
+      bool currentButtonStateResetScore = CYD_Input::readButton(CYD_BTN_A);
+      if (currentButtonStateResetScore && !lastButtonStateResetScore) {
+        Serial.println("Spielstand wird zurückgesetzt!");
+        init(lcd);  // Neu starten
+      }
+      lastButtonStateResetScore = currentButtonStateResetScore;
     }
-    lastButtonStateResetScore = currentButtonStateResetScore;
   }
 
   void updatePaddles() {
@@ -233,20 +262,42 @@ private:
     oldPaddleLeftColor = paddleLeft.color;
     oldPaddleRightY = paddleRight.y;
 
+    bool hasPoti = CYD_Input::hasPotis();
+
     // Linker Schläger
-    if (autoModeLeftPaddle) {
-      // AI: Folgt dem Ball
+    if (hasPoti) {
+      // Mit Potis: AI oder manuell
+      if (autoModeLeftPaddle) {
+        // AI: Folgt dem Ball
+        int targetY = ball.y - (paddleLeft.h / 2);
+        paddleLeft.y += (targetY - paddleLeft.y) * 0.1;
+      } else {
+        // Manuell mit Poti
+        int potLeftValue = CYD_Input::readPoti(CYD_POTI_LEFT);
+        paddleLeft.y = map(potLeftValue, 1000, 0, 0, SCREEN_HEIGHT - paddleLeft.h);
+      }
+    } else {
+      // Ohne Potis: Immer AI-Modus für linken Schläger
+      autoModeLeftPaddle = true;
+      paddleLeft.color = COLOR_PADDLE_AUTO;
       int targetY = ball.y - (paddleLeft.h / 2);
       paddleLeft.y += (targetY - paddleLeft.y) * 0.1;
-    } else {
-      // Manuell
-      int potLeftValue = CYD_Input::readPoti(CYD_POTI_LEFT);
-      paddleLeft.y = map(potLeftValue, 1000, 0, 0, SCREEN_HEIGHT - paddleLeft.h);
     }
 
-    // Rechter Schläger (immer manuell)
-    int potRightValue = CYD_Input::readPoti(CYD_POTI_RIGHT);
-    paddleRight.y = map(potRightValue, 1000, 0, 0, SCREEN_HEIGHT - paddleRight.h);
+    // Rechter Schläger
+    if (hasPoti) {
+      // Mit Poti
+      int potRightValue = CYD_Input::readPoti(CYD_POTI_RIGHT);
+      paddleRight.y = map(potRightValue, 1000, 0, 0, SCREEN_HEIGHT - paddleRight.h);
+    } else {
+      // Ohne Poti: Tastatur (A = hoch, D = runter)
+      if (CYD_Input::readButton(CYD_BTN_A)) {
+        paddleRight.y -= 4;  // Nach oben
+      }
+      if (CYD_Input::readButton(CYD_BTN_D)) {
+        paddleRight.y += 4;  // Nach unten
+      }
+    }
 
     // Grenzen
     paddleLeft.y = constrain(paddleLeft.y, 0, SCREEN_HEIGHT - paddleLeft.h);

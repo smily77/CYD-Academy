@@ -96,18 +96,14 @@ void buildMenu() {
   menuItemCount = 0;
   bool hasPoti = CYD_Input::hasPotis();
 
-  // Pong nur mit Potentiometern
-  if (hasPoti) {
-    menuItems[menuItemCount++] = {"PONG", "Neon-Paddle mit Partikeln", 0x07FF, GAME_PONG};
-  }
+  // Pong (mit Potis oder Tastatur)
+  menuItems[menuItemCount++] = {"PONG", "Neon-Paddle mit Partikeln", 0x07FF, GAME_PONG};
 
   // Snake braucht keine Potis
   menuItems[menuItemCount++] = {"SNAKE", "Gradient-Schlange & Trail", 0x07E0, GAME_SNAKE};
 
-  // Breakout nur mit Potentiometern
-  if (hasPoti) {
-    menuItems[menuItemCount++] = {"BREAKOUT", "3D-Blöcke & Explosionen", 0xFD20, GAME_BREAKOUT};
-  }
+  // Breakout (mit Potis oder Tastatur)
+  menuItems[menuItemCount++] = {"BREAKOUT", "3D-Blöcke & Explosionen", 0xFD20, GAME_BREAKOUT};
 
   // Restliche Spiele brauchen keine Potis
   menuItems[menuItemCount++] = {"SPACE INVADERS", "Glow-Aliens & Schilde", 0xF81F, GAME_SPACEINVADERS};
@@ -169,8 +165,12 @@ void loop() {
 
     case GAME_PONG:
       pongGame.update();
-      // Pong hat kein Game Over, läuft endlos
-      // TODO: Mit extra Button zurück zum Menu
+      // Zurück zum Menu mit Taste D (oder B+C ohne Potis)
+      if (pongGame.shouldReturnToMenu()) {
+        delay(500);
+        currentState = MENU;
+        drawMenu();
+      }
       break;
 
     case GAME_SNAKE:
