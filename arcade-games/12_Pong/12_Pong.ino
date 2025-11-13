@@ -24,6 +24,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 #include <PongGame.h>
 
 // Display Objekt
@@ -42,17 +43,11 @@ void setup() {
   lcd.fillScreen(0x0000);
   lcd.setBrightness(255);
 
-  // Analog Inputs konfigurieren
-  pinMode(potiLeft, INPUT);
-  pinMode(potiRight, INPUT);
-
-  // Taster Inputs konfigurieren
-  pinMode(tasteA, INPUT_PULLUP);
-  pinMode(tasteB, INPUT_PULLUP);
-  pinMode(tasteC, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(potiLeft) + analogRead(potiRight) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_LEFT) + CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Spiel initialisieren
   game.init(&lcd);

@@ -9,6 +9,7 @@
 #define FROGGERGAME_H
 
 #include <Arduino.h>
+#include <CYD_Input.h>
 // Forward declaration - LGFX muss bereits definiert sein
 class LGFX;
 
@@ -111,11 +112,8 @@ public:
     oldFrogY = -1;
     lastMoveTime = 0;
 
-    // Button Inputs konfigurieren
-    pinMode(FRG_BTN_LEFT, INPUT_PULLUP);
-    pinMode(FRG_BTN_RIGHT, INPUT_PULLUP);
-    pinMode(FRG_BTN_UP, INPUT_PULLUP);
-    pinMode(FRG_BTN_DOWN, INPUT_PULLUP);
+    // Input initialisieren
+    CYD_Input::init();
 
     // Bildschirm aufbauen
     drawBackground();
@@ -130,7 +128,7 @@ public:
   void update() {
     if (gameOver) {
       // Warte auf Neustart
-      if (digitalRead(FRG_BTN_UP) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_A)) {
         init(lcd);
         delay(300);
       }
@@ -266,16 +264,16 @@ private:
     float newY = frog.y;
     bool moved = false;
 
-    if (digitalRead(FRG_BTN_LEFT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_B)) {
       newX--;
       moved = true;
-    } else if (digitalRead(FRG_BTN_RIGHT) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_C)) {
       newX++;
       moved = true;
-    } else if (digitalRead(FRG_BTN_UP) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_A)) {
       newY++;
       moved = true;
-    } else if (digitalRead(FRG_BTN_DOWN) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_D)) {
       newY--;
       moved = true;
     }

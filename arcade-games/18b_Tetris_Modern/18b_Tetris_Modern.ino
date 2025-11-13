@@ -28,6 +28,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 
 // Pin-Mapping: Portrait-Modus
 #define BTN_LEFT   tasteD
@@ -257,14 +258,11 @@ void setup() {
   lcd.fillScreen(COLOR_BG);
   lcd.setBrightness(255);
 
-  // Button Inputs konfigurieren
-  pinMode(BTN_LEFT, INPUT_PULLUP);
-  pinMode(BTN_RIGHT, INPUT_PULLUP);
-  pinMode(BTN_ROTATE, INPUT_PULLUP);
-  pinMode(BTN_DOWN, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(35) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Spiel initialisieren
   initGame();
@@ -280,7 +278,7 @@ void setup() {
 void loop() {
   if (gameOver) {
     // Warte auf Neustart
-    if (digitalRead(BTN_ROTATE) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_B)) {
       initGame();
       delay(300);
     }
@@ -383,14 +381,14 @@ void handleInput() {
 
   bool moved = false;
 
-  if (digitalRead(BTN_LEFT) == LOW) {
+  if (CYD_Input::readButton(CYD_BTN_D)) {
     moved = movePiece(-1, 0);
-  } else if (digitalRead(BTN_RIGHT) == LOW) {
+  } else if (CYD_Input::readButton(CYD_BTN_A)) {
     moved = movePiece(1, 0);
-  } else if (digitalRead(BTN_DOWN) == LOW) {
+  } else if (CYD_Input::readButton(CYD_BTN_C)) {
     moved = movePiece(0, 1);
     if (moved) score += 1;
-  } else if (digitalRead(BTN_ROTATE) == LOW) {
+  } else if (CYD_Input::readButton(CYD_BTN_B)) {
     moved = rotatePiece();
   }
 

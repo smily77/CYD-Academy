@@ -15,6 +15,7 @@
 
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
+#include <CYD_Input.h>
 
 // Forward declaration
 class LGFX;
@@ -132,11 +133,8 @@ public:
     lcd->fillScreen(TET_COLOR_BG);
     lcd->setBrightness(255);
 
-    // Button Inputs konfigurieren
-    pinMode(TET_BTN_LEFT, INPUT_PULLUP);
-    pinMode(TET_BTN_RIGHT, INPUT_PULLUP);
-    pinMode(TET_BTN_ROTATE, INPUT_PULLUP);
-    pinMode(TET_BTN_DOWN, INPUT_PULLUP);
+    // Input initialisieren
+    CYD_Input::init();
 
     // Zufallsgenerator
     randomSeed(analogRead(35) + micros());
@@ -155,7 +153,7 @@ public:
   void update() {
     if (gameOver) {
       // Warte auf Neustart
-      if (digitalRead(TET_BTN_ROTATE) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_B)) {
         initGame();
         delay(300);
       }
@@ -359,14 +357,14 @@ private:
 
     bool moved = false;
 
-    if (digitalRead(TET_BTN_LEFT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_D)) {
       moved = movePiece(-1, 0);
-    } else if (digitalRead(TET_BTN_RIGHT) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_A)) {
       moved = movePiece(1, 0);
-    } else if (digitalRead(TET_BTN_DOWN) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_C)) {
       moved = movePiece(0, 1);
       if (moved) score += 1;
-    } else if (digitalRead(TET_BTN_ROTATE) == LOW) {
+    } else if (CYD_Input::readButton(CYD_BTN_B)) {
       moved = rotatePiece();
     }
 

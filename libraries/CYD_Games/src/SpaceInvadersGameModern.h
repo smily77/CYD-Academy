@@ -15,6 +15,7 @@
 
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
+#include <CYD_Input.h>
 
 // Forward declaration
 class LGFX;
@@ -111,7 +112,7 @@ public:
     lastAlienShot(0),
     oldPlayerX(-1),
     backgroundDrawn(false),
-    lastPauseState(HIGH)
+    lastPauseState(false)
   {
     // Arrays werden im init() initialisiert
   }
@@ -121,11 +122,8 @@ public:
 
     Serial.println("Initialisiere Space Invaders Modern...");
 
-    // Button Inputs konfigurieren
-    pinMode(SI_BTN_LEFT, INPUT_PULLUP);
-    pinMode(SI_BTN_RIGHT, INPUT_PULLUP);
-    pinMode(SI_BTN_SHOOT, INPUT_PULLUP);
-    pinMode(SI_BTN_PAUSE, INPUT_PULLUP);
+    // Input initialisieren
+    CYD_Input::init();
 
     // Zufallsgenerator
     randomSeed(analogRead(34) + analogRead(35) + micros());
@@ -139,7 +137,7 @@ public:
   void update() {
     if (gameOver) {
       // Warte auf Neustart-Button
-      if (digitalRead(SI_BTN_SHOOT) == LOW) {
+      if (CYD_Input::readButton(CYD_BTN_A)) {
         initGame();
         gameOver = false;
         delay(300);
@@ -148,8 +146,8 @@ public:
     }
 
     // Pause-Button
-    int pauseState = digitalRead(SI_BTN_PAUSE);
-    if (pauseState == LOW && lastPauseState == HIGH) {
+    bool pauseState = CYD_Input::readButton(CYD_BTN_D);
+    if (pauseState && !lastPauseState) {
       paused = !paused;
       Serial.println(paused ? "PAUSE" : "WEITER");
       delay(200);
@@ -170,7 +168,7 @@ public:
     updatePlayer();
 
     // Spieler schießen
-    if (digitalRead(SI_BTN_SHOOT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_A)) {
       shootPlayerBullet();
       delay(100);  // Entprellen
     }
@@ -247,7 +245,7 @@ private:
   bool backgroundDrawn;
 
   // Button states
-  int lastPauseState;
+  bool lastPauseState;
 
   // === HILFSFUNKTIONEN ===
 
@@ -388,10 +386,10 @@ private:
   void updatePlayer() {
     int newX = player.x;
 
-    if (digitalRead(SI_BTN_LEFT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_B)) {
       newX -= 1;
     }
-    if (digitalRead(SI_BTN_RIGHT) == LOW) {
+    if (CYD_Input::readButton(CYD_BTN_C)) {
       newX += 1;
     }
 

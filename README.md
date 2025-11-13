@@ -46,12 +46,49 @@ Die Beispiele verwenden `CYD_Display_Config.h` aus der MyLGFXConfigs Library fü
 - LGFX Display-Setup für CYD Boards
 - Pin-Definitionen für RGB LED, Photoresistor, Buttons, Potentiometer
 - Automatische Display-Erkennung (2.8" / 3.5")
+- Flexible Hardware-Konfiguration (GPIO oder I2C Buttons)
 
 **Installation MyLGFXConfigs:**
 ```bash
 # In Arduino/libraries/ Verzeichnis:
 git clone https://github.com/dein-repo/MyLGFXConfigs.git
 ```
+
+### Hardware-Konfiguration
+
+Die CYD_Games Library unterstützt verschiedene Hardware-Konfigurationen über `CYD_Display_Config.h`:
+
+**Option 1: GPIO-Buttons (direkt am ESP32)**
+```cpp
+#define gpioSwitch
+#define tasteA 17
+#define tasteB 5
+#define tasteC 16
+#define tasteD 18
+```
+
+**Option 2: I2C-Buttons (über PCF8574 Portextender)**
+```cpp
+#define i2cSwitch
+#define tasteA 0        // PCF8574 Pin 0
+#define tasteB 1        // PCF8574 Pin 1
+#define tasteC 2        // PCF8574 Pin 2
+#define tasteD 3        // PCF8574 Pin 3
+#define pcfAddress 0x20 // I2C-Adresse des PCF8574
+#define switchInterrupt 22  // Optional: Interrupt Pin
+```
+
+**Potentiometer (optional für Pong & Breakout)**
+```cpp
+#define gpioPoti
+#define potiLeft 34
+#define potiRight 35
+```
+
+**Wichtig:**
+- Entweder `gpioSwitch` ODER `i2cSwitch` muss definiert sein (nicht beide!)
+- Spiele die Potentiometer benötigen (Pong, Breakout) erscheinen nur im Menu wenn `gpioPoti` definiert ist
+- Bei I2C-Buttons muss die PCF8574 Library installiert sein
 
 ### Board-Einstellungen
 

@@ -34,6 +34,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 #include <AsteroidsGame.h>
 
 // ===== KONFIGURATION =====
@@ -56,20 +57,11 @@ void setup() {
   lcd.fillScreen(0x0000);
   lcd.setBrightness(255);
 
-  // Button Inputs konfigurieren (wird auch in game.init() gemacht, aber schadet nicht)
-  pinMode(tasteA, INPUT_PULLUP);
-  pinMode(tasteB, INPUT_PULLUP);
-  pinMode(tasteC, INPUT_PULLUP);
-  pinMode(tasteD, INPUT_PULLUP);
-
-#ifdef USE_POT_ROTATION
-  // ADC konfigurieren (0-1V Bereich)
-  analogSetAttenuation(ADC_0db);  // 0-1V Range
-  pinMode(potiLeft, INPUT);
-#endif
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(35) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_RIGHT) + micros());
 
   // Spiel initialisieren
 #ifdef USE_POT_ROTATION

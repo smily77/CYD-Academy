@@ -24,6 +24,7 @@
 */
 
 #include <CYD_Display_Config.h>
+#include <CYD_Input.h>
 
 // Pin-Mapping: Physische Pins -> Logische Namen
 #define BTN_LEFT   tasteB
@@ -131,14 +132,11 @@ void setup() {
   lcd.setRotation(1);
   lcd.setBrightness(255);
 
-  // Button Pins konfigurieren
-  pinMode(BTN_LEFT, INPUT_PULLUP);
-  pinMode(BTN_UP, INPUT_PULLUP);
-  pinMode(BTN_RIGHT, INPUT_PULLUP);
-  pinMode(BTN_DOWN, INPUT_PULLUP);
+  // Input initialisieren
+  CYD_Input::init();
 
   // Zufallsgenerator
-  randomSeed(analogRead(34) + micros());
+  randomSeed(CYD_Input::readPoti(CYD_POTI_LEFT) + micros());
 
   // Partikel initialisieren
   for (int i = 0; i < MAX_PARTICLES; i++) {
@@ -278,22 +276,22 @@ void readButtons() {
   }
 
   // Verhindere 180-Grad Wendungen
-  if (digitalRead(BTN_UP) == LOW && currentDirection != DIR_DOWN) {
+  if (CYD_Input::readButton(CYD_BTN_A) && currentDirection != DIR_DOWN) {
     nextDirection = DIR_UP;
     lastButtonPress = now;
     Serial.println("Button: UP");
   }
-  else if (digitalRead(BTN_DOWN) == LOW && currentDirection != DIR_UP) {
+  else if (CYD_Input::readButton(CYD_BTN_D) && currentDirection != DIR_UP) {
     nextDirection = DIR_DOWN;
     lastButtonPress = now;
     Serial.println("Button: DOWN");
   }
-  else if (digitalRead(BTN_LEFT) == LOW && currentDirection != DIR_RIGHT) {
+  else if (CYD_Input::readButton(CYD_BTN_B) && currentDirection != DIR_RIGHT) {
     nextDirection = DIR_LEFT;
     lastButtonPress = now;
     Serial.println("Button: LEFT");
   }
-  else if (digitalRead(BTN_RIGHT) == LOW && currentDirection != DIR_LEFT) {
+  else if (CYD_Input::readButton(CYD_BTN_C) && currentDirection != DIR_LEFT) {
     nextDirection = DIR_RIGHT;
     lastButtonPress = now;
     Serial.println("Button: RIGHT");
@@ -301,10 +299,10 @@ void readButtons() {
 }
 
 bool checkAnyButton() {
-  return (digitalRead(BTN_UP) == LOW ||
-          digitalRead(BTN_DOWN) == LOW ||
-          digitalRead(BTN_LEFT) == LOW ||
-          digitalRead(BTN_RIGHT) == LOW);
+  return (CYD_Input::readButton(CYD_BTN_A) ||
+          CYD_Input::readButton(CYD_BTN_D) ||
+          CYD_Input::readButton(CYD_BTN_B) ||
+          CYD_Input::readButton(CYD_BTN_C));
 }
 
 // ===== GAME LOGIC =====
