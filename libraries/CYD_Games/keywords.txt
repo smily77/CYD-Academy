@@ -1,0 +1,35 @@
+#######################################
+# Syntax Coloring Map For CYD_Games
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+SnakeGame	KEYWORD1
+PongGame	KEYWORD1
+BreakoutGame	KEYWORD1
+SpaceInvadersGame	KEYWORD1
+AsteroidsGame	KEYWORD1
+FroggerGame	KEYWORD1
+TetrisGame	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+init	KEYWORD2
+update	KEYWORD2
+isGameOver	KEYWORD2
+getScore	KEYWORD2
+getScoreLeft	KEYWORD2
+getScoreRight	KEYWORD2
+isAutoMode	KEYWORD2
+getLives	KEYWORD2
+getLevel	KEYWORD2
+getLines	KEYWORD2
+isPotRotationEnabled	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
