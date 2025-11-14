@@ -1,0 +1,341 @@
+# CYD-Academy Brief Guide
+
+**Schnellreferenz für technische Anforderungen**
+
+---
+
+## 🔧 Arduino IDE Anforderung
+
+**KRITISCH**: Die `.ino` Datei MUSS in einem **gleichnamigen Verzeichnis** liegen!
+
+```
+✅ RICHTIG:
+01_HelloWorld/
+└── 01_HelloWorld.ino
+
+17_Lightning_Sensor/
+└── 17_Lightning_Sensor.ino
+
+❌ FALSCH:
+01_HelloWorld/HelloWorld.ino      (Name passt nicht!)
+HelloWorld.ino                     (Kein Verzeichnis!)
+sketches/01_HelloWorld.ino         (Falsches Verzeichnis!)
+```
+
+**Regel**: Verzeichnisname = Dateiname (ohne `.ino`)
+
+---
+
+## 🔒 Credentials.h Format
+
+### Verwendung im Sketch
+
+```cpp
+#include "Credentials.h"  // WiFi-Zugangsdaten
+
+void setup() {
+  WiFi.begin(ssid, password);  // Variablen aus Credentials.h
+}
+```
+
+### Credentials.h Struktur
+
+```cpp
+// Credentials.h (NICHT ins Repository committen!)
+#ifndef CREDENTIALS_H
+#define CREDENTIALS_H
+
+// WiFi - Nutze const char* (NICHT #define!)
+const char* ssid = "MeinWiFiName";
+const char* password = "MeinPasswort";
+
+// Alternative Schreibweise (auch OK):
+const char* WIFI_SSID = "MeinWiFiName";
+const char* WIFI_PASSWORD = "MeinPasswort";
+
+// API Keys
+const char* OPENWEATHER_API_KEY = "abc123...";
+
+// MQTT
+const char* MQTT_SERVER = "192.168.1.100";
+const int MQTT_PORT = 1883;
+const char* MQTT_USER = "user";
+const char* MQTT_PASSWORD = "pass";
+
+#endif
+```
+
+### .gitignore
+
+```gitignore
+# Credentials niemals committen!
+**/Credentials.h
+Credentials.h
+```
+
+**WICHTIG**:
+- Nutze `const char*` Variablen (WiFi.begin() erwartet diese)
+- NICHT `#define` verwenden!
+
+---
+
+## 📚 CYD_Display_Config.h
+
+**Externe Library**: MyLGFXConfigs (nicht im Repository)
+
+```
+Installation: Arduino/libraries/MyLGFXConfigs/
+Enthält: CYD_Display_Config.h
+```
+
+### Im Sketch verwenden
+
+```cpp
+#include <CYD_Display_Config.h>
+
+LGFX lcd;  // Display-Objekt (aus Config)
+
+void setup() {
+  lcd.init();
+  lcd.setRotation(0);  // 0=Portrait, 1=Landscape
+  // ...
+}
+```
+
+### Was enthält CYD_Display_Config.h?
+
+#### 1. LGFX Konstruktor (Display-Setup)
+
+```cpp
+#include <LovyanGFX.hpp>
+
+class LGFX : public lgfx::LGFX_Device {
+  lgfx::Panel_ILI9341 _panel_instance;     // Display-Chip
+  lgfx::Bus_SPI _bus_instance;             // SPI-Bus
+  lgfx::Touch_XPT2046 _touch_instance;     // Touch-Controller
+
+public:
+  LGFX(void) {
+    // Panel-Konfiguration
+    auto cfg = _panel_instance.config();
+    cfg.pin_cs = 15;
+    cfg.pin_rst = -1;
+    cfg.offset_x = 0;
+    cfg.offset_y = 0;
+    // ...
+
+    // SPI-Bus Konfiguration
+    auto bus_cfg = _bus_instance.config();
+    bus_cfg.pin_mosi = 13;
+    bus_cfg.pin_miso = 12;
+    bus_cfg.pin_sclk = 14;
+    bus_cfg.pin_dc = 2;
+    bus_cfg.freq_write = 40000000;
+    bus_cfg.freq_read = 16000000;
+    // ...
+
+    // Touch-Konfiguration
+    auto touch_cfg = _touch_instance.config();
+    touch_cfg.pin_cs = 33;
+    touch_cfg.pin_int = -1;
+    touch_cfg.bus_shared = true;
+    touch_cfg.offset_rotation = 0;
+    // ...
+
+    setPanel(&_panel_instance);
+    _panel_instance.setBus(&_bus_instance);
+    _panel_instance.setTouch(&_touch_instance);
+  }
+};
+```
+
+**Warum externe Library?**
+- Flexibilität für verschiedene CYD-Varianten (2.8", 3.5")
+- Zentralisierte Display-Konfiguration
+- Keine Code-Duplikation in jedem Beispiel
+
+#### 2. GPIO Pin-Definitionen
+
+**Standard-Pins für CYD Hardware**:
+
+```cpp
+// I2C für Sensoren & Erweiterungen
+#define extSDA 22
+#define extSCL 27
+
+// RGB LED (optional)
+#define rgbLedR 4
+#define rgbLedG 16
+#define rgbLedB 17
+
+// Photoresistor / LDR (optional)
+#define photoPin 34
+
+// Optional: Interrupt Pin für Sensoren
+#ifdef HAS_INTERRUPT_PIN
+  #define extIrqPin 35  // Beispiel, modulabhängig
+#endif
+```
+
+**Verwendung in Sketches**:
+
+```cpp
+// I2C initialisieren
+Wire.begin(extSDA, extSCL);
+
+// RGB LED
+pinMode(rgbLedR, OUTPUT);
+digitalWrite(rgbLedR, HIGH);
+
+// Photoresistor
+int ldrValue = analogRead(photoPin);
+```
+
+#### 3. Hardware-Konfigurationen (optional)
+
+**Option A: GPIO-Buttons**
+```cpp
+#ifdef gpioSwitch
+  #define tasteA 17
+  #define tasteB 5
+  #define tasteC 16
+  #define tasteD 18
+#endif
+```
+
+**Option B: I2C-Buttons (PCF8574)**
+```cpp
+#ifdef i2cSwitch
+  #define tasteA 0        // PCF8574 Pin 0
+  #define tasteB 1
+  #define tasteC 2
+  #define tasteD 3
+  #define pcfAddress 0x20
+  #define switchInterrupt 22  // Optional
+#endif
+```
+
+**Option C: Rotary Encoder**
+```cpp
+#ifdef gpioEnc
+  #define encA 17
+  #define encB 5
+  #define encSW 16
+#endif
+```
+
+---
+
+## ✅ Code-Standards
+
+### Display IMMER aus Config
+
+```cpp
+// ✅ RICHTIG:
+#include <CYD_Display_Config.h>
+LGFX lcd;
+
+// ❌ FALSCH: LGFX-Klasse direkt im Sketch definieren
+#include <LovyanGFX.hpp>
+class LGFX : public lgfx::LGFX_Device {
+  // ... 77 Zeilen Boilerplate
+};
+```
+
+### I2C Pins aus Config
+
+```cpp
+// ✅ RICHTIG:
+#define extSDA 22
+#define extSCL 27
+Wire.begin(extSDA, extSCL);
+
+// ❌ FALSCH: Hardcoded
+Wire.begin(22, 27);
+```
+
+### Interrupt mit Polling-Fallback
+
+```cpp
+// Optional: Interrupt Pin verwenden (falls definiert)
+#ifdef extIrqPin
+  #define IRQ_PIN extIrqPin
+  #define USE_INTERRUPT
+#else
+  #define IRQ_PIN -1  // Kein Interrupt
+#endif
+
+void setup() {
+  #ifdef USE_INTERRUPT
+    pinMode(IRQ_PIN, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(IRQ_PIN), myISR, FALLING);
+  #endif
+}
+
+void loop() {
+  #ifdef USE_INTERRUPT
+    // Interrupt-basiert
+    if (interruptFlag) {
+      handleData();
+      interruptFlag = false;
+    }
+  #else
+    // Polling-Modus (Fallback)
+    if (millis() - lastPoll >= 100) {
+      checkSensor();
+      lastPoll = millis();
+    }
+  #endif
+}
+```
+
+---
+
+## 📝 Sketch Header Template
+
+```cpp
+/*
+ * CYD-Academy - Beispiel XX: Titel
+ *
+ * Kurzbeschreibung (1-2 Sätze).
+ *
+ * WICHTIG: Erstelle eine Datei "Credentials.h" im gleichen Verzeichnis mit:
+ *   const char* ssid = "DeinWiFiName";
+ *   const char* password = "DeinWiFiPasswort";
+ *
+ * Hardware:
+ * - ESP32-2432S028R (CYD - Cheap Yellow Display)
+ * - [Sensor/Komponente]
+ *
+ * Verbindung (I2C):
+ * - SDA: GPIO 22 (extSDA)
+ * - SCL: GPIO 27 (extSCL)
+ * - I2C-Adresse: 0xXX
+ *
+ * Features:
+ * - Feature 1
+ * - Feature 2
+ *
+ * Bibliotheken:
+ * - [Library Name]
+ *
+ * Autor: CYD-Academy
+ * Lizenz: MIT
+ */
+```
+
+---
+
+## 🚫 Häufige Fehler
+
+| Fehler | Richtig |
+|--------|---------|
+| `#define WIFI_SSID "..."` | `const char* ssid = "..."` |
+| `Wire.begin(22, 27)` | `Wire.begin(extSDA, extSCL)` |
+| `class LGFX { ... }` im Sketch | `#include <CYD_Display_Config.h>` |
+| `HelloWorld.ino` (ohne Ordner) | `01_HelloWorld/01_HelloWorld.ino` |
+| Credentials.h committen | `.gitignore` eintragen! |
+
+---
+
+**Version**: 1.0 (November 2025)
