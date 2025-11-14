@@ -9,7 +9,8 @@ Einfache, übersichtliche Wetterstation mit Fokus auf **Langzeit-Datenerfassung*
 ### Datenerfassung
 - ⏱️ **Automatische Messung** alle 2 Stunden
 - 📅 **7-Tage-Speicher**: 84 Datenpunkte (12 Messungen/Tag × 7 Tage)
-- 💾 **Persistente Speicherung** in ESP32 NVS (Preferences)
+- 🔍 **AUTO-DETECTION**: FRAM (10^13 Zyklen) falls vorhanden, sonst NVS (~100k Zyklen)
+- 💾 **Persistente Speicherung** mit unbegrenzter Lebensdauer (optional mit FRAM)
 - 🕐 **NTP-Zeitstempel** für genaue Zeitmarkierungen
 - 🔄 **Überlebt Neustarts**: Daten bleiben erhalten
 
@@ -32,9 +33,11 @@ Einfache, übersichtliche Wetterstation mit Fokus auf **Langzeit-Datenerfassung*
 - **ESP32-2432S028R** (CYD - Cheap Yellow Display)
 - **BMP180** Barometer/Temperatur-Sensor (oder BMP085)
 - WiFi-Verbindung (für NTP-Zeitstempel)
+- **Optional: MB85RC256V FRAM** - für unbegrenzte Schreib-Lebensdauer
 
 ### I2C Verkabelung
 
+#### BMP180 (erforderlich)
 ```
 BMP180         CYD (ESP32)
 ------         -----------
@@ -43,6 +46,19 @@ GND     →      GND
 SDA     →      GPIO 22 (extSDA)
 SCL     →      GPIO 27 (extSCL)
 ```
+
+#### MB85RC256V FRAM (optional - für unbegrenzte Lebensdauer)
+```
+MB85RC256V     CYD (ESP32)
+----------     -----------
+VCC     →      3.3V
+GND     →      GND
+SDA     →      GPIO 22 (extSDA) - parallel mit BMP180
+SCL     →      GPIO 27 (extSCL) - parallel mit BMP180
+WP      →      GND (Write-Protect deaktiviert)
+```
+
+**Mehrere I2C-Geräte**: BMP180 (0x77) und FRAM (0x50) können parallel am gleichen I2C-Bus betrieben werden.
 
 ## 📚 Bibliotheken
 
@@ -135,11 +151,159 @@ const int daylightOffset_sec = 0;
   - Rechts Touch: Neuerer Datenpunkt
   - Mitte Touch: Zurück zur Normal-Ansicht
 
+## 🔋 FRAM Auto-Detection (Unbegrenzte Lebensdauer!)
+
+### Was ist FRAM?
+
+**FRAM (Ferroelectric RAM)** ist ein nicht-flüchtiger Speicher, der die Vorteile von RAM und Flash kombiniert:
+
+| Eigenschaft | Flash (NVS) | FRAM (MB85RC256V) |
+|-------------|-------------|-------------------|
+| **Schreibzyklen** | ~100.000 | 10^13 (10 Billionen!) |
+| **Lebensdauer** bei 4×/Tag | ~68 Jahre | ~6.8 Milliarden Jahre 🤯 |
+| **Schreibgeschwindigkeit** | Langsam (ms) | Schnell (ns) |
+| **Stromverbrauch** | Höher | Niedriger |
+| **Byte-Zugriff** | Nein (Page-Write) | Ja (direkt) |
+| **Preis** | ~ | ~€3-5 |
+
+### Auto-Detection
+
+Das Programm **erkennt automatisch**, ob ein FRAM angeschlossen ist:
+
+1. **Beim Start**: I2C-Scan auf Adresse 0x50
+2. **Verifikation**: Schreib/Lese-Test
+3. **Auswahl**:
+   - ✅ FRAM gefunden → Nutze FRAM (grüne Anzeige "FRAM")
+   - ❌ FRAM nicht gefunden → Nutze NVS (gelbe Anzeige "NVS")
+
+**Display-Anzeige unten rechts:**
+```
+84/84 Punkte
+FRAM          ← Grün = FRAM aktiv
+```
+oder
+```
+84/84 Punkte
+NVS           ← Gelb = NVS Fallback
+```
+
+### Warum FRAM für Wetterdaten?
+
+**Problem mit NVS/Flash**:
+- Bei 4 Schreibvorgängen/Tag (2h-Intervall): ~100.000 Zyklen / 4 = 25.000 Tage = ~68 Jahre
+- Das ist **eigentlich genug**, aber bei häufigeren Messungen (z.B. jede 15 Minuten) reduziert sich die Lebensdauer drastisch!
+
+**Mit FRAM**:
+- 10^13 Zyklen = praktisch **unbegrenzt**
+- Auch bei Messung jede Minute: 10^13 / (60 × 24 × 365) = **~19 Millionen Jahre** 😎
+- **Kein Verschleiß**, kein "Wear-Leveling" nötig
+- **Schneller**: Instant-Write ohne Flash-Erase
+
+### MB85RC256V Spezifikationen
+
+```
+Kapazität:     32 KB (256 Kbit)
+I2C-Adresse:   0x50 (Standard)
+Versorgung:    2.7V - 3.6V (3.3V vom CYD)
+Stromverbrauch:
+  - Aktiv:     190 µA @ 100 kHz
+  - Standby:   10 µA
+  - Sleep:     1 µA
+Schreibzeit:   Keine! (instant write)
+Garantierte Zyklen: 10^13
+Datenretention: 10 Jahre
+Temperatur:    -40°C bis +85°C
+```
+
+### Wann lohnt sich FRAM?
+
+**FRAM lohnt sich wenn**:
+- ✅ Häufige Messungen (< 1h Intervall)
+- ✅ Langzeit-Projekt (mehrere Jahre)
+- ✅ Kritische Daten (keine Datenverlust-Gefahr)
+- ✅ Schnelle Speicherung wichtig
+- ✅ Niedriger Stromverbrauch (Batteriebetrieb)
+
+**NVS reicht wenn**:
+- ✅ Seltenere Messungen (> 2h Intervall)
+- ✅ Prototyp oder Kurzzeit-Projekt
+- ✅ Budget-Limit
+- ✅ Speicherbedarf > 32 KB (FRAM-Limit)
+
+### FRAM-Code-Details
+
+#### Auto-Detection
+```cpp
+bool detectFRAM() {
+  // I2C-Scan auf 0x50
+  Wire.beginTransmission(FRAM_I2C_ADDR);
+  uint8_t error = Wire.endTransmission();
+
+  if (error == 0) {
+    // Schreib/Lese-Test
+    writeFRAMByte(0, 0xAA);
+    uint8_t readBack = readFRAMByte(0);
+    return (readBack == 0xAA);
+  }
+  return false;
+}
+```
+
+#### Speicher-Layout
+```
+FRAM (32 KB):
+┌─────────────────────────────┐
+│ 0x0000: History Data        │  1008 Bytes (84 × 12)
+│         (84 DataPoints)     │
+├─────────────────────────────┤
+│ 0x0FA0: Metadata            │  4 Bytes
+│         - dataCount (2B)    │
+│         - currentIndex (2B) │
+├─────────────────────────────┤
+│ 0x0FA4: Frei                │  ~31 KB verfügbar
+│         (für Erweiterungen) │
+└─────────────────────────────┘
+```
+
+#### Speichern (automatisch gewählt)
+```cpp
+void saveHistoryData() {
+  if (framAvailable) {
+    saveHistoryDataToFRAM();  // Instant write!
+  } else {
+    saveHistoryDataToNVS();   // Flash-Erase Delay
+  }
+}
+```
+
+### FRAM kaufen
+
+**Bezugsquellen**:
+- Amazon: "MB85RC256V FRAM Modul" (~€3-5)
+- AliExpress: "MB85RC256V I2C FRAM" (~€2)
+- Adafruit: "Adafruit I2C FRAM Breakout" (~$7)
+- Reichelt/Conrad/Mouser
+
+**Worauf achten**:
+- ✅ MB85RC256V Chip (32 KB)
+- ✅ I2C-Interface (nicht SPI!)
+- ✅ 3.3V kompatibel
+- ✅ Breakout-Board mit Pull-Up Widerständen
+
+**Alternativen**:
+- **MB85RC512V**: 64 KB (gleicher Preis)
+- **FM24CL64**: 8 KB (günstiger)
+- **CY15B104Q**: 512 KB (teurer)
+
 ## 🧠 Technische Details
 
-### Datenspeicherung (ESP32 Preferences / NVS)
+### Datenspeicherung: FRAM vs. NVS
 
-Der ESP32 besitzt einen **NVS (Non-Volatile Storage)** Bereich im Flash-Speicher, der Daten auch nach einem Neustart erhält.
+Das Programm nutzt **automatisch FRAM** falls vorhanden, ansonsten den **ESP32 NVS (Non-Volatile Storage)** Bereich im Flash-Speicher.
+
+#### NVS (Flash-Fallback)
+
+Der ESP32 besitzt einen **NVS-Bereich** im Flash-Speicher, der Daten auch nach einem Neustart erhält.
 
 #### Was wird gespeichert?
 
@@ -484,28 +648,54 @@ void drawIntervalMenu() {
 }
 ```
 
-### 4. Alarm bei Druck-Extremwerten
+**Mit FRAM**: Intervall bis 1 Minute möglich ohne Verschleiß-Probleme!
+
+### 4. High-Frequency Logging mit FRAM
+
+Mit FRAM kannst du viel häufiger messen ohne Lebensdauer-Probleme:
+
+```cpp
+// FRAM erlaubt: Messung jede Minute!
+const int MEASUREMENT_INTERVAL = 60;  // 60 Sekunden
+
+// Mehr Datenpunkte speichern (z.B. 48h @ 1min = 2880 Punkte)
+const int MAX_DATA_POINTS = 2880;  // Passt in FRAM (2880 × 12 = 34.5 KB)
+
+// NVS-Lebensdauer bei 1min-Intervall:
+// 100.000 Zyklen / (60 × 24) = 69 Tage (zu kurz!)
+
+// FRAM-Lebensdauer bei 1min-Intervall:
+// 10^13 Zyklen / (60 × 24 × 365) = ~19 Millionen Jahre (perfekt!)
+```
+
+**Anwendungsfälle**:
+- 🌡️ **Mikroklima-Analyse**: Erfasse schnelle Temperatur-Schwankungen
+- 🏠 **Heizungs-Optimierung**: Detaillierte Raumklima-Daten
+- 🌤️ **Wetterstation Pro**: Erfasse Fronten-Durchgänge in Echtzeit
+- 📊 **Wissenschaft**: Hochauflösende Langzeit-Messungen
+
+### 5. Alarm bei Druck-Extremwerten
 
 Warnung bei plötzlichen Druckänderungen (Unwetter):
 
 ```cpp
 void checkAlarm() {
   if (dataCount < 2) return;
-  
+
   float pressureChange = currentPressure - historyData[dataCount-2].pressure;
-  
+
   // Schneller Druckabfall (>5 hPa in 2h) → Sturm
   if (pressureChange < -5.0) {
     lcd.fillRect(0, 0, 320, 30, TFT_RED);
     lcd.setTextColor(TFT_WHITE, TFT_RED);
     lcd.drawString("WARNUNG: Starker Druckabfall!", 160, 15);
-    
+
     // Optional: Piezo-Summer oder LED
   }
 }
 ```
 
-### 5. Vergleich mit Vorwoche
+### 6. Vergleich mit Vorwoche
 
 Zeige Differenz zu vor 7 Tagen:
 
@@ -524,7 +714,7 @@ void drawWeekComparison() {
 }
 ```
 
-### 6. WebServer mit Chart.js
+### 7. WebServer mit Chart.js
 
 Daten per Web-Interface abrufen:
 
@@ -574,7 +764,7 @@ void loop() {
 }
 ```
 
-### 7. MQTT für Home Assistant
+### 8. MQTT für Home Assistant
 
 Integration ins Smart Home:
 
@@ -598,7 +788,7 @@ void publishToMQTT() {
 }
 ```
 
-### 8. BME280 Upgrade (+ Luftfeuchtigkeit)
+### 9. BME280 Upgrade (+ Luftfeuchtigkeit)
 
 Erweitere auf BME280 für zusätzliche Luftfeuchtigkeit:
 

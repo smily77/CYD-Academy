@@ -9,6 +9,7 @@
   - ESP32-2432S028R (CYD - Cheap Yellow Display)
   - BMP180 Barometer/Temperatur-Sensor (I2C)
   - WiFi für NTP-Zeitstempel
+  - Optional: MB85RC256V FRAM (I2C, 0x50) für unbegrenzte Lebensdauer
 
   I2C Verbindung (am CYD):
   - SDA: GPIO 22 (extSDA)
@@ -18,7 +19,8 @@
 
   Features:
   - Messung alle 2 Stunden über 7 Tage (84 Datenpunkte)
-  - Persistente Speicherung in ESP32 Preferences (NVS)
+  - AUTO-DETECTION: FRAM (10^13 Zyklen) falls vorhanden, sonst NVS (~100k Zyklen)
+  - Persistente Speicherung mit unbegrenzter Lebensdauer (FRAM)
   - NTP-Synchronisierung für genaue Zeitstempel
   - Zwei übersichtliche Liniendiagramme
   - Min/Max Markierungen
@@ -53,8 +55,13 @@ LGFX lcd;
 // Sensor-Objekt
 Adafruit_BMP085 bmp;
 
-// Preferences für persistente Speicherung
+// Preferences für persistente Speicherung (Fallback wenn kein FRAM)
 Preferences preferences;
+
+// FRAM MB85RC256V Konfiguration
+const uint8_t FRAM_I2C_ADDR = 0x50;  // Standard I2C-Adresse
+const uint16_t FRAM_SIZE = 32768;    // 32 KB (256 Kbit)
+bool framAvailable = false;
 
 // NTP Server
 const char* ntpServer = "pool.ntp.org";
@@ -134,6 +141,28 @@ void setup() {
   // I2C initialisieren (extSDA=22, extSCL=27 aus CYD_Display_Config.h)
   Wire.begin(extSDA, extSCL);
   delay(100);
+
+  // FRAM Auto-Detection
+  lcd.drawString("Suche FRAM...", 160, 100);
+  framAvailable = detectFRAM();
+
+  if (framAvailable) {
+    Serial.println(F("✓ MB85RC256V FRAM gefunden @ 0x50"));
+    Serial.println(F("  Schreibzyklen: 10^13 (praktisch unbegrenzt)"));
+    lcd.setTextColor(TFT_GREEN, TFT_BLACK);
+    lcd.drawString("FRAM gefunden!", 160, 100);
+    lcd.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    lcd.drawString("Unbegrenzte Lebensdauer", 160, 115);
+    delay(1500);
+  } else {
+    Serial.println(F("ℹ FRAM nicht gefunden, nutze NVS"));
+    Serial.println(F("  Schreibzyklen: ~100.000"));
+    lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
+    lcd.drawString("Nutze NVS (Flash)", 160, 100);
+    lcd.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    lcd.drawString("~68 Jahre Lebensdauer", 160, 115);
+    delay(1500);
+  }
 
   // BMP180 initialisieren
   lcd.drawString("Initialisiere BMP180...", 160, 120);
@@ -306,10 +335,136 @@ void updateStatistics() {
 }
 
 //=============================================================================
-// Datenspeicherung (Preferences / NVS)
+// FRAM-Funktionen (MB85RC256V)
+//=============================================================================
+
+bool detectFRAM() {
+  // I2C-Scan auf Adresse 0x50
+  Wire.beginTransmission(FRAM_I2C_ADDR);
+  uint8_t error = Wire.endTransmission();
+
+  if (error == 0) {
+    // Zusätzliche Verifikation: Schreibe/Lese Test an Adresse 0
+    uint8_t testByte = 0xAA;
+    writeFRAMByte(0, testByte);
+    delay(1);
+    uint8_t readBack = readFRAMByte(0);
+
+    return (readBack == testByte);
+  }
+
+  return false;
+}
+
+void writeFRAMByte(uint16_t addr, uint8_t data) {
+  Wire.beginTransmission(FRAM_I2C_ADDR);
+  Wire.write((uint8_t)(addr >> 8));    // High byte
+  Wire.write((uint8_t)(addr & 0xFF));  // Low byte
+  Wire.write(data);
+  Wire.endTransmission();
+}
+
+uint8_t readFRAMByte(uint16_t addr) {
+  Wire.beginTransmission(FRAM_I2C_ADDR);
+  Wire.write((uint8_t)(addr >> 8));
+  Wire.write((uint8_t)(addr & 0xFF));
+  Wire.endTransmission();
+
+  Wire.requestFrom(FRAM_I2C_ADDR, (uint8_t)1);
+  if (Wire.available()) {
+    return Wire.read();
+  }
+  return 0;
+}
+
+void writeFRAMBytes(uint16_t addr, const uint8_t* data, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    writeFRAMByte(addr + i, data[i]);
+  }
+}
+
+void readFRAMBytes(uint16_t addr, uint8_t* data, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    data[i] = readFRAMByte(addr + i);
+  }
+}
+
+//=============================================================================
+// Datenspeicherung (FRAM oder NVS - Auto-Selection)
 //=============================================================================
 
 void saveHistoryData() {
+  if (framAvailable) {
+    saveHistoryDataToFRAM();
+  } else {
+    saveHistoryDataToNVS();
+  }
+}
+
+void loadHistoryData() {
+  if (framAvailable) {
+    loadHistoryDataFromFRAM();
+  } else {
+    loadHistoryDataFromNVS();
+  }
+}
+
+//=============================================================================
+// FRAM Speicher-Funktionen
+//=============================================================================
+
+void saveHistoryDataToFRAM() {
+  const uint16_t FRAM_DATA_START = 0;     // Startadresse im FRAM
+  const uint16_t FRAM_META_START = 4000;  // Metadaten getrennt speichern
+
+  // Metadaten speichern (dataCount und currentIndex)
+  writeFRAMByte(FRAM_META_START, (uint8_t)(dataCount >> 8));
+  writeFRAMByte(FRAM_META_START + 1, (uint8_t)(dataCount & 0xFF));
+  writeFRAMByte(FRAM_META_START + 2, (uint8_t)(currentIndex >> 8));
+  writeFRAMByte(FRAM_META_START + 3, (uint8_t)(currentIndex & 0xFF));
+
+  // Daten speichern
+  writeFRAMBytes(FRAM_DATA_START, (uint8_t*)historyData, sizeof(historyData));
+
+  Serial.println(F("Daten gespeichert (FRAM)"));
+}
+
+void loadHistoryDataFromFRAM() {
+  const uint16_t FRAM_DATA_START = 0;
+  const uint16_t FRAM_META_START = 4000;
+
+  // Metadaten laden
+  uint8_t dcHigh = readFRAMByte(FRAM_META_START);
+  uint8_t dcLow = readFRAMByte(FRAM_META_START + 1);
+  dataCount = (dcHigh << 8) | dcLow;
+
+  uint8_t ciHigh = readFRAMByte(FRAM_META_START + 2);
+  uint8_t ciLow = readFRAMByte(FRAM_META_START + 3);
+  currentIndex = (ciHigh << 8) | ciLow;
+
+  // Plausibilitätsprüfung
+  if (dataCount > MAX_DATA_POINTS) {
+    dataCount = 0;
+    currentIndex = 0;
+    Serial.println(F("FRAM-Daten ungültig, zurückgesetzt"));
+    return;
+  }
+
+  // Daten laden
+  if (dataCount > 0) {
+    readFRAMBytes(FRAM_DATA_START, (uint8_t*)historyData, sizeof(historyData));
+  }
+
+  Serial.print(F("Daten geladen (FRAM): "));
+  Serial.print(dataCount);
+  Serial.println(F(" Punkte"));
+}
+
+//=============================================================================
+// NVS Speicher-Funktionen (Fallback)
+//=============================================================================
+
+void saveHistoryDataToNVS() {
   preferences.begin("weather", false);
 
   // Metadaten speichern
@@ -321,10 +476,10 @@ void saveHistoryData() {
 
   preferences.end();
 
-  Serial.println(F("Daten gespeichert"));
+  Serial.println(F("Daten gespeichert (NVS)"));
 }
 
-void loadHistoryData() {
+void loadHistoryDataFromNVS() {
   preferences.begin("weather", true);  // read-only
 
   dataCount = preferences.getInt("dataCount", 0);
@@ -335,6 +490,10 @@ void loadHistoryData() {
   }
 
   preferences.end();
+
+  Serial.print(F("Daten geladen (NVS): "));
+  Serial.print(dataCount);
+  Serial.println(F(" Punkte"));
 }
 
 //=============================================================================
@@ -424,10 +583,19 @@ void drawNormalView() {
   lcd.drawString("Min: " + String(minPressure, 1) + " hPa", 5, GRAPH_Y_PRESSURE + GRAPH_HEIGHT + 5);
   lcd.drawString("Max: " + String(maxPressure, 1) + " hPa", 5, GRAPH_Y_PRESSURE + GRAPH_HEIGHT + 18);
 
-  // Datenpunkte-Info
+  // Datenpunkte-Info und Speicher-Typ
   lcd.setTextDatum(TR_DATUM);
   lcd.setTextColor(TFT_DARKGREY, TFT_BLACK);
   lcd.drawString(String(dataCount) + "/" + String(MAX_DATA_POINTS) + " Punkte", 315, 230);
+
+  // Speicher-Typ-Anzeige
+  if (framAvailable) {
+    lcd.setTextColor(TFT_GREEN, TFT_BLACK);
+    lcd.drawString("FRAM", 315, 218);
+  } else {
+    lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
+    lcd.drawString("NVS", 315, 218);
+  }
 
   // Touch-Hinweis
   lcd.setTextDatum(MC_DATUM);
