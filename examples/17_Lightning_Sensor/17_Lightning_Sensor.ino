@@ -33,7 +33,11 @@
   - GND → GND
   - SDA → GPIO 22 (extSDA)
   - SCL → GPIO 27 (extSCL)
-  - IRQ → GPIO 35 (Interrupt Pin)
+  - IRQ → GPIO (extIrqPin aus CYD_Display_Config.h - OPTIONAL)
+
+  HINWEIS: Der Interrupt-Pin ist optional!
+  - Mit extIrqPin: Schneller Interrupt-Modus
+  - Ohne extIrqPin: Automatischer Polling-Modus (100ms Intervall)
 
   Installation:
   1. DFRobot AS3935 Library installieren:
@@ -45,13 +49,16 @@
      #define extSDA 22
      #define extSCL 27
 
+  3. Optional in CYD_Display_Config.h für Interrupt-Modus:
+     #define extIrqPin 35  // Oder ein anderer freier Pin
+
   Steuerung:
   - Touch oben: Reset Statistik
   - Touch unten: Sensitivität ändern
   - Neigung: Automatische Blitz-Erkennung
 */
 
-#include <LovyanGFX.hpp>
+#include <CYD_Display_Config.h>
 #include <Wire.h>
 #include <DFRobot_AS3935_I2C.h>
 
@@ -64,87 +71,14 @@
 #define extSCL 27
 #endif
 
-// Interrupt Pin für AS3935
-#define IRQ_PIN 35
-
-// Display-Konfiguration
-class LGFX : public lgfx::LGFX_Device {
-  lgfx::Panel_ILI9341 _panel_instance;
-  lgfx::Bus_SPI _bus_instance;
-  lgfx::Light_PWM _light_instance;
-  lgfx::Touch_XPT2046 _touch_instance;
-
-public:
-  LGFX(void) {
-    {
-      auto cfg = _bus_instance.config();
-      cfg.spi_host = VSPI_HOST;
-      cfg.spi_mode = 0;
-      cfg.freq_write = 40000000;
-      cfg.freq_read = 16000000;
-      cfg.spi_3wire = true;
-      cfg.use_lock = true;
-      cfg.dma_channel = SPI_DMA_CH_AUTO;
-      cfg.pin_sclk = 14;
-      cfg.pin_mosi = 13;
-      cfg.pin_miso = 12;
-      cfg.pin_dc = 2;
-      _bus_instance.config(cfg);
-      _panel_instance.setBus(&_bus_instance);
-    }
-
-    {
-      auto cfg = _panel_instance.config();
-      cfg.pin_cs = 15;
-      cfg.pin_rst = -1;
-      cfg.pin_busy = -1;
-      cfg.panel_width = 240;
-      cfg.panel_height = 320;
-      cfg.offset_x = 0;
-      cfg.offset_y = 0;
-      cfg.offset_rotation = 0;
-      cfg.dummy_read_pixel = 8;
-      cfg.dummy_read_bits = 1;
-      cfg.readable = true;
-      cfg.invert = false;
-      cfg.rgb_order = false;
-      cfg.dlen_16bit = false;
-      cfg.bus_shared = true;
-      _panel_instance.config(cfg);
-    }
-
-    {
-      auto cfg = _light_instance.config();
-      cfg.pin_bl = 21;
-      cfg.invert = false;
-      cfg.freq = 44100;
-      cfg.pwm_channel = 7;
-      _light_instance.config(cfg);
-      _panel_instance.setLight(&_light_instance);
-    }
-
-    {
-      auto cfg = _touch_instance.config();
-      cfg.x_min = 300;
-      cfg.x_max = 3900;
-      cfg.y_min = 400;
-      cfg.y_max = 3900;
-      cfg.pin_int = -1;
-      cfg.bus_shared = true;
-      cfg.offset_rotation = 0;
-      cfg.spi_host = VSPI_HOST;
-      cfg.freq = 1000000;
-      cfg.pin_sclk = 25;
-      cfg.pin_mosi = 32;
-      cfg.pin_miso = 39;
-      cfg.pin_cs = 33;
-      _touch_instance.config(cfg);
-      _panel_instance.setTouch(&_touch_instance);
-    }
-
-    setPanel(&_panel_instance);
-  }
-};
+// Interrupt Pin für AS3935 (aus CYD_Display_Config.h)
+// Falls nicht definiert → Polling-Modus
+#ifdef extIrqPin
+  #define IRQ_PIN extIrqPin
+  #define USE_INTERRUPT
+#else
+  #define IRQ_PIN -1  // Kein Interrupt verfügbar
+#endif
 
 // ===== KONSTANTEN =====
 
@@ -209,9 +143,11 @@ uint8_t sensitivity = 2;  // 0-7 (höher = empfindlicher)
 
 // ===== INTERRUPT HANDLER =====
 
+#ifdef USE_INTERRUPT
 void IRAM_ATTR lightningISR() {
   interruptDetected = true;
 }
+#endif
 
 // ===== SETUP =====
 
@@ -233,9 +169,14 @@ void setup() {
   Serial.printf("Initializing I2C (SDA=%d, SCL=%d)...\n", extSDA, extSCL);
   Wire.begin(extSDA, extSCL);
 
-  // Interrupt Pin konfigurieren
-  pinMode(IRQ_PIN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(IRQ_PIN), lightningISR, RISING);
+  // Interrupt Pin konfigurieren (falls verfügbar)
+  #ifdef USE_INTERRUPT
+    pinMode(IRQ_PIN, INPUT);
+    attachInterrupt(digitalPinToInterrupt(IRQ_PIN), lightningISR, RISING);
+    Serial.printf("Using interrupt mode on pin %d\n", IRQ_PIN);
+  #else
+    Serial.println("No interrupt pin available - using polling mode");
+  #endif
 
   // AS3935 initialisieren
   lcd.fillScreen(COLOR_BG);
@@ -285,11 +226,25 @@ void setup() {
 // ===== LOOP =====
 
 void loop() {
-  // Interrupt-Check
-  if (interruptDetected) {
-    interruptDetected = false;
-    handleLightningInterrupt();
-  }
+  #ifdef USE_INTERRUPT
+    // Interrupt-basierter Modus
+    if (interruptDetected) {
+      interruptDetected = false;
+      handleLightningInterrupt();
+    }
+  #else
+    // Polling-Modus (alle 100ms prüfen)
+    static unsigned long lastPollTime = 0;
+    if (millis() - lastPollTime >= 100) {
+      lastPollTime = millis();
+
+      // Prüfe ob Interrupt-Quelle verfügbar ist
+      uint8_t intSource = sensor.getInterruptSrc();
+      if (intSource != 0) {
+        handleLightningInterrupt();
+      }
+    }
+  #endif
 
   // Blitz-Animation Update
   if (lightningAnimation) {
