@@ -218,19 +218,15 @@ WiFi-Passwörter, API-Keys und andere Credentials dürfen **NICHT** öffentlich 
 ```cpp
 // Im Arduino-Sketch (z.B. 07_WiFiClock.ino):
 #include <CYD_Display_Config.h>
+#include "Credentials.h"  // WiFi-Zugangsdaten
 
-// Credentials einbinden (falls vorhanden)
-#ifdef USE_CREDENTIALS_FILE
-  #include "Credentials.h"
-#else
-  // Fallback: Benutzer muss hier eintragen
-  #define WIFI_SSID "IHR_WIFI_NAME"
-  #define WIFI_PASSWORD "IHR_WIFI_PASSWORT"
-  #define API_KEY "IHRE_API_KEY"
-#endif
+// WICHTIG im Header-Kommentar des Sketches:
+// * WICHTIG: Erstelle eine Datei "Credentials.h" im gleichen Verzeichnis mit:
+// *   const char* ssid = "DeinWiFiName";
+// *   const char* password = "DeinWiFiPasswort";
 
 void setup() {
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(ssid, password);
   // ...
 }
 ```
@@ -244,22 +240,26 @@ Benutzer erstellt **lokal** eine `Credentials.h` Datei:
 #ifndef CREDENTIALS_H
 #define CREDENTIALS_H
 
-// WiFi Credentials
-#define WIFI_SSID "MeinWiFi"
-#define WIFI_PASSWORD "MeinSuperGeheimesPasswort123"
+// WiFi Credentials (als const char* Variablen)
+const char* ssid = "MeinWiFi";
+const char* password = "MeinSuperGeheimesPasswort123";
+
+// Alternative: Mit Großbuchstaben (beide Varianten sind OK)
+// const char* WIFI_SSID = "MeinWiFi";
+// const char* WIFI_PASSWORD = "MeinSuperGeheimesPasswort123";
 
 // API Keys
-#define OPENWEATHER_API_KEY "abc123def456..."
-#define TIMEZONE_API_KEY "xyz789..."
+const char* OPENWEATHER_API_KEY = "abc123def456...";
+const char* TIMEZONE_API_KEY = "xyz789...";
 
 // MQTT Broker
-#define MQTT_SERVER "192.168.1.100"
-#define MQTT_PORT 1883
-#define MQTT_USER "homeassistant"
-#define MQTT_PASSWORD "mqtt_password"
+const char* MQTT_SERVER = "192.168.1.100";
+const int MQTT_PORT = 1883;
+const char* MQTT_USER = "homeassistant";
+const char* MQTT_PASSWORD = "mqtt_password";
 
 // Andere Secrets
-#define DEVICE_ID "CYD-001"
+const char* DEVICE_ID = "CYD-001";
 
 #endif
 ```
@@ -282,19 +282,21 @@ Im README des Beispiels:
 Erstelle eine Datei `Credentials.h` im gleichen Ordner wie das .ino:
 
 ```cpp
-#define WIFI_SSID "DeinWiFiName"
-#define WIFI_PASSWORD "DeinWiFiPasswort"
+const char* ssid = "DeinWiFiName";
+const char* password = "DeinWiFiPasswort";
 ```
 
-Alternativ: Trage direkt im Sketch ein (Zeile 15-16).
+Wichtig: Nutze `const char*` Variablen (nicht `#define`).
 ```
 
 ### Best Practice für neue Beispiele
 
-1. **Immer Fallback bereitstellen** - Sketch funktioniert auch ohne Credentials.h
-2. **README erklärt Setup** - Benutzer weiß, was zu tun ist
-3. **Beispiel-Template in README** - Copy-Paste-fertig
-4. **Niemals echte Credentials committen** - Auch nicht in Kommentaren!
+1. **Include Credentials.h direkt** - Nutze `#include "Credentials.h"` im Sketch
+2. **Header-Kommentar erklärt** - Im Sketch-Header steht, wie Credentials.h aussehen muss
+3. **README erklärt Setup** - Schritt-für-Schritt Anleitung für Credentials.h
+4. **Beispiel-Template in README** - Copy-Paste-fertig mit `const char*` Variablen
+5. **Niemals echte Credentials committen** - Auch nicht in Kommentaren!
+6. **Nutze const char*** - NICHT `#define` für Credentials (WiFi-Library erwartet const char*)
 
 ---
 
@@ -302,14 +304,26 @@ Alternativ: Trage direkt im Sketch ein (Zeile 15-16).
 
 ### Namenskonvention
 
+**WICHTIG - Arduino IDE Anforderung**:
+Die Arduino IDE erfordert, dass die `.ino` Datei in einem **gleichnamigen Verzeichnis** liegt!
+
 ```
 Format: [Nummer]_[Beschreibung]/[Nummer]_[Beschreibung].ino
 
 Beispiele:
-- 01_HelloWorld/01_HelloWorld.ino
-- 17_Lightning_Sensor/17_Lightning_Sensor.ino
-- 20_Air_Quality_CCS811/20_Air_Quality_CCS811.ino
+- 01_HelloWorld/01_HelloWorld.ino          ✅ RICHTIG
+- 17_Lightning_Sensor/17_Lightning_Sensor.ino  ✅ RICHTIG
+- 20_Air_Quality_CCS811/20_Air_Quality_CCS811.ino  ✅ RICHTIG
+
+FALSCH:
+- 01_HelloWorld/HelloWorld.ino             ❌ Dateiname passt nicht
+- HelloWorld.ino                            ❌ Kein Verzeichnis
+- sketches/01_HelloWorld.ino               ❌ Falsches Verzeichnis
 ```
+
+**Warum?** Die Arduino IDE kann eine `.ino` Datei nur öffnen, wenn:
+1. Sie in einem Verzeichnis liegt
+2. Das Verzeichnis **exakt** den gleichen Namen hat wie die `.ino` Datei (ohne Extension)
 
 **Nummerierung**:
 - `01-10`: Basics (Display, Touch, Grafik)
