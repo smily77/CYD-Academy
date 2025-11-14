@@ -234,6 +234,7 @@ void loop() {
       if (tetrisGame.isGameOver()) {
         delay(2000);
         currentState = MENU;
+        drawMenu();
       }
       break;
   }
