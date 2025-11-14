@@ -263,19 +263,33 @@ private:
     float newX = frog.x;
     float newY = frog.y;
     bool moved = false;
+    bool hasEncoder = CYD_Input::hasEncoder();
 
-    if (CYD_Input::readButton(CYD_BTN_B)) {
-      newX--;
-      moved = true;
-    } else if (CYD_Input::readButton(CYD_BTN_C)) {
-      newX++;
-      moved = true;
-    } else if (CYD_Input::readButton(CYD_BTN_A)) {
-      newY++;
-      moved = true;
-    } else if (CYD_Input::readButton(CYD_BTN_D)) {
-      newY--;
-      moved = true;
+    if (hasEncoder) {
+      // Mit Encoder: Drehung = links/rechts, Button = hoch
+      int delta = CYD_Input::readEncoderDelta();
+      if (delta != 0) {
+        newX += delta;
+        moved = true;
+      } else if (CYD_Input::readEncoderButton()) {
+        newY++;  // Hüpfen nach vorne
+        moved = true;
+      }
+    } else {
+      // Mit Buttons: B/C = links/rechts, A = hoch, D = runter
+      if (CYD_Input::readButton(CYD_BTN_B)) {
+        newX--;
+        moved = true;
+      } else if (CYD_Input::readButton(CYD_BTN_C)) {
+        newX++;
+        moved = true;
+      } else if (CYD_Input::readButton(CYD_BTN_A)) {
+        newY++;
+        moved = true;
+      } else if (CYD_Input::readButton(CYD_BTN_D)) {
+        newY--;
+        moved = true;
+      }
     }
 
     if (moved) {

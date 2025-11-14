@@ -259,10 +259,8 @@ public:
           return 0;
       }
 
-      // ESP32 ADC: Angepasst für 1V-Potis (1V / 3,3V * 4095 ≈ 1241)
-      // Statt 0-4095 verwenden wir 0-1241 für 1V-Potis
-      // constrain() stellt sicher, dass auch Werte > 1241 korrekt auf max 1000 gemappt werden
-      int mappedValue = map(rawValue, 0, 1241, 0, 1000);
+      // ESP32 ADC: 0-4095 → 0-1000 mappen
+      int mappedValue = map(rawValue, 0, 4095, 0, 1000);
       return constrain(mappedValue, 0, 1000);
     #else
       // Keine Potis verfügbar

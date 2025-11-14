@@ -59,10 +59,9 @@ Touch-basiertes Menü für alle **Modern-Spiele**:
 - 3D-Schatten
 
 **Steuerung:**
-- 2x Potentiometer für Paddle-Bewegung
-- Button (tasteC): Auto-Modus AN
-- Button (tasteB): Auto-Modus AUS
-- Button (tasteA): Score zurücksetzen
+- **Mit Potis:** 2x Potentiometer für Paddle-Bewegung, Button C/B für Auto-Modus, Button A für Score-Reset, Button D zurück zum Menü
+- **Mit Buttons (ohne Potis):** Tasten A+D für linken, B+C für rechten Paddle, B+C gleichzeitig zurück zum Menü
+- **Mit Encoder:** Encoder-Rotation für rechten Paddle, linker Paddle im Auto-Modus (kein Menü-Rückkehr)
 
 ---
 
@@ -81,8 +80,8 @@ Touch-basiertes Menü für alle **Modern-Spiele**:
 - Smooth-Animation
 
 **Steuerung:**
-- 4x Digitale Buttons (Hoch/Runter/Links/Rechts)
-- Button (tasteD): Pause
+- **Mit Buttons:** 4x Digitale Buttons (Hoch/Runter/Links/Rechts), Button D für Pause
+- **Mit Encoder:** NICHT kompatibel (wird aus Menü ausgeblendet)
 
 ---
 
@@ -102,9 +101,9 @@ Touch-basiertes Menü für alle **Modern-Spiele**:
 - Moderne Neon-Farbpalette
 
 **Steuerung:**
-- Potentiometer für Paddle-Bewegung
-- Button (tasteA): Start/Restart
-- Button (tasteD): Pause
+- **Mit Potis:** Potentiometer für Paddle-Bewegung, Button A für Start, Button D für Pause
+- **Mit Buttons (ohne Potis):** Tasten B/C für Paddle-Bewegung, Button A für Start, Button D für Pause
+- **Mit Encoder:** Encoder-Rotation für Paddle-Bewegung, Button A für Start, Button D für Pause
 
 ---
 
@@ -125,10 +124,8 @@ Touch-basiertes Menü für alle **Modern-Spiele**:
 - Moderne Alien-Farben (5 Reihen)
 
 **Steuerung:**
-- Button (tasteB): Links
-- Button (tasteC): Rechts
-- Button (tasteA): Schießen
-- Button (tasteD): Pause
+- **Mit Buttons:** Tasten B/C für Links/Rechts, Button A für Schießen, Button D für Pause
+- **Mit Encoder:** Encoder-Rotation für Links/Rechts, Encoder-Button für Schießen, Taste D für Pause
 
 ---
 
@@ -149,10 +146,8 @@ Touch-basiertes Menü für alle **Modern-Spiele**:
 - Schub-Flamme mit Glow
 
 **Steuerung:**
-- Button (tasteB): Links drehen
-- Button (tasteC): Rechts drehen
-- Button (tasteA): Schießen
-- Button (tasteD): Schub (Thrust)
+- **Mit Buttons:** Tasten B/C für Rotation, Button A für Schießen, Button D für Schub
+- **Mit Encoder:** NICHT kompatibel (wird aus Menü ausgeblendet)
 
 ---
 
@@ -174,10 +169,8 @@ Touch-basiertes Menü für alle **Modern-Spiele**:
 - Smooth Frosch-Hüpf-Animation (8-Frame Easing)
 
 **Steuerung:**
-- Button (tasteA): Oben
-- Button (tasteB): Links
-- Button (tasteC): Rechts
-- Button (tasteD): Unten
+- **Mit Buttons:** Tasten A/B/C/D für Oben/Links/Rechts/Unten
+- **Mit Encoder:** Encoder-Rotation für Links/Rechts, Encoder-Button für Vorwärts springen
 
 ---
 
@@ -199,10 +192,8 @@ Touch-basiertes Menü für alle **Modern-Spiele**:
 - Portrait-Modus (240x320)
 
 **Steuerung:**
-- Button (tasteD): Links
-- Button (tasteA): Rechts
-- Button (tasteC): Schneller fallen
-- Button (tasteB): Drehen
+- **Mit Buttons:** Taste D für Links, Taste A für Rechts, Taste C für Schneller fallen, Taste B für Drehen
+- **Mit Encoder:** Encoder-Rotation für Links/Rechts, Encoder-Button für Drehen (KEINE Schnellabsenkung)
 
 **Besonderheit:** Tetris läuft im Portrait-Modus! Die Menü-Programme wechseln automatisch die Rotation.
 
@@ -318,6 +309,23 @@ Die Spiele unterstützen flexible Hardware-Konfiguration über `CYD_Display_Conf
 #define switchInterrupt 22  // Optional
 ```
 
+**Option 3: GPIO-Encoder (Rotary Encoder direkt am ESP32)**
+```cpp
+#define gpioEnc
+#define encA 17         // Encoder Pin A
+#define encB 5          // Encoder Pin B
+#define encSW 16        // Encoder Button
+```
+
+**Option 4: I2C-Encoder (Rotary Encoder über PCF8574)**
+```cpp
+#define i2cEnc
+#define encA 0          // PCF8574 Pin 0
+#define encB 1          // PCF8574 Pin 1
+#define encSW 2         // PCF8574 Pin 2
+#define pcfAddress 0x20
+```
+
 **Potentiometer (optional für Pong & Breakout)**
 ```cpp
 #define gpioPoti
@@ -329,10 +337,13 @@ Die Spiele unterstützen flexible Hardware-Konfiguration über `CYD_Display_Conf
 - RGB LED (für visuelles Feedback)
 
 **Wichtig:**
-- Pong und Breakout benötigen Potentiometer (`gpioPoti` muss definiert sein)
-- Ohne Potentiometer werden diese Spiele automatisch aus den Menüs ausgeblendet
+- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc` muss definiert sein
+- Pong und Breakout benötigen Potentiometer (`gpioPoti` muss definiert sein), außer mit Encoder
+- Mit Encoder sind nicht alle Spiele kompatibel:
+  - ✓ Kompatibel: Pong (AI-Modus), Breakout, Space Invaders, Frogger, Tetris
+  - ✗ Nicht kompatibel: Snake, Asteroids (werden automatisch ausgeblendet)
 - Alle anderen Spiele funktionieren nur mit Buttons (GPIO oder I2C)
-- Bei I2C-Buttons muss die PCF8574 Library installiert sein
+- Bei I2C-Buttons/Encoder muss die PCF8574 Library installiert sein
 
 ## 📊 Spiel-Statistiken
 

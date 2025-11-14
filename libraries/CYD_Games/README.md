@@ -142,6 +142,25 @@ Die Library nutzt `CYD_Input.h` für flexible Hardware-Unterstützung:
 #define switchInterrupt 22  // Optional
 ```
 
+**Option 3: GPIO-Encoder (Rotary Encoder direkt am ESP32)**
+```cpp
+// In CYD_Display_Config.h:
+#define gpioEnc
+#define encA 17         // Encoder Pin A
+#define encB 5          // Encoder Pin B
+#define encSW 16        // Encoder Button
+```
+
+**Option 4: I2C-Encoder (Rotary Encoder über PCF8574)**
+```cpp
+// In CYD_Display_Config.h:
+#define i2cEnc
+#define encA 0          // PCF8574 Pin 0
+#define encB 1          // PCF8574 Pin 1
+#define encSW 2         // PCF8574 Pin 2
+#define pcfAddress 0x20
+```
+
 **Potentiometer (optional für Pong & Breakout)**
 ```cpp
 #define gpioPoti
@@ -150,53 +169,101 @@ Die Library nutzt `CYD_Input.h` für flexible Hardware-Unterstützung:
 ```
 
 **Wichtig:**
-- Entweder `gpioSwitch` ODER `i2cSwitch` muss definiert sein
-- Pong und Breakout benötigen `gpioPoti`
+- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc` muss definiert sein
+- Pong und Breakout benötigen `gpioPoti` (außer mit Encoder: Pong nur AI-Modus)
 - Bei I2C: PCF8574 Library installieren
+- Mit Encoder sind Snake und Asteroids nicht kompatibel
 
 ## Steuerung
 
 ### SnakeGame
+**Mit Buttons:**
 - **tasteA** (CYD_BTN_A) - Oben
 - **tasteB** (CYD_BTN_B) - Links
 - **tasteC** (CYD_BTN_C) - Rechts
 - **tasteD** (CYD_BTN_D) - Unten
 
-### PongGame (benötigt Potentiometer)
+**Mit Encoder:** NICHT kompatibel
+
+### PongGame
+**Mit Potentiometer:**
 - **potiLeft** - Linker Schläger
 - **potiRight** - Rechter Schläger
 - **tasteA** (CYD_BTN_A) - Score Reset
 - **tasteB** (CYD_BTN_B) - AI-Modus AUS
 - **tasteC** (CYD_BTN_C) - AI-Modus EIN
+- **tasteD** (CYD_BTN_D) - Zurück zum Menü
 
-### BreakoutGame (benötigt Potentiometer)
+**Mit Buttons (ohne Potis):**
+- **tasteA** + **tasteD** - Linker Schläger
+- **tasteB** + **tasteC** - Rechter Schläger
+- **tasteB** + **tasteC** gleichzeitig - Zurück zum Menü
+
+**Mit Encoder:**
+- **Encoder Rotation** - Rechter Schläger
+- Linker Schläger: AI-Modus (automatisch)
+- Kein Menü-Rückkehr
+
+### BreakoutGame
+**Mit Potentiometer:**
 - **potiLeft** - Schläger Links/Rechts
 - **tasteA** (CYD_BTN_A) - Ball starten
 - **tasteD** (CYD_BTN_D) - Pause
 
+**Mit Buttons (ohne Potis):**
+- **tasteB** - Schläger Links
+- **tasteC** - Schläger Rechts
+- **tasteA** (CYD_BTN_A) - Ball starten
+- **tasteD** (CYD_BTN_D) - Pause
+
+**Mit Encoder:**
+- **Encoder Rotation** - Schläger Links/Rechts
+- **tasteA** (CYD_BTN_A) - Ball starten
+- **tasteD** (CYD_BTN_D) - Pause
+
 ### SpaceInvadersGame
+**Mit Buttons:**
 - **tasteB** (CYD_BTN_B) - Links
 - **tasteC** (CYD_BTN_C) - Rechts
 - **tasteA** (CYD_BTN_A) - Schießen
 - **tasteD** (CYD_BTN_D) - Pause
 
+**Mit Encoder:**
+- **Encoder Rotation** - Links/Rechts
+- **Encoder Button** - Schießen
+- **tasteD** (CYD_BTN_D) - Pause
+
 ### AsteroidsGame
+**Mit Buttons:**
 - **tasteB** (CYD_BTN_B) - Links drehen
 - **tasteC** (CYD_BTN_C) - Rechts drehen
 - **tasteA** (CYD_BTN_A) - Schießen
 - **tasteD** (CYD_BTN_D) - Schub
 
+**Mit Encoder:** NICHT kompatibel
+
 ### FroggerGame
+**Mit Buttons:**
 - **tasteA** (CYD_BTN_A) - Oben
 - **tasteB** (CYD_BTN_B) - Links
 - **tasteC** (CYD_BTN_C) - Rechts
 - **tasteD** (CYD_BTN_D) - Unten
 
+**Mit Encoder:**
+- **Encoder Rotation** - Links/Rechts
+- **Encoder Button** - Vorwärts springen
+
 ### TetrisGame (Portrait-Modus!)
+**Mit Buttons:**
 - **tasteD** (CYD_BTN_D) - Links
 - **tasteA** (CYD_BTN_A) - Rechts
 - **tasteC** (CYD_BTN_C) - Schneller fallen
 - **tasteB** (CYD_BTN_B) - Drehen
+
+**Mit Encoder:**
+- **Encoder Rotation** - Links/Rechts
+- **Encoder Button** - Drehen
+- Keine Schnellabsenkung
 
 ## Beispiele
 

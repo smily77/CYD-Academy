@@ -28,6 +28,7 @@ Vollständige Sammlung klassischer Arcade-Spiele in Retro- und Modern-Versionen:
   - Photoresistor (für Helligkeitssteuerung)
   - 2x Potentiometer (für Spiele-Steuerung)
   - 4x Digitale Buttons (für Spiele-Steuerung)
+  - Rotary Encoder mit Button (alternative Steuerung)
 
 ## 🚀 Quick Start
 
@@ -78,6 +79,23 @@ Die CYD_Games Library unterstützt verschiedene Hardware-Konfigurationen über `
 #define switchInterrupt 22  // Optional: Interrupt Pin
 ```
 
+**Option 3: GPIO-Encoder (Rotary Encoder direkt am ESP32)**
+```cpp
+#define gpioEnc
+#define encA 17         // Encoder Pin A
+#define encB 5          // Encoder Pin B
+#define encSW 16        // Encoder Button
+```
+
+**Option 4: I2C-Encoder (Rotary Encoder über PCF8574)**
+```cpp
+#define i2cEnc
+#define encA 0          // PCF8574 Pin 0
+#define encB 1          // PCF8574 Pin 1
+#define encSW 2         // PCF8574 Pin 2
+#define pcfAddress 0x20 // I2C-Adresse des PCF8574
+```
+
 **Potentiometer (optional für Pong & Breakout)**
 ```cpp
 #define gpioPoti
@@ -86,9 +104,12 @@ Die CYD_Games Library unterstützt verschiedene Hardware-Konfigurationen über `
 ```
 
 **Wichtig:**
-- Entweder `gpioSwitch` ODER `i2cSwitch` muss definiert sein (nicht beide!)
+- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc` muss definiert sein
+- Mit Encoder sind nicht alle Spiele kompatibel (Snake und Asteroids werden automatisch ausgeblendet)
+- Pong läuft mit Encoder nur im AI-Modus (rechter Paddle mit Encoder steuerbar)
+- Bei Encoder-Steuerung: Rotation = Links/Rechts, Button = Aktion
 - Spiele die Potentiometer benötigen (Pong, Breakout) erscheinen nur im Menu wenn `gpioPoti` definiert ist
-- Bei I2C-Buttons muss die PCF8574 Library installiert sein
+- Bei I2C (i2cSwitch oder i2cEnc) muss die PCF8574 Library installiert sein
 
 ### Board-Einstellungen
 

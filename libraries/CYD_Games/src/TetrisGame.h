@@ -252,16 +252,30 @@ private:
     if (now - lastInputTime < TET_INPUT_DELAY) return;
 
     bool moved = false;
+    bool hasEncoder = CYD_Input::hasEncoder();
 
-    if (CYD_Input::readButton(CYD_BTN_D)) {
-      moved = movePiece(-1, 0);
-    } else if (CYD_Input::readButton(CYD_BTN_A)) {
-      moved = movePiece(1, 0);
-    } else if (CYD_Input::readButton(CYD_BTN_C)) {
-      moved = movePiece(0, 1);
-      if (moved) score += 1;  // Bonus für schnelles Fallen
-    } else if (CYD_Input::readButton(CYD_BTN_B)) {
-      moved = rotatePiece();
+    if (hasEncoder) {
+      // Mit Encoder: Drehung = links/rechts, Button = drehen, KEIN Schnellabsenken
+      int delta = CYD_Input::readEncoderDelta();
+      if (delta < 0) {
+        moved = movePiece(-1, 0);  // Links
+      } else if (delta > 0) {
+        moved = movePiece(1, 0);   // Rechts
+      } else if (CYD_Input::readEncoderButton()) {
+        moved = rotatePiece();
+      }
+    } else {
+      // Mit Buttons: D = links, A = rechts, C = runter, B = drehen
+      if (CYD_Input::readButton(CYD_BTN_D)) {
+        moved = movePiece(-1, 0);
+      } else if (CYD_Input::readButton(CYD_BTN_A)) {
+        moved = movePiece(1, 0);
+      } else if (CYD_Input::readButton(CYD_BTN_C)) {
+        moved = movePiece(0, 1);
+        if (moved) score += 1;  // Bonus für schnelles Fallen
+      } else if (CYD_Input::readButton(CYD_BTN_B)) {
+        moved = rotatePiece();
+      }
     }
 
     if (moved) {
