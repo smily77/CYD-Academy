@@ -1,0 +1,1121 @@
+# CYD-Academy Repository Guideline
+
+**Version:** 1.0
+**Datum:** November 2025
+**Für:** Claude & zukünftige Entwickler
+
+---
+
+## 🎯 Was ist die CYD-Academy?
+
+Die **CYD-Academy** ist eine umfassende **Lernplattform für ESP32 Display-Programmierung** mit dem CYD (Cheap Yellow Display). Sie bietet:
+
+### Philosophie & Ziele
+
+1. **Lernen durch Praxis** - Nicht nur Code, sondern Verständnis vermitteln
+2. **Von Basic bis Advanced** - Strukturierter Lernpfad
+3. **Ausführliche Dokumentation** - Jedes Beispiel erklärt das "Warum", nicht nur das "Wie"
+4. **Wiederverwendbarer Code** - Best Practices und professionelle Struktur
+5. **Hardware-Flexibilität** - Unterstützung verschiedener CYD-Varianten und Erweiterungen
+
+### Zielgruppen
+
+- **Anfänger**: Erste Schritte mit ESP32 Display-Programmierung
+- **Fortgeschrittene**: Komplexe Projekte mit Sensoren, Kommunikation, Echtzeit-Daten
+- **Profis**: Master Class mit vollständigen Arcade-Spielen als Referenz
+
+### Inhalte
+
+1. **Examples (examples/)**: 21+ strukturierte Lernbeispiele
+   - Basics: Display, Touch, Grafik
+   - Intermediate: WiFi, Sensoren, I2C
+   - Advanced: ESP-NOW, Multi-Threading, komplexe Visualisierungen
+
+2. **Arcade Games (arcade-games/)**: 14 vollständige Spiele als Master Class
+   - Pong, Snake, Breakout, Space Invaders, Asteroids, Frogger, Tetris
+   - CYD_Games Library mit wiederverwendbaren Klassen
+
+3. **Libraries (libraries/)**: Wiederverwendbare Komponenten
+   - CYD_Games: Game Engine Komponenten
+
+---
+
+## 🏗️ Repository-Struktur
+
+```
+CYD-Academy/
+├── README.md                       # Haupt-Dokumentation
+├── INSTALL_LIBRARY.md              # Installationsanleitung
+├── Repo_Guideline.txt              # Diese Datei
+│
+├── examples/                       # Lernbeispiele (nummeriert)
+│   ├── 01_HelloWorld/
+│   │   ├── 01_HelloWorld.ino      # Haupt-Sketch
+│   │   └── README.md              # Ausführliche Dokumentation
+│   ├── 02_BasicShapes/
+│   ├── ...
+│   ├── 17_Lightning_Sensor/       # I2C Sensor-Beispiele
+│   ├── 18_Compass_Orientation/
+│   ├── 19_Laser_Distance/
+│   ├── 20_Air_Quality_CCS811/
+│   └── 21_Gesture_Sensor_MGC3130/
+│
+├── arcade-games/                   # Master Class Spiele
+│   ├── README.md
+│   ├── 01_Touch_Selector/
+│   ├── 02_Touch_Selector_Modern/
+│   ├── 03_Pong/
+│   └── ...
+│
+├── libraries/                      # Lokale Libraries
+│   └── CYD_Games/                 # Game Engine Komponenten
+│       ├── src/
+│       │   ├── PongGame.h
+│       │   ├── SnakeGame.h
+│       │   └── ...
+│       └── library.properties
+│
+└── install-cyd-games-library.ps1   # Installations-Skripte
+```
+
+---
+
+## 📚 Display-Konfiguration: CYD_Display_Config.h
+
+### Externe Library: MyLGFXConfigs
+
+Die CYD-Academy verwendet die **MyLGFXConfigs Library** (externes Repository) für Display-Konfiguration:
+
+```
+Repository: https://github.com/[username]/MyLGFXConfigs
+Installation: Arduino/libraries/MyLGFXConfigs/
+```
+
+### Was enthält CYD_Display_Config.h?
+
+```cpp
+#include <LovyanGFX.hpp>
+
+// ========================================
+// LGFX Klassen-Definition
+// ========================================
+// Hier wird der LGFX-Konstruktor definiert:
+// - Display-Typ (ILI9341, ILI9488, etc.)
+// - SPI-Pins (MOSI, MISO, SCK, CS, DC, RST)
+// - Touch-Controller (XPT2046)
+// - Display-Rotation und Kalibrierung
+
+class LGFX : public lgfx::LGFX_Device {
+  lgfx::Panel_ILI9341 _panel_instance;
+  lgfx::Bus_SPI _bus_instance;
+  lgfx::Touch_XPT2046 _touch_instance;
+
+public:
+  LGFX(void) {
+    // Detaillierte Panel-Konfiguration
+    auto cfg = _panel_instance.config();
+    cfg.pin_cs = 15;
+    cfg.pin_rst = -1;
+    // ... weitere Konfiguration
+
+    // Bus-Konfiguration
+    auto bus_cfg = _bus_instance.config();
+    bus_cfg.pin_mosi = 13;
+    bus_cfg.pin_miso = 12;
+    bus_cfg.pin_sclk = 14;
+    // ... weitere Konfiguration
+
+    // Touch-Konfiguration
+    auto touch_cfg = _touch_instance.config();
+    touch_cfg.pin_cs = 33;
+    // ... weitere Konfiguration
+  }
+};
+
+// ========================================
+// GPIO Pin-Definitionen
+// ========================================
+// Standard-Pins für CYD Hardware-Erweiterungen
+
+// RGB LED
+#define rgbLedR 4
+#define rgbLedG 16
+#define rgbLedB 17
+
+// Photoresistor (LDR)
+#define photoPin 34
+
+// I2C für Sensoren & Erweiterungen
+#define extSDA 22
+#define extSCL 27
+
+// Optional: Interrupt Pin für Sensoren
+#ifdef HAS_INTERRUPT_PIN
+  #define extIrqPin 35  // Beispiel
+#endif
+
+// ========================================
+// Hardware-Konfiguration (Optional)
+// ========================================
+// Verschiedene Steuerungs-Optionen
+
+// Option 1: GPIO-Buttons (direkt am ESP32)
+#ifdef gpioSwitch
+  #define tasteA 17
+  #define tasteB 5
+  #define tasteC 16
+  #define tasteD 18
+#endif
+
+// Option 2: I2C-Buttons (PCF8574 Portextender)
+#ifdef i2cSwitch
+  #define tasteA 0
+  #define tasteB 1
+  #define tasteC 2
+  #define tasteD 3
+  #define pcfAddress 0x20
+  #define switchInterrupt 22  // Optional
+#endif
+
+// Option 3: Rotary Encoder
+#ifdef gpioEnc
+  #define encA 17
+  #define encB 5
+  #define encSW 16
+#endif
+```
+
+### Warum diese Struktur?
+
+**Flexibilität für verschiedene CYD-Varianten**:
+- CYD 2.8" (320x240, ILI9341)
+- CYD 3.5" (480x320, ILI9488)
+- Zukünftige Varianten
+
+**Hardware-Erweiterungen unterstützen**:
+- Sensoren über I2C (extSDA/extSCL)
+- RGB LEDs für visuelle Effekte
+- Photoresistor für Auto-Brightness
+- Verschiedene Input-Methoden (Touch, Buttons, Encoder)
+
+**Zentralisierte Konfiguration**:
+- Keine Hardcoded-Pins in Beispielen
+- Ein Ort für Display-Setup
+- Einfache Anpassung für neue Hardware
+
+---
+
+## 🔒 Credentials-Verwaltung: Credentials.h
+
+### Problem: Secrets auf GitHub
+
+WiFi-Passwörter, API-Keys und andere Credentials dürfen **NICHT** öffentlich auf GitHub landen!
+
+### Lösung: Credentials.h (nicht im Repository)
+
+#### 1. Beispiel mit Credentials.h
+
+```cpp
+// Im Arduino-Sketch (z.B. 07_WiFiClock.ino):
+#include <CYD_Display_Config.h>
+#include "Credentials.h"  // WiFi-Zugangsdaten
+
+// WICHTIG im Header-Kommentar des Sketches:
+// * WICHTIG: Erstelle eine Datei "Credentials.h" im gleichen Verzeichnis mit:
+// *   const char* ssid = "DeinWiFiName";
+// *   const char* password = "DeinWiFiPasswort";
+
+void setup() {
+  WiFi.begin(ssid, password);
+  // ...
+}
+```
+
+#### 2. Credentials.h Datei-Struktur
+
+Benutzer erstellt **lokal** eine `Credentials.h` Datei:
+
+```cpp
+// Credentials.h (NICHT ins Repository committen!)
+#ifndef CREDENTIALS_H
+#define CREDENTIALS_H
+
+// WiFi Credentials (als const char* Variablen)
+const char* ssid = "MeinWiFi";
+const char* password = "MeinSuperGeheimesPasswort123";
+
+// Alternative: Mit Großbuchstaben (beide Varianten sind OK)
+// const char* WIFI_SSID = "MeinWiFi";
+// const char* WIFI_PASSWORD = "MeinSuperGeheimesPasswort123";
+
+// API Keys
+const char* OPENWEATHER_API_KEY = "abc123def456...";
+const char* TIMEZONE_API_KEY = "xyz789...";
+
+// MQTT Broker
+const char* MQTT_SERVER = "192.168.1.100";
+const int MQTT_PORT = 1883;
+const char* MQTT_USER = "homeassistant";
+const char* MQTT_PASSWORD = "mqtt_password";
+
+// Andere Secrets
+const char* DEVICE_ID = "CYD-001";
+
+#endif
+```
+
+#### 3. .gitignore eintragen
+
+```gitignore
+# Credentials (niemals committen!)
+**/Credentials.h
+Credentials.h
+```
+
+#### 4. Template für Benutzer
+
+Im README des Beispiels:
+
+```markdown
+## WiFi-Konfiguration
+
+Erstelle eine Datei `Credentials.h` im gleichen Ordner wie das .ino:
+
+```cpp
+const char* ssid = "DeinWiFiName";
+const char* password = "DeinWiFiPasswort";
+```
+
+Wichtig: Nutze `const char*` Variablen (nicht `#define`).
+```
+
+### Best Practice für neue Beispiele
+
+1. **Include Credentials.h direkt** - Nutze `#include "Credentials.h"` im Sketch
+2. **Header-Kommentar erklärt** - Im Sketch-Header steht, wie Credentials.h aussehen muss
+3. **README erklärt Setup** - Schritt-für-Schritt Anleitung für Credentials.h
+4. **Beispiel-Template in README** - Copy-Paste-fertig mit `const char*` Variablen
+5. **Niemals echte Credentials committen** - Auch nicht in Kommentaren!
+6. **Nutze const char*** - NICHT `#define` für Credentials (WiFi-Library erwartet const char*)
+
+---
+
+## 🎨 Beispiel-Erstellung: Best Practices
+
+### Namenskonvention
+
+**WICHTIG - Arduino IDE Anforderung**:
+Die Arduino IDE erfordert, dass die `.ino` Datei in einem **gleichnamigen Verzeichnis** liegt!
+
+```
+Format: [Nummer]_[Beschreibung]/[Nummer]_[Beschreibung].ino
+
+Beispiele:
+- 01_HelloWorld/01_HelloWorld.ino          ✅ RICHTIG
+- 17_Lightning_Sensor/17_Lightning_Sensor.ino  ✅ RICHTIG
+- 20_Air_Quality_CCS811/20_Air_Quality_CCS811.ino  ✅ RICHTIG
+
+FALSCH:
+- 01_HelloWorld/HelloWorld.ino             ❌ Dateiname passt nicht
+- HelloWorld.ino                            ❌ Kein Verzeichnis
+- sketches/01_HelloWorld.ino               ❌ Falsches Verzeichnis
+```
+
+**Warum?** Die Arduino IDE kann eine `.ino` Datei nur öffnen, wenn:
+1. Sie in einem Verzeichnis liegt
+2. Das Verzeichnis **exakt** den gleichen Namen hat wie die `.ino` Datei (ohne Extension)
+
+**Nummerierung**:
+- `01-10`: Basics (Display, Touch, Grafik)
+- `11-16`: Intermediate (Animationen, Charts, Kommunikation)
+- `17-25`: Advanced (I2C Sensoren, komplexe Visualisierungen)
+- `26+`: Expert (Multi-Threading, AI, etc.)
+
+**Untervarianten**: Verwende Buchstaben (z.B. `13b_Racing_Track_Obstacles`)
+
+### Datei-Struktur eines Beispiels
+
+```
+XX_Beispiel_Name/
+├── XX_Beispiel_Name.ino    # Haupt-Sketch
+├── README.md                # Ausführliche Dokumentation (WICHTIG!)
+└── (assets/)                # Optional: Bilder, Dateien
+    ├── screenshot.png
+    └── schematic.png
+```
+
+### Arduino-Sketch Template
+
+```cpp
+/*
+ * CYD-Academy - Beispiel XX: Titel
+ *
+ * Kurzbeschreibung was dieses Beispiel demonstriert (1-2 Sätze).
+ *
+ * Hardware:
+ * - ESP32-2432S028R (CYD - Cheap Yellow Display)
+ * - [Zusätzliche Hardware falls nötig]
+ *
+ * Verbindung (falls I2C/SPI Sensor):
+ * - SDA: GPIO 22 (extSDA)
+ * - SCL: GPIO 27 (extSCL)
+ * - I2C-Adresse: 0xXX
+ *
+ * Features:
+ * - Feature 1
+ * - Feature 2
+ * - Feature 3
+ *
+ * Bibliotheken:
+ * - [Library Name] (für was benötigt)
+ *
+ * Installation:
+ * Arduino IDE -> Tools -> Manage Libraries -> "[Library Name]" installieren
+ *
+ * Autor: CYD-Academy
+ * Lizenz: MIT
+ */
+
+#include <Wire.h>
+#include <CYD_Display_Config.h>  // IMMER verwenden!
+
+// ========== Display Setup ==========
+LGFX lcd;  // Display-Objekt (aus CYD_Display_Config.h)
+
+// ========== Konfiguration ==========
+// I2C Pins vom CYD (aus CYD_Display_Config.h)
+#define extSDA 22
+#define extSCL 27
+
+// Sensor-spezifische Defines
+#define SENSOR_ADDR 0x42
+
+// ========== Globale Variablen ==========
+// ... deine Variablen
+
+// ========== Setup ==========
+void setup() {
+  Serial.begin(115200);
+  Serial.println("\n=== CYD Beispiel XX: Titel ===");
+
+  // Display initialisieren
+  lcd.init();
+  lcd.setRotation(0);  // 0=Portrait, 1=Landscape
+  lcd.fillScreen(TFT_BLACK);
+  lcd.setTextColor(TFT_WHITE);
+  lcd.setTextDatum(TC_DATUM);  // Text zentriert
+
+  // I2C initialisieren (falls benötigt)
+  Wire.begin(extSDA, extSCL);
+  Serial.printf("I2C initialisiert auf SDA: %d, SCL: %d\n", extSDA, extSCL);
+
+  // ... restliches Setup
+
+  Serial.println("Setup abgeschlossen!");
+}
+
+// ========== Main Loop ==========
+void loop() {
+  // ... deine Loop-Logik
+
+  delay(10);  // Kleine Pause für Watchdog
+}
+
+// ========== Hilfsfunktionen ==========
+// Gut strukturiert und kommentiert
+```
+
+### README.md Template (SEHR WICHTIG!)
+
+Jedes Beispiel **MUSS** eine ausführliche README haben:
+
+```markdown
+# Beispiel XX: Titel
+
+Einleitung (1-2 Absätze) was dieses Beispiel zeigt und warum es wichtig/interessant ist.
+
+## 📸 Features
+
+- Feature 1 mit Erklärung
+- Feature 2 mit Erklärung
+- Feature 3 mit Erklärung
+
+## 🔌 Hardware-Anforderungen
+
+### Hauptkomponenten
+- ESP32-2432S028R (CYD)
+- [Sensor/Komponente]
+
+### [Komponente] Spezifikationen
+- Technische Details
+- Messbereiche
+- Besonderheiten
+
+### Verbindung (I2C/SPI/etc.)
+
+```
+[Komponente]    CYD (ESP32-2432S028R)
+--------        ---------------------
+VCC     -----> 3.3V
+GND     -----> GND
+SDA     -----> GPIO 22 (extSDA)
+SCL     -----> GPIO 27 (extSCL)
+```
+
+**Wichtig**: [Warnungen, z.B. 3.3V statt 5V]
+
+## 🔬 Technischer Hintergrund
+
+### [Technologie/Konzept] Erklärung
+
+Erkläre die zugrundeliegende Technologie im Detail:
+- Wie funktioniert es?
+- Physikalische/Mathematische Grundlagen
+- Diagramme und Formeln
+
+### Vergleich mit Alternativen
+
+Tabelle: Diese Technologie vs. andere Ansätze
+
+## 📡 Kommunikation (I2C/SPI/etc.)
+
+### Verwendete Library
+
+```cpp
+#include <LibraryName.h>
+
+// Beispiel-Code
+```
+
+### Protokoll-Details (Optional für Advanced)
+
+Low-Level Erklärung wenn relevant.
+
+## 💻 Code-Struktur
+
+### Hauptkomponenten
+
+Erkläre die wichtigsten Code-Teile mit Snippets.
+
+#### 1. Initialisierung
+```cpp
+// Code-Beispiel mit Erklärung
+```
+
+#### 2. Daten auslesen
+```cpp
+// Code-Beispiel mit Erklärung
+```
+
+#### 3. Visualisierung
+```cpp
+// Code-Beispiel mit Erklärung
+```
+
+## 🚀 Installation & Verwendung
+
+### 1. Library installieren
+```
+Arduino IDE -> Tools -> Manage Libraries -> "[Name]"
+```
+
+### 2. Hardware aufbauen
+- Schritt-für-Schritt Anleitung
+- Warnung vor Fehlern
+
+### 3. Code hochladen
+```bash
+# Arduino IDE Einstellungen
+```
+
+### 4. Bedienung
+- Wie wird das Beispiel benutzt?
+- Touch-Interaktionen
+- Modi wechseln
+
+### Serielle Ausgabe
+```
+Beispiel der erwarteten Serial Monitor Ausgabe
+```
+
+## 🔧 Troubleshooting
+
+### Problem: [Häufiges Problem 1]
+
+**Symptome**: Was der Benutzer sieht
+
+**Lösungen**:
+1. Lösung 1 mit Code wenn nötig
+2. Lösung 2
+3. Lösung 3
+
+### Problem: [Häufiges Problem 2]
+
+... gleiche Struktur
+
+## 🎯 Erweiterungsideen
+
+### 1. [Erweiterung 1]
+
+**Konzept**: Beschreibung
+
+```cpp
+// Beispiel-Code wie man es umsetzen könnte
+```
+
+**Anwendungen**:
+- Use Case 1
+- Use Case 2
+
+### 2. [Erweiterung 2]
+
+... 5-7 Erweiterungsideen total
+
+## 📚 Weiterführende Themen
+
+### [Vertieftes Thema]
+
+Detaillierte Erklärung für Interessierte.
+
+### Vergleich: [Technologie A] vs. [Technologie B]
+
+Tabelle mit Pro/Contra
+
+## 🛠️ Praktische Tipps
+
+- Tipp 1: ...
+- Tipp 2: ...
+
+## 📖 Ressourcen & Links
+
+### Datenblätter & Dokumentation
+- [Link 1]: Beschreibung
+- [Link 2]: Beschreibung
+
+### CYD-Spezifisch
+- CYD Display Config: `lib/CYD_Display_Config/CYD_Display_Config.h`
+- I2C Pins: extSDA (GPIO 22), extSCL (GPIO 27)
+
+### Verwandte Beispiele
+- Beispiel XX: Titel (Bezug)
+- Beispiel YY: Titel (Bezug)
+
+## 🎓 Lernziele
+
+Nach Abschluss dieses Beispiels solltest du:
+- ✅ Lernziel 1
+- ✅ Lernziel 2
+- ✅ Lernziel 3
+
+## 🔜 Nächste Schritte
+
+Weitere Beispiele:
+- Beispiel XX+1: ...
+- Beispiel XX+2: ...
+
+---
+
+**Viel Erfolg mit [Projekt]! [Emoji]**
+
+Bei Fragen: CYD-Academy GitHub Issues
+```
+
+### README-Qualität
+
+**Minimum** (für einfache Beispiele): 500+ Zeilen
+**Standard** (für I2C/Sensor): 1500+ Zeilen
+**Umfassend** (für komplexe Themen): 2000+ Zeilen
+
+**Wichtig**:
+- ✅ Erkläre das "Warum", nicht nur das "Wie"
+- ✅ Technische Hintergründe mit Formeln/Diagrammen
+- ✅ Vergleiche mit Alternativen
+- ✅ Umfangreiches Troubleshooting
+- ✅ Viele Erweiterungsideen (5-7 Stück)
+- ✅ Praktische Code-Snippets
+- ✅ Lernziele klar definieren
+
+---
+
+## 🎯 Code-Qualität & Standards
+
+### Display-Verwendung
+
+```cpp
+// RICHTIG: LGFX aus CYD_Display_Config.h verwenden
+#include <CYD_Display_Config.h>
+LGFX lcd;
+
+void setup() {
+  lcd.init();
+  lcd.setRotation(0);
+  // ...
+}
+```
+
+```cpp
+// FALSCH: LGFX-Klasse direkt im Sketch definieren
+#include <LovyanGFX.hpp>
+class LGFX : public lgfx::LGFX_Device {
+  // ... 77 Zeilen Boilerplate-Code
+};
+LGFX lcd;
+```
+
+**Warum?**
+- Flexibilität für verschiedene CYD-Varianten
+- Zentralisierte Konfiguration
+- Keine Code-Duplikation
+- Einfachere Updates
+
+### I2C-Verwendung
+
+```cpp
+// IMMER die Pins aus CYD_Display_Config.h verwenden
+#define extSDA 22
+#define extSCL 27
+
+void setup() {
+  Wire.begin(extSDA, extSCL);
+}
+```
+
+**NICHT** Pins hardcoden:
+```cpp
+Wire.begin(22, 27);  // ❌ FALSCH
+```
+
+### Interrupt-Pins (Optional)
+
+Für Sensoren mit Interrupt-Support:
+
+```cpp
+// Check ob Interrupt-Pin definiert ist
+#ifdef extIrqPin
+  #define IRQ_PIN extIrqPin
+  #define USE_INTERRUPT
+#else
+  #define IRQ_PIN -1  // Kein Interrupt verfügbar
+#endif
+
+void setup() {
+  #ifdef USE_INTERRUPT
+    pinMode(IRQ_PIN, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(IRQ_PIN), myISR, FALLING);
+  #endif
+}
+
+void loop() {
+  #ifdef USE_INTERRUPT
+    // Interrupt-basiert
+    if (interruptFlag) {
+      handleData();
+    }
+  #else
+    // Polling-Modus als Fallback
+    if (millis() - lastPoll >= 100) {
+      checkSensor();
+      lastPoll = millis();
+    }
+  #endif
+}
+```
+
+**Wichtig**: Automatischer Fallback auf Polling wenn kein Interrupt-Pin!
+
+### Kommentare & Struktur
+
+```cpp
+// ========== Großer Abschnitt ==========
+// Für Hauptbereiche (Setup, Loop, etc.)
+
+// ---------- Unterabschnitt ----------
+// Für logische Gruppen innerhalb eines Abschnitts
+
+// Kurzer Kommentar für einzelne Zeile
+int value = 42;  // Inline-Kommentar
+
+/* Mehrzeiliger
+   Kommentar für
+   komplexe Erklärungen */
+```
+
+### Variablen-Naming
+
+```cpp
+// Konstanten: UPPER_CASE
+#define MAX_BUFFER_SIZE 100
+const int SENSOR_ADDR = 0x42;
+
+// Globale Variablen: camelCase
+int currentValue = 0;
+float sensorReading = 0.0;
+bool isConnected = false;
+
+// Funktionen: camelCase mit Verben
+void readSensor() { }
+void updateDisplay() { }
+bool checkConnection() { }
+
+// Klassen/Structs: PascalCase
+struct SensorData {
+  int value;
+  unsigned long timestamp;
+};
+```
+
+### Error-Handling
+
+```cpp
+// Immer Fehler abfangen und sinnvoll behandeln
+if (!sensor.begin()) {
+  Serial.println("FEHLER: Sensor nicht gefunden!");
+
+  // User-freundliche Display-Meldung
+  lcd.fillScreen(TFT_BLACK);
+  lcd.setTextColor(TFT_RED);
+  lcd.drawString("SENSOR FEHLER!", 160, 200);
+  lcd.setTextColor(TFT_WHITE);
+  lcd.drawString("Prüfe Verkabelung:", 160, 240);
+  lcd.drawString("SDA -> GPIO 22", 160, 260);
+  lcd.drawString("SCL -> GPIO 27", 160, 280);
+
+  // Weiter ausführen (Demo-Modus) oder stoppen
+  sensorAvailable = false;
+  // Alternativ: while(1) { delay(1000); }
+}
+```
+
+---
+
+## 🧪 Testing & Validierung
+
+### Vor dem Commit prüfen:
+
+- [ ] Code kompiliert ohne Fehler
+- [ ] Code kompiliert ohne Warnungen
+- [ ] Verwendet `#include <CYD_Display_Config.h>` (NICHT inline LGFX)
+- [ ] I2C Pins aus Config verwenden (extSDA, extSCL)
+- [ ] Keine hardcoded Credentials (WiFi-Passwörter, API-Keys)
+- [ ] README.md existiert und ist umfassend (1500+ Zeilen)
+- [ ] Code-Kommentare sind klar und hilfreich
+- [ ] Serielle Debug-Ausgaben vorhanden
+- [ ] Error-Handling implementiert
+- [ ] User-freundliche Display-Meldungen bei Fehlern
+
+### README.md Checkliste:
+
+- [ ] Features klar aufgelistet
+- [ ] Hardware-Anforderungen mit Schaltplan
+- [ ] Technischer Hintergrund erklärt (Formeln, Diagramme)
+- [ ] Code-Struktur mit Beispielen
+- [ ] Installation Schritt-für-Schritt
+- [ ] Troubleshooting mit Lösungen (3+ Probleme)
+- [ ] Erweiterungsideen mit Code (5-7 Ideen)
+- [ ] Weiterführende Themen (Vergleiche, Vertiefung)
+- [ ] Lernziele definiert
+- [ ] Links zu Ressourcen und verwandten Beispielen
+
+---
+
+## 🔄 Git Workflow
+
+### Branch-Strategie
+
+- `main`: Stabile, getestete Beispiele
+- `claude/[feature-name]`: Feature-Branches für neue Beispiele
+- Nach Review: Merge in `main`
+
+### Commit-Message Format
+
+```
+[TYPE]: Kurzbeschreibung (max 50 Zeichen)
+
+Ausführlichere Beschreibung (max 72 Zeichen pro Zeile):
+- Bullet Point 1
+- Bullet Point 2
+
+Features:
+- Feature 1
+- Feature 2
+
+Technologie:
+- Tech Detail 1
+- Tech Detail 2
+```
+
+**Types**:
+- `ADD`: Neues Beispiel oder Feature
+- `FIX`: Bugfix oder Korrektur
+- `UPDATE`: Verbesserung bestehenden Codes
+- `DOCS`: Dokumentation
+- `REFACTOR`: Code-Umstrukturierung ohne Funktionsänderung
+
+**Beispiel**:
+```
+ADD: Beispiel 21 - 3D-Gestensensor MGC3130
+
+Neues Beispiel für berührungslose Gestensteuerung.
+
+Features:
+- 3D-Positionserkennung (X, Y, Z)
+- 6 Gesten-Typen (Swipe, Kreis)
+- Touch-Elektroden (5x kapazitiv)
+- AirWheel für Rotations-Steuerung
+
+Technologie:
+- E-Field Sensing (Elektrisches Feld)
+- SparkFun MGC3130 Library
+```
+
+### .gitignore
+
+Wichtige Einträge:
+```gitignore
+# Credentials (NIEMALS committen!)
+**/Credentials.h
+Credentials.h
+
+# Arduino Build-Artefakte
+*.bin
+*.elf
+*.map
+
+# IDE-spezifisch
+.vscode/
+.DS_Store
+```
+
+---
+
+## 📊 Beispiel-Kategorien & Progression
+
+### Level 1: Basics (Beispiel 01-10)
+**Ziel**: Grundlagen verstehen
+
+- Display-Initialisierung
+- Grafik-Funktionen (Formen, Text, Farben)
+- Touch-Eingabe
+- Einfache Animationen
+
+**Typische Länge**:
+- Code: 100-300 Zeilen
+- README: 500-1000 Zeilen
+
+### Level 2: Intermediate (Beispiel 11-16)
+**Ziel**: Interaktive Anwendungen
+
+- WiFi-Verbindung
+- Echtzeit-Daten (APIs)
+- Charts und Graphen
+- ESP-NOW Kommunikation
+- LVGL UI-Framework
+
+**Typische Länge**:
+- Code: 300-600 Zeilen
+- README: 1000-1500 Zeilen
+
+### Level 3: Advanced (Beispiel 17-25)
+**Ziel**: Hardware-Integration & Sensoren
+
+- I2C Sensoren (AS3935, BNO055, CCS811, MGC3130)
+- ToF Laser-Sensoren (R50-C)
+- Komplexe Visualisierungen (3D, Radar, Gesten)
+- Sensor-Fusion
+- Baseline-Management (EEPROM)
+
+**Typische Länge**:
+- Code: 600-1000 Zeilen
+- README: 1500-2500 Zeilen
+
+### Level 4: Expert (Beispiel 26+)
+**Ziel**: Professionelle Anwendungen
+
+- Multi-Threading
+- Machine Learning (TinyML)
+- Audio-Verarbeitung (FFT)
+- Kamera-Integration
+- Cloud-Integration (MQTT, InfluxDB)
+
+**Typische Länge**:
+- Code: 1000+ Zeilen
+- README: 2000+ Zeilen
+
+---
+
+## 🎮 Arcade Games: Master Class
+
+Siehe separate Dokumentation in `arcade-games/README.md`
+
+**Besonderheit**:
+- Vollständige, spielbare Spiele
+- CYD_Games Library mit wiederverwendbaren Klassen
+- Professioneller Code als Lern-Ressource
+- Game-Loops, State-Management, Kollisionserkennung
+
+---
+
+## 🤝 Zusammenarbeit mit Claude
+
+### Was Claude tun sollte:
+
+1. **Neue Beispiele erstellen**:
+   - Folge diesem Template exakt
+   - Verwende IMMER `CYD_Display_Config.h`
+   - Erstelle umfassende READMEs (1500+ Zeilen)
+   - Erkläre technische Hintergründe mit Formeln/Diagrammen
+   - Biete 5-7 Erweiterungsideen an
+
+2. **Code überprüfen**:
+   - Prüfe ob LGFX korrekt eingebunden (nicht inline definiert)
+   - Prüfe ob Pins aus Config kommen (nicht hardcoded)
+   - Prüfe ob Credentials nicht im Code (nutze Fallback)
+
+3. **Dokumentation verbessern**:
+   - READMEs erweitern
+   - Troubleshooting-Abschnitte ergänzen
+   - Vergleiche mit Alternativen hinzufügen
+
+4. **Fehler fixen**:
+   - Behebe Issues mit Erklärung
+   - Update README falls nötig
+
+### Was Claude NICHT tun sollte:
+
+- ❌ LGFX-Klasse direkt im Sketch definieren
+- ❌ Pins hardcoden statt aus Config lesen
+- ❌ Credentials im Code committen
+- ❌ Kurze/unvollständige READMEs (< 1000 Zeilen)
+- ❌ Code ohne Error-Handling
+- ❌ Beispiele ohne serielle Debug-Ausgaben
+
+### Typischer Workflow:
+
+1. **Beispiel-Request**: User bittet um neues Beispiel (z.B. "Beispiel für Sensor X")
+2. **Recherche**: Claude versteht Sensor, Technologie, I2C-Protokoll
+3. **Code-Erstellung**: Arduino-Sketch nach Template (~700 Zeilen)
+4. **README-Erstellung**: Umfassende Dokumentation (~2000 Zeilen)
+5. **Commit & Push**: Mit ausführlicher Commit-Message
+6. **Follow-up**: Fragen klären, Erweiterungen vorschlagen
+
+---
+
+## 🎓 Lern-Philosophie der Academy
+
+### "Verstehen, nicht nur Kopieren"
+
+Die CYD-Academy vermittelt **Wissen**, nicht nur Code:
+
+1. **Warum funktioniert es?** - Physikalische/mathematische Grundlagen
+2. **Wie funktioniert es?** - Schritt-für-Schritt Code-Erklärung
+3. **Was kann ich damit machen?** - Erweiterungsideen und Projekte
+4. **Was sind Alternativen?** - Vergleiche mit anderen Technologien
+
+### README-Struktur erklärt das "Warum"
+
+Ein typisches README hat:
+
+- **Features**: Was macht das Beispiel? (Das "Was")
+- **Hardware**: Was brauche ich? (Das "Womit")
+- **Technischer Hintergrund**: Wie funktioniert die Technologie? (Das "Warum")
+- **Code-Struktur**: Wie ist der Code aufgebaut? (Das "Wie")
+- **Troubleshooting**: Was kann schiefgehen? (Das "Falls")
+- **Erweiterungen**: Was kann ich daraus machen? (Das "Weiter")
+
+### Praktische Beispiele, nicht abstrakte Theorie
+
+- Jedes Beispiel ist **lauffähig** und **sinnvoll**
+- Visualisierungen sind **professionell** (nicht nur Serial.println)
+- Touch-Interaktion wo möglich
+- Realistische Anwendungsfälle
+
+---
+
+## 📝 Checkliste für neue Beispiele
+
+```
+Planung:
+[ ] Thema/Sensor ausgewählt
+[ ] Technologie recherchiert (Datenblatt, Protokoll)
+[ ] Lernziele definiert
+
+Code:
+[ ] CYD_Display_Config.h eingebunden (LGFX lcd;)
+[ ] I2C Pins aus Config (extSDA, extSCL)
+[ ] Interrupt-Pin optional mit Fallback
+[ ] Error-Handling implementiert
+[ ] Serielle Debug-Ausgaben
+[ ] Code kommentiert (Abschnitte mit ==========)
+[ ] Variablen sinnvoll benannt (camelCase)
+[ ] Kompiliert ohne Fehler/Warnungen
+
+README.md:
+[ ] Features klar beschrieben (3-5 Bullet Points)
+[ ] Hardware-Anforderungen mit Schaltplan/Tabelle
+[ ] Technischer Hintergrund (500+ Zeilen):
+    [ ] Funktionsprinzip erklärt
+    [ ] Formeln/Diagramme eingebunden
+    [ ] Vergleiche mit Alternativen (Tabelle)
+[ ] I2C/Kommunikations-Details
+[ ] Code-Struktur erklärt (6+ Komponenten)
+[ ] Installation Schritt-für-Schritt (4 Schritte)
+[ ] Troubleshooting (3+ Probleme mit Lösungen)
+[ ] Erweiterungsideen (5-7 Ideen mit Code)
+[ ] Weiterführende Themen
+[ ] Praktische Tipps
+[ ] Ressourcen & Links (Datenblätter, verwandte Beispiele)
+[ ] Lernziele (5+ Punkte)
+[ ] Nächste Schritte
+
+Git:
+[ ] Credentials geprüft (keine Secrets im Code!)
+[ ] .gitignore aktualisiert
+[ ] Commit-Message nach Format
+[ ] Auf Feature-Branch committed
+[ ] Gepusht zum Remote
+
+Testing:
+[ ] Code auf echtem CYD getestet (falls möglich)
+[ ] Alle Features funktionieren
+[ ] Error-Handling getestet (Sensor trennen)
+[ ] README auf Typos geprüft
+```
+
+---
+
+## 🚀 Zukünftige Erweiterungen
+
+### Geplante Beispiele
+
+- **Audio-Verarbeitung**: INMP441 Mikrofon mit FFT-Spektrum
+- **Kamera**: OV2640 Kamera-Integration
+- **TinyML**: Machine Learning auf ESP32
+- **Multi-Threading**: FreeRTOS-Tasks
+- **Cloud**: ThingSpeak/InfluxDB Integration
+- **E-Paper**: E-Ink Display als Second Screen
+
+### Geplante Features
+
+- **CYD_Sensors Library**: Wiederverwendbare Sensor-Klassen
+- **CYD_UI Library**: UI-Komponenten (Buttons, Sliders, Graphs)
+- **Web-Configurator**: Browser-basiertes Setup-Tool
+
+---
+
+## 📞 Kontakt & Beitragen
+
+**Repository**: https://github.com/[username]/CYD-Academy
+**Issues**: https://github.com/[username]/CYD-Academy/issues
+**Lizenz**: MIT
+
+**Beiträge willkommen!**
+- Neue Beispiele
+- Verbesserungen bestehender Beispiele
+- Übersetzungen
+- Bug-Reports
+
+---
+
+**Version**: 1.0 (November 2025)
+**Maintainer**: [Dein Name]
+**Für Claude & Entwickler**
