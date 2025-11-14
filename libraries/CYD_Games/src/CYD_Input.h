@@ -259,8 +259,8 @@ public:
           return 0;
       }
 
-      // ESP32 ADC: 0-4095 → 0-1000 mappen
-      int mappedValue = map(rawValue, 0, 4095, 0, 1000);
+      // ESP32 ADC: 0-1000 → 0-1000 mappen
+      int mappedValue = map(rawValue, 0, 1000, 0, 1000);
       return constrain(mappedValue, 0, 1000);
     #else
       // Keine Potis verfügbar
