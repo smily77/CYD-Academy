@@ -160,11 +160,11 @@ const int RADAR_UPDATE_INTERVAL = 200;  // Radar alle 200ms aktualisieren
 
 // ===== LOVYANGFX FONTS =====
 
-// Schöne Fonts für verschiedene Bereiche
-const lgfx::IFont* FONT_SMALL = &fonts::FreeSans9pt7b;      // Labels, klein
-const lgfx::IFont* FONT_MEDIUM = &fonts::FreeSans12pt7b;    // Normaler Text
-const lgfx::IFont* FONT_LARGE = &fonts::FreeSans18pt7b;     // Status, wichtig
-const lgfx::IFont* FONT_HUGE = &fonts::FreeSerifBold24pt7b; // Distance (große Zahl)
+// Schöne Fonts für verschiedene Bereiche (angepasste Größen)
+const lgfx::IFont* FONT_TINY = &fonts::Font0;               // Sehr klein für Radar-Labels
+const lgfx::IFont* FONT_SMALL = &fonts::FreeSans9pt7b;      // Labels, Footer
+const lgfx::IFont* FONT_MEDIUM = &fonts::FreeSans12pt7b;    // Hauptwerte, wichtige Zahlen
+const lgfx::IFont* FONT_LARGE = &fonts::FreeSans18pt7b;     // Distance Zahl
 const lgfx::IFont* FONT_TITLE = &fonts::FreeSansBold12pt7b; // Header-Titel
 
 // ===== HILFSFUNKTIONEN =====
@@ -246,11 +246,11 @@ void setup() {
 
   // AS3935 initialisieren
   lcd.fillScreen(COLOR_BG);
-  lcd.setFont(FONT_LARGE);
+  lcd.setFont(FONT_MEDIUM);
   lcd.setTextColor(COLOR_TEXT);
   lcd.setTextDatum(MC_DATUM);
   lcd.drawString("Initializing", 160, 100);
-  lcd.drawString("AS3935...", 160, 130);
+  lcd.drawString("AS3935...", 160, 125);
 
   Serial.printf("Attempting to initialize AS3935 at address 0x%02X...\n", AS3935_I2C_ADDR);
 
@@ -422,8 +422,8 @@ void handleTouch() {
     lastEnergy = 0;
 
     // Feedback anzeigen
-    lcd.fillRect(40, 95, 120, 50, COLOR_SAFE);
-    lcd.setFont(FONT_LARGE);
+    lcd.fillRect(40, 100, 120, 40, COLOR_SAFE);
+    lcd.setFont(FONT_MEDIUM);
     lcd.setTextDatum(MC_DATUM);
     lcd.setTextColor(COLOR_BG);
     lcd.drawString("RESET!", 100, 120);
@@ -442,16 +442,16 @@ void handleTouch() {
     Serial.printf("Sensitivity changed to: %d/7\n", sensitivity);
 
     // Feedback anzeigen
-    lcd.fillRect(INFO_PANEL_X, 90, INFO_PANEL_WIDTH, 50, COLOR_WARNING);
-    lcd.setFont(FONT_LARGE);
+    lcd.fillRect(INFO_PANEL_X, 95, INFO_PANEL_WIDTH, 40, COLOR_WARNING);
+    lcd.setFont(FONT_MEDIUM);
     lcd.setTextDatum(MC_DATUM);
     lcd.setTextColor(COLOR_BG);
     lcd.drawString("Sens", INFO_PANEL_X + INFO_PANEL_WIDTH / 2, 105);
-    lcd.drawString(String(sensitivity) + "/7", INFO_PANEL_X + INFO_PANEL_WIDTH / 2, 130);
+    lcd.drawString(String(sensitivity) + "/7", INFO_PANEL_X + INFO_PANEL_WIDTH / 2, 125);
     delay(500);
 
     // Feedback-Bereich löschen (vollständig überschreiben mit schwarzem Hintergrund)
-    lcd.fillRect(INFO_PANEL_X, 90, INFO_PANEL_WIDTH, 50, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, 95, INFO_PANEL_WIDTH, 40, COLOR_BG);
 
     footerNeedsRedraw = true;
     infoPanelNeedsFullRedraw = true;
@@ -516,11 +516,17 @@ void drawRadarBackground() {
 
     lcd.drawCircle(RADAR_CENTER_X, RADAR_CENTER_Y, radius, COLOR_RADAR_GRID);
 
-    // Labels mit schönem Font
-    lcd.setFont(FONT_SMALL);
+    // Labels mit kleinem Font (rechts vom Kreis)
+    lcd.setFont(FONT_TINY);
     lcd.setTextColor(COLOR_TEXT_DIM);
-    lcd.setTextDatum(MC_DATUM);
-    lcd.drawString(String(distKm) + "km", RADAR_CENTER_X + radius - 12, RADAR_CENTER_Y);
+    lcd.setTextDatum(ML_DATUM);  // Links ausgerichtet
+
+    // Position rechts vom Kreis
+    int labelX = RADAR_CENTER_X + radius + 3;
+    int labelY = RADAR_CENTER_Y;
+
+    // Kleineres Label
+    lcd.drawString(String(distKm) + "km", labelX, labelY);
   }
 
   // Standort-Marker
@@ -626,27 +632,27 @@ void drawInfoPanel() {
   // ===== ENTFERNUNG =====
   if (lastDisplayedDistance != lastDistance || infoPanelNeedsFullRedraw) {
     // Bereich löschen
-    lcd.fillRect(INFO_PANEL_X, y - 5, INFO_PANEL_WIDTH, 55, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 42, COLOR_BG);
 
     lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT_DIM);
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString("Distance:", x, y);
 
-    y += 14;
+    y += 11;
     if (lastDistance > 0 && totalLightningCount > 0) {
       // Große Zahl für Entfernung
-      lcd.setFont(FONT_HUGE);
+      lcd.setFont(FONT_LARGE);
       lcd.setTextColor(COLOR_TEXT);
       lcd.setTextDatum(TL_DATUM);
       lcd.drawString(String(lastDistance), x, y);
 
       // "km" kleinerer Font
-      lcd.setFont(FONT_MEDIUM);
+      lcd.setFont(FONT_SMALL);
       lcd.setTextDatum(TL_DATUM);
-      lcd.drawString("km", x + 60, y + 16);
+      lcd.drawString("km", x + 32, y + 12);
     } else {
-      lcd.setFont(FONT_MEDIUM);
+      lcd.setFont(FONT_SMALL);
       lcd.setTextColor(COLOR_TEXT);
       lcd.setTextDatum(TL_DATUM);
       lcd.drawString("No data", x, y);
@@ -656,7 +662,7 @@ void drawInfoPanel() {
   }
 
   // ===== STATUS =====
-  y = HEADER_HEIGHT + 72;
+  y = HEADER_HEIGHT + 55;
   String currentStatus;
   if (lastDistance == 0 || totalLightningCount == 0) {
     currentStatus = "Safe";
@@ -671,15 +677,15 @@ void drawInfoPanel() {
   }
 
   if (lastDisplayedStatus != currentStatus || infoPanelNeedsFullRedraw) {
-    lcd.fillRect(INFO_PANEL_X, y - 5, INFO_PANEL_WIDTH, 35, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 28, COLOR_BG);
 
     lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT_DIM);
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString("Status:", x, y);
 
-    y += 14;
-    lcd.setFont(FONT_LARGE);
+    y += 11;
+    lcd.setFont(FONT_MEDIUM);
     lcd.setTextColor(getDistanceColor(lastDistance));
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString(currentStatus, x, y);
@@ -688,17 +694,17 @@ void drawInfoPanel() {
   }
 
   // ===== COUNT =====
-  y = HEADER_HEIGHT + 112;
+  y = HEADER_HEIGHT + 86;
   if (lastDisplayedCount != totalLightningCount || infoPanelNeedsFullRedraw) {
-    lcd.fillRect(INFO_PANEL_X, y - 5, INFO_PANEL_WIDTH, 38, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 28, COLOR_BG);
 
     lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT_DIM);
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString("Count:", x, y);
 
-    y += 14;
-    lcd.setFont(FONT_LARGE);
+    y += 11;
+    lcd.setFont(FONT_MEDIUM);
     lcd.setTextColor(COLOR_TEXT);
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString(String(totalLightningCount), x, y);
@@ -707,7 +713,7 @@ void drawInfoPanel() {
   }
 
   // ===== LAST =====
-  y = HEADER_HEIGHT + 155;
+  y = HEADER_HEIGHT + 117;
   String currentLast;
   if (totalLightningCount > 0) {
     unsigned long elapsed = (millis() - lastLightningTime) / 1000;
@@ -725,15 +731,15 @@ void drawInfoPanel() {
   // Update alle 5 Sekunden oder bei Änderung
   static unsigned long lastTimeUpdate = 0;
   if (lastDisplayedLast != currentLast || infoPanelNeedsFullRedraw || millis() - lastTimeUpdate > 5000) {
-    lcd.fillRect(INFO_PANEL_X, y - 5, INFO_PANEL_WIDTH, 25, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 22, COLOR_BG);
 
     lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT_DIM);
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString("Last:", x, y);
 
-    y += 12;
-    lcd.setFont(FONT_MEDIUM);
+    y += 11;
+    lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT);
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString(currentLast, x, y);
@@ -743,15 +749,15 @@ void drawInfoPanel() {
   }
 
   // ===== STATISTIK =====
-  y = HEADER_HEIGHT + 183;
+  y = HEADER_HEIGHT + 142;
   if (lastDisplayedNoise != noiseCount || lastDisplayedDisturb != disturbanceCount || infoPanelNeedsFullRedraw) {
-    lcd.fillRect(INFO_PANEL_X, y - 5, INFO_PANEL_WIDTH, 30, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 24, COLOR_BG);
 
-    lcd.setFont(FONT_SMALL);
+    lcd.setFont(FONT_TINY);
     lcd.setTextColor(COLOR_TEXT_DIM);
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString("Noise: " + String(noiseCount), x, y);
-    lcd.drawString("Disturb: " + String(disturbanceCount), x, y + 13);
+    lcd.drawString("Disturb: " + String(disturbanceCount), x, y + 11);
 
     lastDisplayedNoise = noiseCount;
     lastDisplayedDisturb = disturbanceCount;
@@ -786,52 +792,52 @@ uint16_t getDistanceColor(uint8_t distance) {
 void drawSplashScreen() {
   lcd.fillScreen(COLOR_RADAR_BG);
 
-  drawLightningBolt(160, 70);
-
-  lcd.setFont(FONT_HUGE);
-  lcd.setTextColor(COLOR_LIGHTNING);
-  lcd.setTextDatum(MC_DATUM);
-  lcd.drawString("LIGHTNING", 160, 120);
+  drawLightningBolt(160, 60);
 
   lcd.setFont(FONT_LARGE);
-  lcd.drawString("SENSOR", 160, 160);
+  lcd.setTextColor(COLOR_LIGHTNING);
+  lcd.setTextDatum(MC_DATUM);
+  lcd.drawString("LIGHTNING", 160, 110);
+
+  lcd.setFont(FONT_MEDIUM);
+  lcd.drawString("SENSOR", 160, 140);
 
   lcd.setFont(FONT_SMALL);
   lcd.setTextColor(COLOR_TEXT_DIM);
-  lcd.drawString("Example 17b", 160, 190);
-  lcd.drawString("Landscape v3 - LovyanGFX Fonts", 160, 205);
-  lcd.drawString("SEN0290 / AS3935", 160, 220);
+  lcd.drawString("Example 17b", 160, 175);
+  lcd.drawString("Landscape v3", 160, 195);
+  lcd.drawString("SEN0290 / AS3935", 160, 215);
 }
 
 void drawErrorScreen() {
   lcd.fillScreen(COLOR_BG);
 
-  lcd.setFont(FONT_LARGE);
+  lcd.setFont(FONT_MEDIUM);
   lcd.setTextColor(COLOR_CRITICAL);
   lcd.setTextDatum(MC_DATUM);
-  lcd.drawString("AS3935 Error!", 160, 50);
+  lcd.drawString("AS3935 Error!", 160, 40);
 
-  lcd.setFont(FONT_MEDIUM);
+  lcd.setFont(FONT_SMALL);
   lcd.setTextColor(COLOR_TEXT);
   lcd.setTextDatum(TL_DATUM);
 
-  int y = 90;
-  lcd.setFont(FONT_SMALL);
+  int y = 75;
   lcd.drawString("Check wiring:", 10, y);
-  y += 18;
+  y += 16;
+  lcd.setFont(FONT_TINY);
   lcd.drawString("SDA -> GPIO " + String(extSDA), 10, y);
-  y += 15;
+  y += 13;
   lcd.drawString("SCL -> GPIO " + String(extSCL), 10, y);
-  y += 15;
+  y += 13;
   lcd.drawString("IRQ -> GPIO " + String(IRQ_PIN) + " (optional)", 10, y);
-  y += 15;
+  y += 13;
   lcd.drawString("VCC -> 3.3V", 10, y);
-  y += 15;
+  y += 13;
   lcd.drawString("GND -> GND", 10, y);
-  y += 20;
-  lcd.setFont(FONT_MEDIUM);
-  lcd.drawString("I2C Address: 0x" + String(AS3935_I2C_ADDR, HEX), 10, y);
-  y += 25;
+  y += 18;
   lcd.setFont(FONT_SMALL);
+  lcd.drawString("I2C Address: 0x" + String(AS3935_I2C_ADDR, HEX), 10, y);
+  y += 20;
+  lcd.setFont(FONT_TINY);
   lcd.drawString("Check Serial Monitor for details.", 10, y);
 }
