@@ -25,20 +25,57 @@ LGFX lcd;
 // ❌ FALSCH: class LGFX { ... } inline definieren
 ```
 
-## I2C Pins
+## Standard-Pins (CYD_Display_Config.h)
 ```cpp
+// I2C für Sensoren
 #define extSDA 22
 #define extSCL 27
-Wire.begin(extSDA, extSCL);  // NICHT Wire.begin(22, 27)
-```
+Wire.begin(extSDA, extSCL);
 
-## Interrupt optional mit Polling-Fallback
-```cpp
+// RGB LED (optional)
+#define rgbLedR 4
+#define rgbLedG 16
+#define rgbLedB 17
+
+// Photoresistor (optional)
+#define photoPin 34
+
+// Interrupt (optional, für Sensoren)
 #ifdef extIrqPin
   // Interrupt-Modus
 #else
-  // Polling alle 100ms
+  // Polling-Fallback
 #endif
+```
+
+## Hardware-Konfigurationen (eine wählen)
+```cpp
+// 1. GPIO Buttons
+#define gpioSwitch
+#define tasteA 17, tasteB 5, tasteC 16, tasteD 18
+
+// 2. I2C Buttons (PCF8574)
+#define i2cSwitch
+#define tasteA 0, tasteB 1, tasteC 2, tasteD 3
+#define pcfAddress 0x20
+
+// 3. GPIO Rotary Encoder
+#define gpioEnc
+#define encA 17, encB 5, encSW 16
+
+// 4. I2C Rotary Encoder (PCF8574)
+#define i2cEnc
+#define encA 0, encB 1, encSW 2
+#define pcfAddress 0x20
+
+// 5. Potentiometer (für Pong/Breakout)
+#define gpioPoti
+#define potiLeft 34, potiRight 35
+
+// 6-8. ESP-NOW (drahtlos via 2. ESP32)
+#define espNowSwitch    // Buttons
+#define espNowEnc       // Encoder
+#define espNowPoti      // Potentiometer
 ```
 
 ---
