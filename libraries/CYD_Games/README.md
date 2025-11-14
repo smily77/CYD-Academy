@@ -161,6 +161,16 @@ Die Library nutzt `CYD_Input.h` für flexible Hardware-Unterstützung:
 #define pcfAddress 0x20
 ```
 
+**Option 5-7: ESP-NOW (Drahtlose Eingabe)**
+```cpp
+// In CYD_Display_Config.h:
+#define espNowSwitch    // Drahtlose Buttons
+// ODER
+#define espNowEnc       // Drahtloser Encoder
+// ODER
+#define espNowPoti      // Drahtlose Potentiometer
+```
+
 **Potentiometer (optional für Pong & Breakout)**
 ```cpp
 #define gpioPoti
@@ -169,10 +179,11 @@ Die Library nutzt `CYD_Input.h` für flexible Hardware-Unterstützung:
 ```
 
 **Wichtig:**
-- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc` muss definiert sein
-- Pong und Breakout benötigen `gpioPoti` (außer mit Encoder: Pong nur AI-Modus)
+- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc`, `espNowSwitch`, `espNowEnc`, `espNowPoti` muss definiert sein
+- Pong und Breakout benötigen `gpioPoti` oder `espNowPoti` (außer mit Encoder: Pong nur AI-Modus)
 - Bei I2C: PCF8574 Library installieren
 - Mit Encoder sind Snake und Asteroids nicht kompatibel
+- Bei ESP-NOW: Siehe [../../examples/ESP-NOW_Sender/](../../examples/ESP-NOW_Sender/) für Sender-Sketches
 
 ## Steuerung
 

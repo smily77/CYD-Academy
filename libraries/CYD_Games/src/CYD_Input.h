@@ -7,6 +7,9 @@
   - GPIO-Encoder (Rotary Encoder direkt am ESP32)
   - I2C-Encoder (Rotary Encoder über PCF8574)
   - GPIO-Potentiometer (optional, nur mit Buttons)
+  - ESP-NOW Buttons (drahtlos über ESP-NOW)
+  - ESP-NOW Encoder (drahtlos über ESP-NOW)
+  - ESP-NOW Potentiometer (drahtlos über ESP-NOW)
 
   Konfiguration erfolgt in CYD_Display_Config.h:
 
@@ -39,6 +42,15 @@
     #define encSW 2     // PCF8574 Pin 2
     #define pcfAddress 0x20
 
+  Option 5: Buttons über ESP-NOW (drahtlos)
+    #define espNowSwitch
+
+  Option 6: Encoder über ESP-NOW (drahtlos)
+    #define espNowEnc
+
+  Option 7: Potentiometer über ESP-NOW (drahtlos)
+    #define espNowPoti
+
   Potentiometer (optional, nur mit gpioSwitch/i2cSwitch):
     #define gpioPoti
     #define potiLeft 34
@@ -57,17 +69,54 @@
 #include <Arduino.h>
 
 // Konfigurationsprüfung - nur EINE Methode darf definiert sein
-#if (defined(gpioSwitch) + defined(i2cSwitch) + defined(gpioEnc) + defined(i2cEnc)) > 1
-  #error "FEHLER: Nur EINE von gpioSwitch, i2cSwitch, gpioEnc, i2cEnc darf definiert sein!"
+#if (defined(gpioSwitch) + defined(i2cSwitch) + defined(gpioEnc) + defined(i2cEnc) + defined(espNowSwitch) + defined(espNowEnc) + defined(espNowPoti)) > 1
+  #error "FEHLER: Nur EINE von gpioSwitch, i2cSwitch, gpioEnc, i2cEnc, espNowSwitch, espNowEnc, espNowPoti darf definiert sein!"
 #endif
 
-#if !defined(gpioSwitch) && !defined(i2cSwitch) && !defined(gpioEnc) && !defined(i2cEnc)
-  #error "FEHLER: Genau EINE von gpioSwitch, i2cSwitch, gpioEnc, i2cEnc muss definiert sein!"
+#if !defined(gpioSwitch) && !defined(i2cSwitch) && !defined(gpioEnc) && !defined(i2cEnc) && !defined(espNowSwitch) && !defined(espNowEnc) && !defined(espNowPoti)
+  #error "FEHLER: Genau EINE Eingabemethode muss definiert sein!"
 #endif
 
 // PCF8574 Library nur laden wenn i2cSwitch oder i2cEnc aktiv
 #if defined(i2cSwitch) || defined(i2cEnc)
   #include <PCF8574.h>
+#endif
+
+// ESP-NOW Library und WiFi nur laden wenn espNow* aktiv
+#if defined(espNowSwitch) || defined(espNowEnc) || defined(espNowPoti)
+  #include <esp_now.h>
+  #include <WiFi.h>
+#endif
+
+// ===== ESP-NOW DATENSTRUKTUR =====
+#if defined(espNowSwitch) || defined(espNowEnc) || defined(espNowPoti)
+// Paket-Typen für ESP-NOW Kommunikation
+#define ESPNOW_PACKET_PAIRING 0
+#define ESPNOW_PACKET_BUTTON  1
+#define ESPNOW_PACKET_ENCODER 2
+#define ESPNOW_PACKET_POTI    3
+
+// Datenstruktur für ESP-NOW Übertragung (Sender → CYD)
+struct ESPNowInputData {
+  uint8_t packetType;     // 0=pairing, 1=button, 2=encoder, 3=poti
+  uint8_t senderMAC[6];   // MAC-Adresse des Senders für Pairing
+
+  // Button-Daten (für espNowSwitch)
+  bool buttonA;
+  bool buttonB;
+  bool buttonC;
+  bool buttonD;
+
+  // Encoder-Daten (für espNowEnc)
+  int8_t encoderDelta;    // -1, 0, +1
+  bool encoderButton;
+
+  // Poti-Daten (für espNowPoti)
+  uint16_t potiLeft;      // 0-1000
+  uint16_t potiRight;     // 0-1000
+
+  uint32_t timestamp;     // millis() vom Sender für Sync
+};
 #endif
 
 // Button-Konstanten für lesbareren Code
@@ -189,6 +238,51 @@ public:
       Serial.println("CYD_Input: Keine Potentiometer definiert");
     #endif
 
+    #if defined(espNowSwitch) || defined(espNowEnc) || defined(espNowPoti)
+      // ESP-NOW Empfänger initialisieren
+      // WiFi in Station-Mode ohne Verbindung
+      WiFi.mode(WIFI_STA);
+      WiFi.disconnect();
+
+      // ESP-NOW initialisieren
+      if (esp_now_init() != ESP_OK) {
+        Serial.println("FEHLER: ESP-NOW Init fehlgeschlagen!");
+        return false;
+      }
+
+      // Callback registrieren
+      esp_now_register_recv_cb(espNowOnDataRecv);
+
+      // Variablen initialisieren
+      espNowPaired = false;
+      espNowDataReceived = false;
+      lastEspNowReceive = millis();
+
+      // MAC-Adresse des CYD ausgeben (für Sender-Konfiguration)
+      uint8_t cydMAC[6];
+      WiFi.macAddress(cydMAC);
+
+      Serial.println("CYD_Input: ESP-NOW Empfänger initialisiert");
+      #ifdef espNowSwitch
+        Serial.println("  Modus: espNowSwitch (Buttons über ESP-NOW)");
+      #endif
+      #ifdef espNowEnc
+        Serial.println("  Modus: espNowEnc (Encoder über ESP-NOW)");
+      #endif
+      #ifdef espNowPoti
+        Serial.println("  Modus: espNowPoti (Potis über ESP-NOW)");
+      #endif
+
+      Serial.print("  CYD MAC-Adresse: ");
+      for (int i = 0; i < 6; i++) {
+        Serial.printf("%02X", cydMAC[i]);
+        if (i < 5) Serial.print(":");
+      }
+      Serial.println();
+      Serial.println("  Warte auf Pairing mit Sender...");
+      Serial.println("  (Sender einschalten zum Pairen)");
+    #endif
+
     return true;
   }
 
@@ -224,6 +318,26 @@ public:
       }
     #endif
 
+    #ifdef espNowSwitch
+      // Timeout prüfen
+      if (millis() - lastEspNowReceive > ESP_NOW_TIMEOUT) {
+        return false;  // Keine Verbindung
+      }
+
+      // Prüfen ob gepaired
+      if (!espNowPaired) {
+        return false;
+      }
+
+      switch (button) {
+        case CYD_BTN_A: return espNowData.buttonA;
+        case CYD_BTN_B: return espNowData.buttonB;
+        case CYD_BTN_C: return espNowData.buttonC;
+        case CYD_BTN_D: return espNowData.buttonD;
+        default: return false;
+      }
+    #endif
+
     return false;
   }
 
@@ -236,7 +350,7 @@ public:
 
   // Prüft ob Potentiometer verfügbar sind
   static bool hasPotis() {
-    #ifdef gpioPoti
+    #if defined(gpioPoti) || defined(espNowPoti)
       return true;
     #else
       return false;
@@ -262,17 +376,38 @@ public:
       // ESP32 ADC: 0-1000 → 0-1000 mappen
       int mappedValue = map(rawValue, 0, 1000, 0, 1000);
       return constrain(mappedValue, 0, 1000);
-    #else
-      // Keine Potis verfügbar
-      return 500;  // Mittelwert zurückgeben
     #endif
+
+    #ifdef espNowPoti
+      // Timeout prüfen
+      if (millis() - lastEspNowReceive > ESP_NOW_TIMEOUT) {
+        return 500;  // Mittelposition bei Timeout
+      }
+
+      // Prüfen ob gepaired
+      if (!espNowPaired) {
+        return 500;
+      }
+
+      switch (poti) {
+        case CYD_POTI_LEFT:
+          return constrain(espNowData.potiLeft, 0, 1000);
+        case CYD_POTI_RIGHT:
+          return constrain(espNowData.potiRight, 0, 1000);
+        default:
+          return 500;
+      }
+    #endif
+
+    // Fallback: Keine Potis verfügbar
+    return 500;  // Mittelwert zurückgeben
   }
 
   // ===== ENCODER-INPUT =====
 
   // Prüft ob Encoder verfügbar ist
   static bool hasEncoder() {
-    #if defined(gpioEnc) || defined(i2cEnc)
+    #if defined(gpioEnc) || defined(i2cEnc) || defined(espNowEnc)
       return true;
     #else
       return false;
@@ -313,9 +448,23 @@ public:
       lastEncB = currentB;
 
       return delta;
-    #else
-      return 0;
     #endif
+
+    #ifdef espNowEnc
+      // Timeout prüfen
+      if (millis() - lastEspNowReceive > ESP_NOW_TIMEOUT) {
+        return 0;  // Keine Bewegung bei Timeout
+      }
+
+      // Prüfen ob gepaired
+      if (!espNowPaired) {
+        return 0;
+      }
+
+      return espNowData.encoderDelta;
+    #endif
+
+    return 0;
   }
 
   // Liest Encoder-Button (LOW = gedrückt)
@@ -326,6 +475,20 @@ public:
 
     #ifdef i2cEnc
       return pcf.digitalRead(encSW) == LOW;
+    #endif
+
+    #ifdef espNowEnc
+      // Timeout prüfen
+      if (millis() - lastEspNowReceive > ESP_NOW_TIMEOUT) {
+        return false;
+      }
+
+      // Prüfen ob gepaired
+      if (!espNowPaired) {
+        return false;
+      }
+
+      return espNowData.encoderButton;
     #endif
 
     return false;
@@ -372,6 +535,20 @@ private:
     static int lastEncB;
     static int encoderPos;
   #endif
+
+  #if defined(espNowSwitch) || defined(espNowEnc) || defined(espNowPoti)
+    static ESPNowInputData espNowData;
+    static bool espNowDataReceived;
+    static bool espNowPaired;
+    static uint8_t pairedSenderMAC[6];
+    static unsigned long lastEspNowReceive;
+    static const unsigned long ESP_NOW_TIMEOUT = 500;  // 500ms Timeout
+  #endif
+
+  // Freund-Deklaration für ESP-NOW Callback
+  #if defined(espNowSwitch) || defined(espNowEnc) || defined(espNowPoti)
+    friend void espNowOnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len);
+  #endif
 };
 
 // Statische Member initialisieren
@@ -383,6 +560,71 @@ private:
   int CYD_Input::lastEncA = 0;
   int CYD_Input::lastEncB = 0;
   int CYD_Input::encoderPos = 0;
+#endif
+
+#if defined(espNowSwitch) || defined(espNowEnc) || defined(espNowPoti)
+  ESPNowInputData CYD_Input::espNowData = {};
+  bool CYD_Input::espNowDataReceived = false;
+  bool CYD_Input::espNowPaired = false;
+  uint8_t CYD_Input::pairedSenderMAC[6] = {0};
+  unsigned long CYD_Input::lastEspNowReceive = 0;
+#endif
+
+// ===== ESP-NOW CALLBACK-FUNKTION =====
+#if defined(espNowSwitch) || defined(espNowEnc) || defined(espNowPoti)
+// Callback für empfangene ESP-NOW Daten
+void espNowOnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
+  if (len != sizeof(ESPNowInputData)) {
+    Serial.printf("ESP-NOW: Fehlerhafte Paketgröße: %d (erwartet: %d)\n", len, sizeof(ESPNowInputData));
+    return;
+  }
+
+  ESPNowInputData receivedData;
+  memcpy(&receivedData, incomingData, sizeof(ESPNowInputData));
+
+  // Pairing-Paket behandeln
+  if (receivedData.packetType == ESPNOW_PACKET_PAIRING) {
+    if (!CYD_Input::espNowPaired) {
+      // Neue Pairing-Anfrage
+      memcpy(CYD_Input::pairedSenderMAC, receivedData.senderMAC, 6);
+      CYD_Input::espNowPaired = true;
+      CYD_Input::lastEspNowReceive = millis();
+
+      Serial.print("ESP-NOW: Neuer Sender gepaired: ");
+      for (int i = 0; i < 6; i++) {
+        Serial.printf("%02X", CYD_Input::pairedSenderMAC[i]);
+        if (i < 5) Serial.print(":");
+      }
+      Serial.println();
+    }
+    return;
+  }
+
+  // Prüfen ob Sender gepaired ist
+  if (!CYD_Input::espNowPaired) {
+    Serial.println("ESP-NOW: Daten von ungepairtem Sender ignoriert");
+    return;
+  }
+
+  // Prüfen ob MAC übereinstimmt
+  bool macMatch = true;
+  for (int i = 0; i < 6; i++) {
+    if (CYD_Input::pairedSenderMAC[i] != receivedData.senderMAC[i]) {
+      macMatch = false;
+      break;
+    }
+  }
+
+  if (!macMatch) {
+    Serial.println("ESP-NOW: Daten von unbekanntem Sender ignoriert");
+    return;
+  }
+
+  // Daten akzeptieren
+  memcpy(&CYD_Input::espNowData, &receivedData, sizeof(ESPNowInputData));
+  CYD_Input::espNowDataReceived = true;
+  CYD_Input::lastEspNowReceive = millis();
+}
 #endif
 
 #endif // CYD_INPUT_H

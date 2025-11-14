@@ -1,22 +1,33 @@
-# CYD Academy - Arduino Beispiele & Arcade Games
+# CYD Academy - Lerne ESP32 Display-Programmierung
 
-Dieses Repository enthält Arduino IDE Beispiele und eine vollständige Arcade-Spielesammlung für das **CYD (Cheap Yellow Display)** mit der **LovyanGFX** Library.
+**Eine umfassende Lernplattform für das CYD (Cheap Yellow Display)** mit praxisnahen Beispielen, Schritt-für-Schritt Tutorials und einer vollständigen Arcade-Spielesammlung als Master Class.
+
+## 🎓 Was ist die CYD Academy?
+
+Die CYD Academy ist dein **Einstieg in die ESP32 Display-Programmierung**. Von grundlegenden Konzepten bis zu fortgeschrittenen Techniken - hier lernst du alles, was du brauchst, um beeindruckende Projekte mit dem CYD zu erstellen.
+
+**Lernpfad:**
+1. 📚 **Basics** - Verstehe Display, Touch und Grafik-Grundlagen
+2. 🎨 **Intermediate** - Lerne Animationen, WiFi und Sensoren
+3. 🚀 **Advanced** - ESP-NOW, Multi-Threading, komplexe UI
+4. 🎮 **Master Class** - Analysiere vollständige Arcade-Spiele
 
 ## 📦 Inhalt
 
-### 🎮 [Arcade Games](arcade-games/)
-Vollständige Sammlung klassischer Arcade-Spiele in Retro- und Modern-Versionen:
-- **14 Spiele:** Pong, Snake, Breakout, Space Invaders, Asteroids, Frogger, Tetris (je 2 Versionen)
-- **2 Touch-Menüs:** Retro Games & Modern Games für einfache Spielauswahl
-- **CYD_Games Library:** Alle Spiele als wiederverwendbare Klassen gekapselt
-- Mehr Details: [arcade-games/README.md](arcade-games/README.md)
+### 📚 [Examples](examples/) - Lerne Schritt für Schritt
+Von einfach bis fortgeschritten - 12 durchdachte Beispiele zum Lernen:
+- **Basics:** Hello World, Touch Demo, Grafik, Text-Effekte
+- **Intermediate:** WiFi-Uhren, Taschenrechner, Live-Daten
+- **Advanced:** ESP-NOW Kommunikation zwischen CYDs
+- Jedes Beispiel ist **ausführlich dokumentiert** und erklärt **warum**, nicht nur **wie**
 
-### 📚 [Examples](examples/)
-11 grundlegende Beispiele zum Lernen der Display-Programmierung:
-- Hello World, Touch Demo, Grafik, Text-Effekte
-- WiFi-Uhren (Digital & Analog)
-- Taschenrechner, Touch-Buttons
-- Live-Daten-Visualisierung
+### 🎮 [Arcade Games](arcade-games/) - Master Class
+Vollständige Arcade-Spiele als **Lern-Ressource für Fortgeschrittene**:
+- **14 Spiele:** Pong, Snake, Breakout, Space Invaders, Asteroids, Frogger, Tetris (je 2 Versionen)
+- **CYD_Games Library:** Alle Spiele als wiederverwendbare Klassen - **Studiere professionellen Code**
+- **Lerne:** Game-Loops, Kollisionserkennung, State-Management, Performance-Optimierung
+- **2 Touch-Menüs:** Komplette UI-Implementierung als Referenz
+- Mehr Details: [arcade-games/README.md](arcade-games/README.md)
 
 ## 🖥️ Hardware
 
@@ -29,6 +40,7 @@ Vollständige Sammlung klassischer Arcade-Spiele in Retro- und Modern-Versionen:
   - 2x Potentiometer (für Spiele-Steuerung)
   - 4x Digitale Buttons (für Spiele-Steuerung)
   - Rotary Encoder mit Button (alternative Steuerung)
+  - ESP32 Board (als drahtloser Controller via ESP-NOW)
 
 ## 🚀 Quick Start
 
@@ -96,6 +108,16 @@ Die CYD_Games Library unterstützt verschiedene Hardware-Konfigurationen über `
 #define pcfAddress 0x20 // I2C-Adresse des PCF8574
 ```
 
+**Option 5-7: ESP-NOW (Drahtlose Eingabe über zweites ESP32)**
+```cpp
+// Auf dem CYD (Empfänger):
+#define espNowSwitch    // Für drahtlose Buttons
+// ODER
+#define espNowEnc       // Für drahtlosen Encoder
+// ODER
+#define espNowPoti      // Für drahtlose Potentiometer
+```
+
 **Potentiometer (optional für Pong & Breakout)**
 ```cpp
 #define gpioPoti
@@ -104,12 +126,13 @@ Die CYD_Games Library unterstützt verschiedene Hardware-Konfigurationen über `
 ```
 
 **Wichtig:**
-- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc` muss definiert sein
+- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc`, `espNowSwitch`, `espNowEnc`, `espNowPoti` muss definiert sein
 - Mit Encoder sind nicht alle Spiele kompatibel (Snake und Asteroids werden automatisch ausgeblendet)
 - Pong läuft mit Encoder nur im AI-Modus (rechter Paddle mit Encoder steuerbar)
 - Bei Encoder-Steuerung: Rotation = Links/Rechts, Button = Aktion
-- Spiele die Potentiometer benötigen (Pong, Breakout) erscheinen nur im Menu wenn `gpioPoti` definiert ist
+- Spiele die Potentiometer benötigen (Pong, Breakout) erscheinen nur im Menu wenn `gpioPoti` oder `espNowPoti` definiert ist
 - Bei I2C (i2cSwitch oder i2cEnc) muss die PCF8574 Library installiert sein
+- Bei ESP-NOW: Siehe [examples/ESP-NOW_Sender/](examples/ESP-NOW_Sender/) für Sender-Sketches
 
 ### Board-Einstellungen
 
@@ -249,14 +272,36 @@ CYD-Academy/
         └── library.properties
 ```
 
-## 🎓 Lernpfad
+## 🎓 Empfohlener Lernpfad
 
-1. **Basics:** Starte mit `examples/01_HelloWorld` bis `examples/04_Colors`
-2. **Interaktion:** Lerne Touch-Input mit `examples/03_TouchDemo` und `examples/10_TouchButtons`
-3. **Grafik:** Fortgeschrittene Techniken in `examples/06_BouncingBall` und `examples/11_ScrollingChart`
-4. **Projekte:** Baue eigene Apps mit `examples/09_Calculator` als Vorlage
-5. **Games:** Erkunde die Arcade-Spiele in `arcade-games/`
-6. **Library:** Lerne die CYD_Games Library kennen für eigene Spiele
+### Level 1: Basics (1-4 Stunden)
+1. **Display-Grundlagen:** `examples/01_HelloWorld` → `examples/02_BasicShapes` → `examples/04_Colors`
+2. **Touch-Input:** `examples/03_TouchDemo` - Verstehe wie Touch funktioniert
+3. **Erste Schritte:** Experimentiere mit den Beispielen, ändere Farben, Positionen, Texte
+
+**Lernziele:** Display initialisieren, Grafik zeichnen, Touch lesen
+
+### Level 2: Intermediate (4-8 Stunden)
+4. **Text & Animation:** `examples/05_ScrollText` → `examples/06_BouncingBall`
+5. **WiFi & NTP:** `examples/07_WiFiClock` → `examples/08_AnalogClock`
+6. **Touch-UI:** `examples/09_Calculator` → `examples/10_TouchButtons`
+7. **Live-Daten:** `examples/11_ScrollingChart`
+
+**Lernziele:** Animationen, WiFi-Verbindung, komplexe Touch-UIs, Sensoren
+
+### Level 3: Advanced (8-12 Stunden)
+8. **ESP-NOW Remote:** `examples/ESP-NOW_Sender/` - Baue einen drahtlosen Controller
+9. **CYD-zu-CYD:** `examples/12_CYD_to_CYD_Communication/` - Zwei CYDs kommunizieren
+10. **Eigene Projekte:** Kombiniere Gelerntes für eigene Ideen
+
+**Lernziele:** Drahtlose Kommunikation, Pairing-Mechanismen, Multi-Device-Systeme
+
+### Level 4: Master Class (12+ Stunden)
+11. **Game-Analyse:** Studiere `arcade-games/` - Von einfach (Snake) bis komplex (Space Invaders)
+12. **Library-Code:** Verstehe `libraries/CYD_Games/` - Professionelle Code-Struktur
+13. **Eigene Games:** Baue dein eigenes Spiel mit der CYD_Games Library
+
+**Lernziele:** Game-Loops, State-Management, Kollisionserkennung, Performance-Optimierung
 
 ## 🛠️ WiFi-Konfiguration
 
