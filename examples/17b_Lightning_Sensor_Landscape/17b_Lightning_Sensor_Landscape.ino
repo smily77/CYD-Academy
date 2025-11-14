@@ -632,7 +632,7 @@ void drawInfoPanel() {
   // ===== ENTFERNUNG =====
   if (lastDisplayedDistance != lastDistance || infoPanelNeedsFullRedraw) {
     // Bereich löschen
-    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 42, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 35, COLOR_BG);
 
     lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT_DIM);
@@ -641,18 +641,18 @@ void drawInfoPanel() {
 
     y += 11;
     if (lastDistance > 0 && totalLightningCount > 0) {
-      // Große Zahl für Entfernung
-      lcd.setFont(FONT_LARGE);
+      // Zahl für Entfernung
+      lcd.setFont(FONT_MEDIUM);
       lcd.setTextColor(COLOR_TEXT);
       lcd.setTextDatum(TL_DATUM);
       lcd.drawString(String(lastDistance), x, y);
 
       // "km" kleinerer Font
-      lcd.setFont(FONT_SMALL);
+      lcd.setFont(FONT_TINY);
       lcd.setTextDatum(TL_DATUM);
-      lcd.drawString("km", x + 32, y + 12);
+      lcd.drawString("km", x + 22, y + 9);
     } else {
-      lcd.setFont(FONT_SMALL);
+      lcd.setFont(FONT_TINY);
       lcd.setTextColor(COLOR_TEXT);
       lcd.setTextDatum(TL_DATUM);
       lcd.drawString("No data", x, y);
@@ -662,7 +662,7 @@ void drawInfoPanel() {
   }
 
   // ===== STATUS =====
-  y = HEADER_HEIGHT + 55;
+  y = HEADER_HEIGHT + 48;
   String currentStatus;
   if (lastDistance == 0 || totalLightningCount == 0) {
     currentStatus = "Safe";
@@ -677,7 +677,7 @@ void drawInfoPanel() {
   }
 
   if (lastDisplayedStatus != currentStatus || infoPanelNeedsFullRedraw) {
-    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 28, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 22, COLOR_BG);
 
     lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT_DIM);
@@ -685,7 +685,7 @@ void drawInfoPanel() {
     lcd.drawString("Status:", x, y);
 
     y += 11;
-    lcd.setFont(FONT_MEDIUM);
+    lcd.setFont(FONT_SMALL);
     lcd.setTextColor(getDistanceColor(lastDistance));
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString(currentStatus, x, y);
@@ -694,9 +694,9 @@ void drawInfoPanel() {
   }
 
   // ===== COUNT =====
-  y = HEADER_HEIGHT + 86;
+  y = HEADER_HEIGHT + 73;
   if (lastDisplayedCount != totalLightningCount || infoPanelNeedsFullRedraw) {
-    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 28, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 22, COLOR_BG);
 
     lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT_DIM);
@@ -704,7 +704,7 @@ void drawInfoPanel() {
     lcd.drawString("Count:", x, y);
 
     y += 11;
-    lcd.setFont(FONT_MEDIUM);
+    lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT);
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString(String(totalLightningCount), x, y);
@@ -713,7 +713,7 @@ void drawInfoPanel() {
   }
 
   // ===== LAST =====
-  y = HEADER_HEIGHT + 117;
+  y = HEADER_HEIGHT + 98;
   String currentLast;
   if (totalLightningCount > 0) {
     unsigned long elapsed = (millis() - lastLightningTime) / 1000;
@@ -731,7 +731,7 @@ void drawInfoPanel() {
   // Update alle 5 Sekunden oder bei Änderung
   static unsigned long lastTimeUpdate = 0;
   if (lastDisplayedLast != currentLast || infoPanelNeedsFullRedraw || millis() - lastTimeUpdate > 5000) {
-    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 22, COLOR_BG);
+    lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 18, COLOR_BG);
 
     lcd.setFont(FONT_SMALL);
     lcd.setTextColor(COLOR_TEXT_DIM);
@@ -739,7 +739,7 @@ void drawInfoPanel() {
     lcd.drawString("Last:", x, y);
 
     y += 11;
-    lcd.setFont(FONT_SMALL);
+    lcd.setFont(FONT_TINY);
     lcd.setTextColor(COLOR_TEXT);
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString(currentLast, x, y);
@@ -749,7 +749,7 @@ void drawInfoPanel() {
   }
 
   // ===== STATISTIK =====
-  y = HEADER_HEIGHT + 142;
+  y = HEADER_HEIGHT + 119;
   if (lastDisplayedNoise != noiseCount || lastDisplayedDisturb != disturbanceCount || infoPanelNeedsFullRedraw) {
     lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 24, COLOR_BG);
 
