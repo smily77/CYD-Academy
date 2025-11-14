@@ -29,6 +29,7 @@ Vollständige Sammlung klassischer Arcade-Spiele in Retro- und Modern-Versionen:
   - 2x Potentiometer (für Spiele-Steuerung)
   - 4x Digitale Buttons (für Spiele-Steuerung)
   - Rotary Encoder mit Button (alternative Steuerung)
+  - ESP32 Board (als drahtloser Controller via ESP-NOW)
 
 ## 🚀 Quick Start
 
@@ -96,6 +97,16 @@ Die CYD_Games Library unterstützt verschiedene Hardware-Konfigurationen über `
 #define pcfAddress 0x20 // I2C-Adresse des PCF8574
 ```
 
+**Option 5-7: ESP-NOW (Drahtlose Eingabe über zweites ESP32)**
+```cpp
+// Auf dem CYD (Empfänger):
+#define espNowSwitch    // Für drahtlose Buttons
+// ODER
+#define espNowEnc       // Für drahtlosen Encoder
+// ODER
+#define espNowPoti      // Für drahtlose Potentiometer
+```
+
 **Potentiometer (optional für Pong & Breakout)**
 ```cpp
 #define gpioPoti
@@ -104,12 +115,13 @@ Die CYD_Games Library unterstützt verschiedene Hardware-Konfigurationen über `
 ```
 
 **Wichtig:**
-- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc` muss definiert sein
+- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc`, `espNowSwitch`, `espNowEnc`, `espNowPoti` muss definiert sein
 - Mit Encoder sind nicht alle Spiele kompatibel (Snake und Asteroids werden automatisch ausgeblendet)
 - Pong läuft mit Encoder nur im AI-Modus (rechter Paddle mit Encoder steuerbar)
 - Bei Encoder-Steuerung: Rotation = Links/Rechts, Button = Aktion
-- Spiele die Potentiometer benötigen (Pong, Breakout) erscheinen nur im Menu wenn `gpioPoti` definiert ist
+- Spiele die Potentiometer benötigen (Pong, Breakout) erscheinen nur im Menu wenn `gpioPoti` oder `espNowPoti` definiert ist
 - Bei I2C (i2cSwitch oder i2cEnc) muss die PCF8574 Library installiert sein
+- Bei ESP-NOW: Siehe [examples/ESP-NOW_Sender/](examples/ESP-NOW_Sender/) für Sender-Sketches
 
 ### Board-Einstellungen
 

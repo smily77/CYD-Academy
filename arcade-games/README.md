@@ -326,6 +326,15 @@ Die Spiele unterstützen flexible Hardware-Konfiguration über `CYD_Display_Conf
 #define pcfAddress 0x20
 ```
 
+**Option 5-7: ESP-NOW (Drahtlose Eingabe über zweites ESP32)**
+```cpp
+#define espNowSwitch    // Drahtlose Buttons
+// ODER
+#define espNowEnc       // Drahtloser Encoder
+// ODER
+#define espNowPoti      // Drahtlose Potentiometer
+```
+
 **Potentiometer (optional für Pong & Breakout)**
 ```cpp
 #define gpioPoti
@@ -337,13 +346,14 @@ Die Spiele unterstützen flexible Hardware-Konfiguration über `CYD_Display_Conf
 - RGB LED (für visuelles Feedback)
 
 **Wichtig:**
-- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc` muss definiert sein
-- Pong und Breakout benötigen Potentiometer (`gpioPoti` muss definiert sein), außer mit Encoder
+- Genau EINE von `gpioSwitch`, `i2cSwitch`, `gpioEnc`, `i2cEnc`, `espNowSwitch`, `espNowEnc`, `espNowPoti` muss definiert sein
+- Pong und Breakout benötigen Potentiometer (`gpioPoti` oder `espNowPoti` muss definiert sein), außer mit Encoder
 - Mit Encoder sind nicht alle Spiele kompatibel:
   - ✓ Kompatibel: Pong (AI-Modus), Breakout, Space Invaders, Frogger, Tetris
   - ✗ Nicht kompatibel: Snake, Asteroids (werden automatisch ausgeblendet)
 - Alle anderen Spiele funktionieren nur mit Buttons (GPIO oder I2C)
 - Bei I2C-Buttons/Encoder muss die PCF8574 Library installiert sein
+- Bei ESP-NOW: Siehe [../examples/ESP-NOW_Sender/](../examples/ESP-NOW_Sender/) für Sender-Sketches und Pairing-Anleitung
 
 ## 📊 Spiel-Statistiken
 
