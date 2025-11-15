@@ -61,6 +61,7 @@ unsigned long lastReceiveTime = 0;
 // UI State
 bool buttonPressed = false;
 bool lastTouchState = false;
+bool needsUIRedraw = false;  // Flag für UI-Update aus Callback
 
 // Farben
 #define COLOR_BG 0x0000           // Schwarz
@@ -98,7 +99,28 @@ void onDataRecv(const esp_now_recv_info *recv_info, const uint8_t *data, int len
       }
       Serial.println();
 
-      drawUI();  // UI neu zeichnen mit Pairing-Status
+      // UI-Redraw triggern (nicht direkt aus Callback!)
+      needsUIRedraw = true;
+
+      // Sofort Pairing-Antwort zurücksenden damit beide gepaired werden
+      Message response;
+      response.type = 0;
+      WiFi.macAddress(response.senderMAC);
+      response.counter = 0;
+      response.timestamp = millis();
+
+      // Peer hinzufügen
+      esp_now_peer_info_t peerInfo = {};
+      memcpy(peerInfo.peer_addr, peerMAC, 6);
+      peerInfo.channel = 0;
+      peerInfo.encrypt = false;
+
+      if (!esp_now_is_peer_exist(peerMAC)) {
+        esp_now_add_peer(&peerInfo);
+      }
+
+      esp_now_send(peerMAC, (uint8_t*)&response, sizeof(response));
+      Serial.println("Pairing-Antwort gesendet");
     }
     return;
   }
@@ -179,6 +201,12 @@ void setup() {
 // ===== LOOP =====
 
 void loop() {
+  // UI-Redraw wenn von Callback getriggert
+  if (needsUIRedraw) {
+    drawUI();
+    needsUIRedraw = false;
+  }
+
   // Touch lesen
   uint16_t x, y;
   bool touched = lcd.getTouch(&x, &y);
