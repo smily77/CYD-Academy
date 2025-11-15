@@ -63,6 +63,10 @@ bool buttonPressed = false;
 bool lastTouchState = false;
 bool needsUIRedraw = false;  // Flag für UI-Update aus Callback
 
+// Connection-Timeout (10 Sekunden ohne Nachricht → Verbindung verloren)
+const unsigned long CONNECTION_TIMEOUT = 10000;
+unsigned long lastPeerActivity = 0;
+
 // Farben
 #define COLOR_BG 0x0000           // Schwarz
 #define COLOR_BUTTON 0x001F       // Blau
@@ -86,12 +90,32 @@ void onDataRecv(const esp_now_recv_info *recv_info, const uint8_t *data, int len
   Message msg;
   memcpy(&msg, data, sizeof(Message));
 
-  // Pairing-Nachricht
+  // Pairing-Nachricht (immer akzeptieren für Re-Pairing nach Absturz!)
   if (msg.type == 0) {
+    bool isNewPeer = false;
+
+    // Prüfe ob es ein neuer Peer ist
     if (!isPaired) {
-      memcpy(peerMAC, msg.senderMAC, 6);
+      isNewPeer = true;
+    } else {
+      // Prüfe ob MAC anders ist (Re-Pairing mit neuem Gerät)
+      for (int i = 0; i < 6; i++) {
+        if (msg.senderMAC[i] != peerMAC[i]) {
+          isNewPeer = true;
+          break;
+        }
+      }
+    }
+
+    // Aktualisiere Peer-Daten
+    memcpy(peerMAC, msg.senderMAC, 6);
+    lastPeerActivity = millis();
+
+    if (isNewPeer) {
+      bool wasAlreadyPaired = isPaired;
       isPaired = true;
 
+      Serial.print(wasAlreadyPaired ? "Re-" : "");
       Serial.print("Gepaired mit: ");
       for (int i = 0; i < 6; i++) {
         Serial.printf("%02X", peerMAC[i]);
@@ -101,27 +125,29 @@ void onDataRecv(const esp_now_recv_info *recv_info, const uint8_t *data, int len
 
       // UI-Redraw triggern (nicht direkt aus Callback!)
       needsUIRedraw = true;
-
-      // Sofort Pairing-Antwort zurücksenden damit beide gepaired werden
-      Message response;
-      response.type = 0;
-      WiFi.macAddress(response.senderMAC);
-      response.counter = 0;
-      response.timestamp = millis();
-
-      // Peer hinzufügen
-      esp_now_peer_info_t peerInfo = {};
-      memcpy(peerInfo.peer_addr, peerMAC, 6);
-      peerInfo.channel = 0;
-      peerInfo.encrypt = false;
-
-      if (!esp_now_is_peer_exist(peerMAC)) {
-        esp_now_add_peer(&peerInfo);
-      }
-
-      esp_now_send(peerMAC, (uint8_t*)&response, sizeof(response));
-      Serial.println("Pairing-Antwort gesendet");
     }
+
+    // Immer Pairing-Antwort senden (auch bei Re-Pairing)
+    Message response;
+    response.type = 0;
+    WiFi.macAddress(response.senderMAC);
+    response.counter = 0;
+    response.timestamp = millis();
+
+    // Peer hinzufügen/aktualisieren
+    esp_now_peer_info_t peerInfo = {};
+    memcpy(peerInfo.peer_addr, peerMAC, 6);
+    peerInfo.channel = 0;
+    peerInfo.encrypt = false;
+
+    // Entferne alten Peer falls vorhanden und füge neu hinzu
+    if (esp_now_is_peer_exist(peerMAC)) {
+      esp_now_del_peer(peerMAC);
+    }
+    esp_now_add_peer(&peerInfo);
+
+    esp_now_send(peerMAC, (uint8_t*)&response, sizeof(response));
+
     return;
   }
 
@@ -139,6 +165,7 @@ void onDataRecv(const esp_now_recv_info *recv_info, const uint8_t *data, int len
     if (valid) {
       receiveCounter++;
       lastReceiveTime = millis();
+      lastPeerActivity = millis();  // Connection-Timeout zurücksetzen
       memcpy(&lastMessage, &msg, sizeof(Message));
 
       Serial.printf("Empfangen: Counter=%d, Latenz=%dms\n",
@@ -205,6 +232,21 @@ void loop() {
   if (needsUIRedraw) {
     drawUI();
     needsUIRedraw = false;
+  }
+
+  // Connection-Timeout prüfen (10s ohne Nachricht → Verbindung verloren)
+  if (isPaired && lastPeerActivity > 0 &&
+      millis() - lastPeerActivity > CONNECTION_TIMEOUT) {
+    Serial.println("Connection-Timeout! Peer verloren. Re-Pairing möglich.");
+    isPaired = false;
+    lastPeerActivity = 0;
+
+    // Peer entfernen
+    if (esp_now_is_peer_exist(peerMAC)) {
+      esp_now_del_peer(peerMAC);
+    }
+
+    needsUIRedraw = true;  // UI auf "WAITING" setzen
   }
 
   // Touch lesen
