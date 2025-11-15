@@ -62,6 +62,7 @@ unsigned long lastReceiveTime = 0;
 bool buttonPressed = false;
 bool lastTouchState = false;
 bool needsUIRedraw = false;  // Flag für UI-Update aus Callback
+bool needsReceiveAnimation = false;  // Flag für Animation aus Callback
 
 // Connection-Timeout (10 Sekunden ohne Nachricht → Verbindung verloren)
 const unsigned long CONNECTION_TIMEOUT = 10000;
@@ -171,8 +172,8 @@ void onDataRecv(const esp_now_recv_info *recv_info, const uint8_t *data, int len
       Serial.printf("Empfangen: Counter=%d, Latenz=%dms\n",
                     msg.counter, millis() - msg.timestamp);
 
-      // Visuelles Feedback
-      showReceiveAnimation();
+      // Visuelles Feedback triggern (nicht direkt aus Callback!)
+      needsReceiveAnimation = true;
     }
   }
 }
@@ -232,6 +233,12 @@ void loop() {
   if (needsUIRedraw) {
     drawUI();
     needsUIRedraw = false;
+  }
+
+  // Receive-Animation wenn von Callback getriggert
+  if (needsReceiveAnimation) {
+    showReceiveAnimation();
+    needsReceiveAnimation = false;
   }
 
   // Connection-Timeout prüfen (10s ohne Nachricht → Verbindung verloren)
@@ -409,10 +416,23 @@ void updateStatus() {
 }
 
 void showReceiveAnimation() {
-  // Kurzer Flash-Effekt
-  lcd.fillRect(BUTTON_X - 10, BUTTON_Y - 10,
-               BUTTON_W + 20, BUTTON_H + 20, COLOR_RECEIVE);
-  delay(100);
-  drawButton(false);
-  updateStatus();
+  // Kurzer Flash-Effekt (ohne delay!)
+  static unsigned long flashStartTime = 0;
+  static bool isFlashing = false;
+
+  if (!isFlashing) {
+    // Start Flash
+    lcd.fillRect(BUTTON_X - 10, BUTTON_Y - 10,
+                 BUTTON_W + 20, BUTTON_H + 20, COLOR_RECEIVE);
+    flashStartTime = millis();
+    isFlashing = true;
+  } else if (millis() - flashStartTime > 100) {
+    // End Flash nach 100ms
+    drawButton(false);
+    updateStatus();
+    isFlashing = false;
+  } else {
+    // Flash läuft noch - triggere nochmal für nächstes Frame
+    needsReceiveAnimation = true;
+  }
 }
