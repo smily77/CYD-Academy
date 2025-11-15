@@ -80,6 +80,10 @@
   #define IRQ_PIN -1  // Kein Interrupt verfügbar
 #endif
 
+// AS3935 I2C-Adresse (Standard: 0x03)
+// Mögliche Adressen: 0x01, 0x02, 0x03 (je nach A0/A1 Jumper)
+#define AS3935_I2C_ADDR AS3935_ADD3  // 0x03 (Standard)
+
 // ===== KONSTANTEN =====
 
 // Farben
@@ -111,7 +115,7 @@ struct LightningEvent {
 // ===== GLOBALE VARIABLEN =====
 
 LGFX lcd;
-DFRobot_AS3935_I2C sensor((uint8_t)IRQ_PIN);
+DFRobot_AS3935_I2C sensor((uint8_t)IRQ_PIN, AS3935_I2C_ADDR);
 
 // Sensor-Status
 bool sensorConnected = false;
@@ -141,6 +145,47 @@ unsigned long lastTouchTime = 0;
 // Sensor-Einstellungen
 uint8_t sensitivity = 2;  // 0-7 (höher = empfindlicher)
 
+// ===== HILFSFUNKTIONEN =====
+
+// I2C Scanner - Scannt alle Geräte auf dem Bus
+void scanI2C() {
+  Serial.println("\n=== I2C Scanner ===");
+  Serial.printf("Scanning I2C bus (SDA=%d, SCL=%d)...\n", extSDA, extSCL);
+
+  byte count = 0;
+
+  for (byte addr = 1; addr < 127; addr++) {
+    Wire.beginTransmission(addr);
+    byte error = Wire.endTransmission();
+
+    if (error == 0) {
+      Serial.printf("✓ Device found at address 0x%02X\n", addr);
+      count++;
+
+      // Zeige AS3935-spezifische Adressen
+      if (addr == AS3935_ADD1) {
+        Serial.println("  → AS3935_ADD1 (A0=high, A1=low)");
+      } else if (addr == AS3935_ADD2) {
+        Serial.println("  → AS3935_ADD2 (A0=low, A1=high)");
+      } else if (addr == AS3935_ADD3) {
+        Serial.println("  → AS3935_ADD3 (A0=high, A1=high)");
+      }
+    }
+  }
+
+  if (count == 0) {
+    Serial.println("✗ No I2C devices found!");
+    Serial.println("  Check wiring:");
+    Serial.printf("  - SDA -> GPIO %d\n", extSDA);
+    Serial.printf("  - SCL -> GPIO %d\n", extSCL);
+    Serial.println("  - VCC -> 3.3V");
+    Serial.println("  - GND -> GND");
+  } else {
+    Serial.printf("\n✓ Found %d device(s)\n", count);
+  }
+  Serial.println("==================\n");
+}
+
 // ===== INTERRUPT HANDLER =====
 
 #ifdef USE_INTERRUPT
@@ -169,6 +214,9 @@ void setup() {
   Serial.printf("Initializing I2C (SDA=%d, SCL=%d)...\n", extSDA, extSCL);
   Wire.begin(extSDA, extSCL);
 
+  // I2C Scanner ausführen (Debug)
+  scanI2C();
+
   // Interrupt Pin konfigurieren (falls verfügbar)
   #ifdef USE_INTERRUPT
     pinMode(IRQ_PIN, INPUT);
@@ -187,34 +235,57 @@ void setup() {
   lcd.setCursor(10, 160);
   lcd.print("AS3935...");
 
-  // Sensor starten (I2C-Adresse 0x03)
+  // Sensor starten mit I2C-Adresse
+  Serial.printf("Attempting to initialize AS3935 at address 0x%02X...\n", AS3935_I2C_ADDR);
+
+  int attempts = 0;
   while (!sensor.begin()) {
-    Serial.println("AS3935 not found!");
+    attempts++;
+    Serial.printf("AS3935 initialization failed (attempt %d)!\n", attempts);
+
+    if (attempts >= 5) {
+      Serial.println("✗ AS3935 not responding after 5 attempts!");
+      Serial.println("\nPossible issues:");
+      Serial.println("1. Wrong I2C address - try changing AS3935_I2C_ADDR");
+      Serial.println("   Current: 0x03 (AS3935_ADD3)");
+      Serial.println("   Try: 0x01 (AS3935_ADD1) or 0x02 (AS3935_ADD2)");
+      Serial.println("2. Sensor not properly connected");
+      Serial.println("3. Sensor needs more power-up time");
+      Serial.println("\nEntering demo mode (no real sensor data)...");
+      sensorConnected = false;
+      break;
+    }
+
     lcd.fillScreen(COLOR_BG);
     drawErrorScreen();
     delay(1000);
   }
 
-  sensorConnected = true;
-  Serial.println("AS3935 found!");
+  if (sensorConnected) {
+    Serial.println("✓ AS3935 initialized successfully!");
 
-  // Sensor konfigurieren
-  sensor.manualCal(96, 64, 64);  // Kalibrierung (Indoor)
+    // Sensor konfigurieren
+    sensor.manualCal(96, 64, 64);  // Kalibrierung (Indoor)
 
-  // Störungsunterdrückung (0-10, höher = mehr Unterdrückung)
-  sensor.setNoiseFloorLvl(2);
+    // Störungsunterdrückung (0-10, höher = mehr Unterdrückung)
+    sensor.setNoiseFloorLvl(2);
 
-  // Empfindlichkeit (0-7, höher = empfindlicher)
-  sensor.setWatchdogThreshold(sensitivity);
+    // Empfindlichkeit (0-7, höher = empfindlicher)
+    sensor.setWatchdogThreshold(sensitivity);
 
-  // Indoor/Outdoor (0 = Outdoor, 1 = Indoor)
-  sensor.setIndoors();
+    // Indoor/Outdoor (0 = Outdoor, 1 = Indoor)
+    sensor.setIndoors();
 
-  // Störungs-Maskierung (0-10 Minuten)
-  sensor.disturberEn();  // Störungen melden
+    // Störungs-Maskierung (0-10 Minuten)
+    sensor.disturberEn();  // Störungen melden
 
-  Serial.println("AS3935 configured!");
-  Serial.printf("Sensitivity: %d/7\n", sensitivity);
+    Serial.println("✓ AS3935 configured!");
+    Serial.printf("  Sensitivity: %d/7\n", sensitivity);
+    Serial.printf("  I2C Address: 0x%02X\n", AS3935_I2C_ADDR);
+    Serial.printf("  Mode: Indoor\n");
+  } else {
+    Serial.println("⚠ Running in demo mode (sensor not available)");
+  }
 
   // Initiale Anzeige
   lcd.fillScreen(COLOR_BG);
@@ -226,25 +297,28 @@ void setup() {
 // ===== LOOP =====
 
 void loop() {
-  #ifdef USE_INTERRUPT
-    // Interrupt-basierter Modus
-    if (interruptDetected) {
-      interruptDetected = false;
-      handleLightningInterrupt();
-    }
-  #else
-    // Polling-Modus (alle 100ms prüfen)
-    static unsigned long lastPollTime = 0;
-    if (millis() - lastPollTime >= 100) {
-      lastPollTime = millis();
-
-      // Prüfe ob Interrupt-Quelle verfügbar ist
-      uint8_t intSource = sensor.getInterruptSrc();
-      if (intSource != 0) {
+  // Nur Sensor auslesen wenn verbunden
+  if (sensorConnected) {
+    #ifdef USE_INTERRUPT
+      // Interrupt-basierter Modus
+      if (interruptDetected) {
+        interruptDetected = false;
         handleLightningInterrupt();
       }
-    }
-  #endif
+    #else
+      // Polling-Modus (alle 100ms prüfen)
+      static unsigned long lastPollTime = 0;
+      if (millis() - lastPollTime >= 100) {
+        lastPollTime = millis();
+
+        // Prüfe ob Interrupt-Quelle verfügbar ist
+        uint8_t intSource = sensor.getInterruptSrc();
+        if (intSource != 0) {
+          handleLightningInterrupt();
+        }
+      }
+    #endif
+  }
 
   // Blitz-Animation Update
   if (lightningAnimation) {

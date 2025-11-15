@@ -145,8 +145,9 @@ struct Message {
 ### 4. Callback-Funktion
 
 ```cpp
-void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
+void onDataRecv(const esp_now_recv_info *recv_info, const uint8_t *data, int len) {
   // Wird automatisch aufgerufen bei Empfang!
+  // recv_info enthält Absender-MAC: recv_info->src_addr
   Message msg;
   memcpy(&msg, data, sizeof(Message));
 

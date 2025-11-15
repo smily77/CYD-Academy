@@ -62,6 +62,14 @@ unsigned long lapStartTime = 0;
 unsigned long bestLapTime = 0;
 int lapCount = 0;
 
+// Anti-Flacker System
+Point lastCarPos = {0, 0};
+float lastCarAngle = 0;
+int lastLapCount = -1;
+float lastDisplayedSpeed = -1;
+unsigned long lastUIUpdate = 0;
+const int UI_UPDATE_INTERVAL = 100;  // UI nur alle 100ms aktualisieren
+
 // Display
 LGFX lcd;
 
@@ -79,8 +87,12 @@ void setup() {
   // Pfad generieren
   generateTrackPath();
 
-  // Initiales Zeichnen
+  // Initiales Zeichnen (nur 1x!)
   drawTrack();
+
+  // Erste Auto-Position merken
+  lastCarPos = getPointOnPath(carPosition);
+  lastCarAngle = getAngle(carPosition);
 
   lapStartTime = millis();
 
@@ -125,8 +137,7 @@ void loop() {
     lapStartTime = currentTime;
   }
 
-  // Neu zeichnen
-  drawTrack();
+  // Nur Auto und UI neu zeichnen (Track bleibt!)
   drawCar();
   drawUI();
 
@@ -235,12 +246,19 @@ void drawCar() {
   Point pos = getPointOnPath(carPosition);
   float angle = getAngle(carPosition);
 
-  // Einfaches Auto (Rechteck mit Rotation)
-  // Wir zeichnen 4 Eckpunkte und verbinden sie
-
   float carWidth = 8;
   float carLength = 14;
 
+  // ===== ALTE POSITION LÖSCHEN =====
+  // Prüfe ob Auto auf äußerer oder innerer Straße ist
+  uint16_t eraseColor = COLOR_ROAD_INNER;  // Standardmäßig innere Straße
+
+  // Lösche altes Auto (mit größerem Radius für sauberes Löschen)
+  if (lastCarPos.x != 0 || lastCarPos.y != 0) {
+    lcd.fillCircle(lastCarPos.x, lastCarPos.y, 12, eraseColor);
+  }
+
+  // ===== NEUE POSITION ZEICHNEN =====
   // Lokale Koordinaten (Auto zeigt nach rechts)
   float corners[4][2] = {
     {-carLength/2, -carWidth/2},  // Hinten Links
@@ -270,36 +288,60 @@ void drawCar() {
   float frontX = pos.x + cos(angle) * (carLength/2 + 2);
   float frontY = pos.y + sin(angle) * (carLength/2 + 2);
   lcd.fillCircle(frontX, frontY, 2, 0xFFE0);  // Gelb
+
+  // Aktuelle Position für nächstes Frame speichern
+  lastCarPos = pos;
+  lastCarAngle = angle;
 }
 
 void drawUI() {
-  // Geschwindigkeitsanzeige
-  lcd.setTextSize(1);
-  lcd.setTextColor(COLOR_TEXT, COLOR_GRASS);
-  lcd.setCursor(5, 5);
-  lcd.printf("Speed: %.0f%%", (carSpeed / MAX_SPEED) * 100);
+  unsigned long currentTime = millis();
 
-  // Aktuelle Rundenzeit
-  unsigned long currentLapTime = millis() - lapStartTime;
-  lcd.setCursor(5, 18);
-  lcd.printf("Lap: %.2f s", currentLapTime / 1000.0);
+  // UI nur alle 100ms aktualisieren (weniger Flackern)
+  if (currentTime - lastUIUpdate < UI_UPDATE_INTERVAL) {
+    return;
+  }
+  lastUIUpdate = currentTime;
 
-  // Runden-Counter
-  lcd.setCursor(5, 31);
-  lcd.printf("Count: %d", lapCount);
-
-  // Beste Zeit (wenn vorhanden)
-  if (bestLapTime > 0) {
-    lcd.setCursor(5, 44);
-    lcd.printf("Best: %.2f s", bestLapTime / 1000.0);
+  // Geschwindigkeitsanzeige (nur bei Änderung)
+  float currentSpeed = (carSpeed / MAX_SPEED) * 100;
+  if (abs(currentSpeed - lastDisplayedSpeed) > 1.0) {  // Nur bei >1% Änderung
+    lcd.setTextSize(1);
+    lcd.setTextColor(COLOR_TEXT, COLOR_GRASS);
+    lcd.setCursor(5, 5);
+    lcd.printf("Speed: %3.0f%%", currentSpeed);
+    lastDisplayedSpeed = currentSpeed;
   }
 
-  // Touch-Hilfe
-  lcd.setTextColor(0xFFE0, COLOR_GRASS);  // Gelb
-  lcd.setCursor(140, 5);
-  lcd.print("Touch:");
-  lcd.setCursor(140, 18);
-  lcd.print("Top=Gas");
-  lcd.setCursor(140, 31);
-  lcd.print("Bot=Brake");
+  // Aktuelle Rundenzeit (immer aktualisieren)
+  unsigned long currentLapTime = millis() - lapStartTime;
+  lcd.setTextColor(COLOR_TEXT, COLOR_GRASS);
+  lcd.setCursor(5, 18);
+  lcd.printf("Lap: %5.2f s", currentLapTime / 1000.0);
+
+  // Runden-Counter (nur bei Änderung)
+  if (lastLapCount != lapCount) {
+    lcd.setCursor(5, 31);
+    lcd.printf("Count: %d  ", lapCount);  // Extra Leerzeichen zum Löschen alter Ziffern
+    lastLapCount = lapCount;
+
+    // Beste Zeit (bei neuer Runde aktualisieren)
+    if (bestLapTime > 0) {
+      lcd.setCursor(5, 44);
+      lcd.printf("Best: %.2f s", bestLapTime / 1000.0);
+    }
+  }
+
+  // Touch-Hilfe (nur einmal zeichnen)
+  static bool helpDrawn = false;
+  if (!helpDrawn) {
+    lcd.setTextColor(0xFFE0, COLOR_GRASS);  // Gelb
+    lcd.setCursor(140, 5);
+    lcd.print("Touch:");
+    lcd.setCursor(140, 18);
+    lcd.print("Top=Gas");
+    lcd.setCursor(140, 31);
+    lcd.print("Bot=Brake");
+    helpDrawn = true;
+  }
 }

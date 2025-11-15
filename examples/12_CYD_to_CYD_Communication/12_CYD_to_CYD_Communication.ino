@@ -61,6 +61,12 @@ unsigned long lastReceiveTime = 0;
 // UI State
 bool buttonPressed = false;
 bool lastTouchState = false;
+bool needsUIRedraw = false;  // Flag für UI-Update aus Callback
+bool needsReceiveAnimation = false;  // Flag für Animation aus Callback
+
+// Connection-Timeout (10 Sekunden ohne Nachricht → Verbindung verloren)
+const unsigned long CONNECTION_TIMEOUT = 10000;
+unsigned long lastPeerActivity = 0;
 
 // Farben
 #define COLOR_BG 0x0000           // Schwarz
@@ -79,18 +85,38 @@ bool lastTouchState = false;
 
 // ===== ESP-NOW CALLBACK =====
 
-void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
+void onDataRecv(const esp_now_recv_info *recv_info, const uint8_t *data, int len) {
   if (len != sizeof(Message)) return;
 
   Message msg;
   memcpy(&msg, data, sizeof(Message));
 
-  // Pairing-Nachricht
+  // Pairing-Nachricht (immer akzeptieren für Re-Pairing nach Absturz!)
   if (msg.type == 0) {
+    bool isNewPeer = false;
+
+    // Prüfe ob es ein neuer Peer ist
     if (!isPaired) {
-      memcpy(peerMAC, msg.senderMAC, 6);
+      isNewPeer = true;
+    } else {
+      // Prüfe ob MAC anders ist (Re-Pairing mit neuem Gerät)
+      for (int i = 0; i < 6; i++) {
+        if (msg.senderMAC[i] != peerMAC[i]) {
+          isNewPeer = true;
+          break;
+        }
+      }
+    }
+
+    // Aktualisiere Peer-Daten
+    memcpy(peerMAC, msg.senderMAC, 6);
+    lastPeerActivity = millis();
+
+    if (isNewPeer) {
+      bool wasAlreadyPaired = isPaired;
       isPaired = true;
 
+      Serial.print(wasAlreadyPaired ? "Re-" : "");
       Serial.print("Gepaired mit: ");
       for (int i = 0; i < 6; i++) {
         Serial.printf("%02X", peerMAC[i]);
@@ -98,8 +124,31 @@ void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
       }
       Serial.println();
 
-      drawUI();  // UI neu zeichnen mit Pairing-Status
+      // UI-Redraw triggern (nicht direkt aus Callback!)
+      needsUIRedraw = true;
     }
+
+    // Immer Pairing-Antwort senden (auch bei Re-Pairing)
+    Message response;
+    response.type = 0;
+    WiFi.macAddress(response.senderMAC);
+    response.counter = 0;
+    response.timestamp = millis();
+
+    // Peer hinzufügen/aktualisieren
+    esp_now_peer_info_t peerInfo = {};
+    memcpy(peerInfo.peer_addr, peerMAC, 6);
+    peerInfo.channel = 0;
+    peerInfo.encrypt = false;
+
+    // Entferne alten Peer falls vorhanden und füge neu hinzu
+    if (esp_now_is_peer_exist(peerMAC)) {
+      esp_now_del_peer(peerMAC);
+    }
+    esp_now_add_peer(&peerInfo);
+
+    esp_now_send(peerMAC, (uint8_t*)&response, sizeof(response));
+
     return;
   }
 
@@ -117,13 +166,14 @@ void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
     if (valid) {
       receiveCounter++;
       lastReceiveTime = millis();
+      lastPeerActivity = millis();  // Connection-Timeout zurücksetzen
       memcpy(&lastMessage, &msg, sizeof(Message));
 
       Serial.printf("Empfangen: Counter=%d, Latenz=%dms\n",
                     msg.counter, millis() - msg.timestamp);
 
-      // Visuelles Feedback
-      showReceiveAnimation();
+      // Visuelles Feedback triggern (nicht direkt aus Callback!)
+      needsReceiveAnimation = true;
     }
   }
 }
@@ -179,6 +229,33 @@ void setup() {
 // ===== LOOP =====
 
 void loop() {
+  // UI-Redraw wenn von Callback getriggert
+  if (needsUIRedraw) {
+    drawUI();
+    needsUIRedraw = false;
+  }
+
+  // Receive-Animation wenn von Callback getriggert
+  if (needsReceiveAnimation) {
+    showReceiveAnimation();
+    needsReceiveAnimation = false;
+  }
+
+  // Connection-Timeout prüfen (10s ohne Nachricht → Verbindung verloren)
+  if (isPaired && lastPeerActivity > 0 &&
+      millis() - lastPeerActivity > CONNECTION_TIMEOUT) {
+    Serial.println("Connection-Timeout! Peer verloren. Re-Pairing möglich.");
+    isPaired = false;
+    lastPeerActivity = 0;
+
+    // Peer entfernen
+    if (esp_now_is_peer_exist(peerMAC)) {
+      esp_now_del_peer(peerMAC);
+    }
+
+    needsUIRedraw = true;  // UI auf "WAITING" setzen
+  }
+
   // Touch lesen
   uint16_t x, y;
   bool touched = lcd.getTouch(&x, &y);
@@ -339,10 +416,23 @@ void updateStatus() {
 }
 
 void showReceiveAnimation() {
-  // Kurzer Flash-Effekt
-  lcd.fillRect(BUTTON_X - 10, BUTTON_Y - 10,
-               BUTTON_W + 20, BUTTON_H + 20, COLOR_RECEIVE);
-  delay(100);
-  drawButton(false);
-  updateStatus();
+  // Kurzer Flash-Effekt (ohne delay!)
+  static unsigned long flashStartTime = 0;
+  static bool isFlashing = false;
+
+  if (!isFlashing) {
+    // Start Flash
+    lcd.fillRect(BUTTON_X - 10, BUTTON_Y - 10,
+                 BUTTON_W + 20, BUTTON_H + 20, COLOR_RECEIVE);
+    flashStartTime = millis();
+    isFlashing = true;
+  } else if (millis() - flashStartTime > 100) {
+    // End Flash nach 100ms
+    drawButton(false);
+    updateStatus();
+    isFlashing = false;
+  } else {
+    // Flash läuft noch - triggere nochmal für nächstes Frame
+    needsReceiveAnimation = true;
+  }
 }
