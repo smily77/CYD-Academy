@@ -639,7 +639,7 @@ void drawInfoPanel() {
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString("Distance:", x, y);
 
-    y += 11;
+    y += 17;
     if (lastDistance > 0 && totalLightningCount > 0) {
       // Zahl für Entfernung
       lcd.setFont(FONT_MEDIUM);
@@ -694,7 +694,7 @@ void drawInfoPanel() {
   }
 
   // ===== COUNT =====
-  y = HEADER_HEIGHT + 73;
+  y = HEADER_HEIGHT + 83;
   if (lastDisplayedCount != totalLightningCount || infoPanelNeedsFullRedraw) {
     lcd.fillRect(INFO_PANEL_X, y, INFO_PANEL_WIDTH, 22, COLOR_BG);
 
