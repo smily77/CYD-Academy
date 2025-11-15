@@ -79,7 +79,7 @@ bool lastTouchState = false;
 
 // ===== ESP-NOW CALLBACK =====
 
-void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
+void onDataRecv(const esp_now_recv_info *recv_info, const uint8_t *data, int len) {
   if (len != sizeof(Message)) return;
 
   Message msg;
