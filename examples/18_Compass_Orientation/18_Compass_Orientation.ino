@@ -101,7 +101,7 @@ enum ViewMode {
 // ===== GLOBALE VARIABLEN =====
 
 LGFX lcd;
-Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);
 
 // Sensor-Status
 bool sensorConnected = false;
