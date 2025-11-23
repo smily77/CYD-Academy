@@ -15,11 +15,20 @@ Die CYD Academy ist dein **Einstieg in die ESP32 Display-Programmierung**. Von g
 ## 📦 Inhalt
 
 ### 📚 [Examples](examples/) - Lerne Schritt für Schritt
-Von einfach bis fortgeschritten - 12 durchdachte Beispiele zum Lernen:
-- **Basics:** Hello World, Touch Demo, Grafik, Text-Effekte
-- **Intermediate:** WiFi-Uhren, Taschenrechner, Live-Daten
-- **Advanced:** ESP-NOW Kommunikation zwischen CYDs
+Von einfach bis fortgeschritten - 16 durchdachte Beispiele zum Lernen:
+- **Basics:** Board-Test, Hello World, Touch Demo, Grafik, Text-Effekte
+- **Intermediate:** WiFi-Uhren, Taschenrechner, Live-Daten, Racing Track
+- **Advanced:** ESP-NOW Kommunikation zwischen CYDs, LVGL UI-Framework
 - Jedes Beispiel ist **ausführlich dokumentiert** und erklärt **warum**, nicht nur **wie**
+
+### 🔬 [Sensor Examples](sensor-examples/) - Hardware-Integration
+Fortgeschrittene Beispiele mit externen I2C/SPI-Sensoren:
+- **Bewegungssensoren:** Spirit Level, Compass (BNO055, MPU6050)
+- **Wettersensoren:** Lightning Sensor (AS3935), Weather Station (BMP180)
+- **Distanzsensoren:** Laser Distance (VL53L0X, R50-C)
+- **Luftqualität:** Air Quality Monitor (CCS811)
+- **Gestensensoren:** 3D Gesture Control (MGC3130)
+- Vollständige I2C-Verkabelung und Library-Guides
 
 ### 🎮 [Arcade Games](arcade-games/) - Master Class
 Vollständige Arcade-Spiele als **Lern-Ressource für Fortgeschrittene**:
@@ -150,6 +159,7 @@ Jedes Beispiel demonstriert spezifische Features:
 
 | # | Name | Beschreibung |
 |---|------|--------------|
+| 00 | BoardConfigTest | Board-Test (Display + Touch + Rotation) |
 | 01 | HelloWorld | Einfache Textausgabe |
 | 02 | BasicShapes | Grundformen zeichnen |
 | 03 | TouchDemo | Touch-Input verarbeiten |
@@ -158,11 +168,29 @@ Jedes Beispiel demonstriert spezifische Features:
 | 06 | BouncingBall | Physik-Simulation mit Touch |
 | 07 | WiFiClock | Digitale Uhr mit NTP |
 | 08 | AnalogClock | Analoge Uhr mit NTP |
-| 09 | Calculator | Touch-Taschenrechner |
-| 10 | TouchButtons | Button-Verhaltensweisen |
+| 09 | Calculator | Touch-Taschenrechner (inkl. LVGL-Version) |
+| 10 | TouchButtons | Button-Verhaltensweisen (inkl. LVGL & Premium) |
 | 11 | ScrollingChart | Live-Daten-Visualisierung |
+| 12 | CYD_to_CYD | ESP-NOW Kommunikation zwischen CYDs |
+| 13 | Racing_Track | Rennstrecke mit Touch-Steuerung |
+| 14 | Selection_Menu | Menü-Navigation (Native & LVGL) |
+| 15 | Image_Viewer | Bild-Anzeige (SPIFFS & SD-Karte) |
 
 Alle Beispiele sind **vollständig skalierbar** und funktionieren auf 2.8" und 3.5" Displays.
+
+### Sensor-Beispiele (sensor-examples/)
+
+Fortgeschrittene Hardware-Integration mit I2C/SPI-Sensoren - siehe [sensor-examples/README.md](sensor-examples/README.md):
+
+| # | Sensor | Beschreibung |
+|---|--------|--------------|
+| 16 | Spirit Level | BNO055/MPU6050 - Wasserwaage & Labyrinth |
+| 17 | Lightning Sensor | AS3935 - Blitzdetektor (0-40 km) |
+| 18 | Compass | BNO055 - Digitaler Kompass |
+| 19 | Laser Distance | VL53L0X - ToF Distanzmessung |
+| 20 | Air Quality | CCS811 - eCO2 & TVOC Monitor |
+| 21 | Gesture Sensor | MGC3130 - 3D Gestensteuerung |
+| 22 | Weather Station | BMP180 - Luftdruck & Temperatur |
 
 ### Arcade Games (arcade-games/)
 
@@ -229,6 +257,38 @@ Deaktiviere Features durch Auskommentieren der entsprechenden `#define` Zeilen i
 ```
 CYD-Academy/
 ├── README.md                      # Diese Datei
+├── TOUCH_ROTATION_FIX.md          # Touch-Rotation-Dokumentation
+├── Repo_Guideline.txt             # Entwickler-Richtlinien
+│
+├── examples/                      # Grundlegende Beispiele (00-15)
+│   ├── 00_BoardConfigTest/        # Board-Test Tool
+│   ├── 01_HelloWorld/
+│   ├── 02_BasicShapes/
+│   ├── 03_TouchDemo/
+│   ├── 04_Colors/
+│   ├── 05_ScrollText/
+│   ├── 06_BouncingBall/
+│   ├── 07_WiFiClock/
+│   ├── 08_AnalogClock/
+│   ├── 09_Calculator/             # + 09b_LVGL
+│   ├── 10_TouchButtons/           # + 10b_LVGL, 10c_Premium
+│   ├── 11_ScrollingChart/
+│   ├── 12_CYD_to_CYD_Communication/
+│   ├── 13_Racing_Track/           # + 13b_Obstacles
+│   ├── 14_Selection_Menu_Native/  # + 14b_LVGL
+│   ├── 15_Image_Viewer/           # + 15b_SD
+│   └── ESP-NOW_Sender/            # Sender für drahtlose Steuerung
+│
+├── sensor-examples/               # Sensor-Integration (16-22)
+│   ├── README.md                  # Sensor-Dokumentation
+│   ├── 16_Spirit_Level/           # BNO055/MPU6050 + 16b_Maze
+│   ├── 17_Lightning_Sensor/       # AS3935 + 17b_Landscape
+│   ├── 18_Compass_Orientation/    # BNO055 Magnetometer
+│   ├── 19_Laser_Distance/         # VL53L0X/R50-C ToF
+│   ├── 20_Air_Quality_CCS811/     # eCO2 & TVOC Monitor
+│   ├── 21_Gesture_Sensor_MGC3130/ # 3D Gestensteuerung
+│   └── 22_Weather_Station_BMP180/ # Luftdruck + 22b_History
+│
 ├── arcade-games/                  # Alle Arcade-Spiele
 │   ├── README.md                  # Spiele-Dokumentation
 │   ├── 00_RetroGames/            # Retro-Spiele-Menü
@@ -247,11 +307,7 @@ CYD-Academy/
 │   ├── 17b_Frogger_Modern/       # Modern Frogger
 │   ├── 18_Tetris/                # Retro Tetris
 │   └── 18b_Tetris_Modern/        # Modern Tetris
-├── examples/                      # Grundlegende Beispiele
-│   ├── 01_HelloWorld/
-│   ├── 02_BasicShapes/
-│   ├── ...
-│   └── 11_ScrollingChart/
+│
 └── libraries/
     └── CYD_Games/                 # Spiele-Library
         ├── src/
@@ -274,6 +330,14 @@ CYD-Academy/
 
 ## 🎓 Empfohlener Lernpfad
 
+### Level 0: Setup & Test (30 Minuten)
+0. **Board-Test:** `examples/00_BoardConfigTest` - Teste Display, Touch und Rotation
+   - Validiere deine Board-Konfiguration
+   - Prüfe RGB-Farben
+   - Teste Touch-Genauigkeit
+
+**Lernziele:** Funktionierende Hardware-Setup bestätigen
+
 ### Level 1: Basics (1-4 Stunden)
 1. **Display-Grundlagen:** `examples/01_HelloWorld` → `examples/02_BasicShapes` → `examples/04_Colors`
 2. **Touch-Input:** `examples/03_TouchDemo` - Verstehe wie Touch funktioniert
@@ -286,20 +350,24 @@ CYD-Academy/
 5. **WiFi & NTP:** `examples/07_WiFiClock` → `examples/08_AnalogClock`
 6. **Touch-UI:** `examples/09_Calculator` → `examples/10_TouchButtons`
 7. **Live-Daten:** `examples/11_ScrollingChart`
+8. **Advanced UI:** `examples/13_Racing_Track` → `examples/14_Selection_Menu`
 
-**Lernziele:** Animationen, WiFi-Verbindung, komplexe Touch-UIs, Sensoren
+**Lernziele:** Animationen, WiFi-Verbindung, komplexe Touch-UIs
 
 ### Level 3: Advanced (8-12 Stunden)
-8. **ESP-NOW Remote:** `examples/ESP-NOW_Sender/` - Baue einen drahtlosen Controller
-9. **CYD-zu-CYD:** `examples/12_CYD_to_CYD_Communication/` - Zwei CYDs kommunizieren
-10. **Eigene Projekte:** Kombiniere Gelerntes für eigene Ideen
+9. **ESP-NOW Remote:** `examples/ESP-NOW_Sender/` - Baue einen drahtlosen Controller
+10. **CYD-zu-CYD:** `examples/12_CYD_to_CYD_Communication/` - Zwei CYDs kommunizieren
+11. **Hardware-Sensoren:** `sensor-examples/` - Integriere I2C/SPI-Sensoren
+    - Start: `22_Weather_Station` (einfach)
+    - Fortgeschritten: `17_Lightning_Sensor`, `20_Air_Quality`
+12. **Eigene Projekte:** Kombiniere Gelerntes für eigene Ideen
 
-**Lernziele:** Drahtlose Kommunikation, Pairing-Mechanismen, Multi-Device-Systeme
+**Lernziele:** Drahtlose Kommunikation, I2C-Protokoll, Sensor-Integration
 
 ### Level 4: Master Class (12+ Stunden)
-11. **Game-Analyse:** Studiere `arcade-games/` - Von einfach (Snake) bis komplex (Space Invaders)
-12. **Library-Code:** Verstehe `libraries/CYD_Games/` - Professionelle Code-Struktur
-13. **Eigene Games:** Baue dein eigenes Spiel mit der CYD_Games Library
+13. **Game-Analyse:** Studiere `arcade-games/` - Von einfach (Snake) bis komplex (Space Invaders)
+14. **Library-Code:** Verstehe `libraries/CYD_Games/` - Professionelle Code-Struktur
+15. **Eigene Games:** Baue dein eigenes Spiel mit der CYD_Games Library
 
 **Lernziele:** Game-Loops, State-Management, Kollisionserkennung, Performance-Optimierung
 
@@ -317,11 +385,12 @@ const char* password = "DeinWiFiPasswort";
 
 ## 📊 Statistiken
 
-- **📚 11 Basis-Beispiele** zum Lernen
+- **📚 16 Basis-Beispiele** zum Lernen (examples/)
+- **🔬 10 Sensor-Beispiele** für Hardware-Integration (sensor-examples/)
 - **🎮 14 Arcade-Spiele** (7 Retro + 7 Modern)
 - **🎯 2 Touch-Menüs** für einfachen Zugriff
 - **📦 14 Klassen** in der CYD_Games Library
-- **~15.000 Zeilen Code** vollständig dokumentiert
+- **~20.000 Zeilen Code** vollständig dokumentiert
 - **✓ 100% Skalierbar** für alle CYD Displays
 
 ## 🤝 Beitragen
