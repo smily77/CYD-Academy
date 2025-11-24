@@ -213,10 +213,19 @@ float heading = 0.0;   // Yaw (0-360°)
 float roll = 0.0;      // Roll (-180 bis +180°)
 float pitch = 0.0;     // Pitch (-90 bis +90°)
 
-// Geglättete Orientierung
+// Letzte Werte für Delta-Berechnung (Debug)
+float lastHeading = 0.0;
+float lastPitch = 0.0;
+float lastRoll = 0.0;
+
+// Geglättete Orientierung (für Demo-Modus)
 float smoothHeading = 0.0;
 float smoothRoll = 0.0;
 float smoothPitch = 0.0;
+
+// Quaternionen (vermeidet Gimbal Lock - DAS IST DER FIX!)
+imu::Quaternion currentQuat(1, 0, 0, 0);  // Identity Quaternion
+imu::Quaternion smoothQuat(1, 0, 0, 0);
 
 // Kalibrierungsstatus
 uint8_t calSystem = 0;
@@ -309,13 +318,15 @@ void loop() {
   // Touch-Handling
   handleTouch();
 
-  // Bildschirm löschen (für sauberes Rendering, besonders wichtig für Wireframe)
-  lcd.fillScreen(COLOR_BG);
+  // Bildschirm löschen (nur im Wireframe-Modus nötig, sonst übermalen Flächen sich gegenseitig)
+  if (showWireframe) {
+    lcd.fillScreen(COLOR_BG);
+  }
 
   // 3D-Würfel rendern
   renderCube();
 
-  // UI-Elemente
+  // UI-Elemente (immer neu zeichnen, da sie übermalt werden könnten)
   drawUI();
 
   delay(20);  // ~50 FPS
@@ -324,10 +335,12 @@ void loop() {
 // ===== SENSOR FUNKTIONEN =====
 
 void readSensor() {
-  // Euler-Winkel auslesen
+  // Quaternionen auslesen (vermeidet Gimbal Lock!)
+  currentQuat = bno.getQuat();
+
+  // Euler-Winkel nur für Debug ausgeben
   sensors_event_t event;
   bno.getEvent(&event);
-
   heading = event.orientation.x;  // 0-360°
   pitch = event.orientation.y;    // -180 bis +180°
   roll = event.orientation.z;     // -90 bis +90°
@@ -336,31 +349,67 @@ void readSensor() {
   uint8_t calGyro, calAccel, calMag;
   bno.getCalibration(&calSystem, &calGyro, &calAccel, &calMag);
 
-  // Debug (alle 500ms für besseres Tracking)
+  // Debug: Nur bewegte Achse ausgeben (für gezieltes Feedback)
   static unsigned long lastDebug = 0;
-  if (millis() - lastDebug > 500) {
+  if (millis() - lastDebug > 200) {  // Schnellere Updates für besseres Tracking
     lastDebug = millis();
-    Serial.printf("RAW - Heading: %6.1f°  Pitch: %6.1f°  Roll: %6.1f°  Cal: %d\n",
-                  heading, pitch, roll, calSystem);
-    Serial.printf("SMOOTH - H: %6.1f°  P: %6.1f°  R: %6.1f°\n",
-                  smoothHeading, smoothPitch, smoothRoll);
+
+    // Berechne Deltas (Bewegung seit letztem Frame)
+    float deltaH = abs(heading - lastHeading);
+    float deltaP = abs(pitch - lastPitch);
+    float deltaR = abs(roll - lastRoll);
+
+    // Schwellwert für "signifikante Bewegung"
+    const float threshold = 1.0;  // 1 Grad Änderung
+
+    // Finde die Achse mit der größten Bewegung
+    if (deltaH > threshold && deltaH > deltaP && deltaH > deltaR) {
+      // Heading (Y-Achse im Würfel-Space) bewegt sich
+      String direction = (heading > lastHeading) ? "POSITIV" : "NEGATIV";
+      Serial.printf(">>> Y-ACHSE (Heading/Yaw) %s  [%.1f°]  Cal:%d\n",
+                    direction.c_str(), heading, calSystem);
+    }
+    else if (deltaP > threshold && deltaP > deltaH && deltaP > deltaR) {
+      // Pitch (X-Achse im Würfel-Space) bewegt sich
+      String direction = (pitch > lastPitch) ? "POSITIV" : "NEGATIV";
+      Serial.printf(">>> X-ACHSE (Pitch) %s  [%.1f°]  Cal:%d\n",
+                    direction.c_str(), pitch, calSystem);
+    }
+    else if (deltaR > threshold && deltaR > deltaP && deltaR > deltaH) {
+      // Roll (Z-Achse im Würfel-Space) bewegt sich
+      String direction = (roll > lastRoll) ? "POSITIV" : "NEGATIV";
+      Serial.printf(">>> Z-ACHSE (Roll) %s  [%.1f°]  Cal:%d\n",
+                    direction.c_str(), roll, calSystem);
+    }
+
+    // Speichere aktuelle Werte für nächsten Vergleich
+    lastHeading = heading;
+    lastPitch = pitch;
+    lastRoll = roll;
   }
 }
 
 void smoothValues() {
-  // Exponential Smoothing für flüssige Animation
+  // Quaternion-Smoothing (SLERP - Spherical Linear Interpolation)
+  // Einfache Version: Lineares Interpolieren und dann normalisieren
 
-  // Heading (mit Wrap-around für 360°/0°)
-  float headingDiff = heading - smoothHeading;
-  if (headingDiff > 180) headingDiff -= 360;
-  if (headingDiff < -180) headingDiff += 360;
-  smoothHeading += headingDiff * SMOOTH_FACTOR;
-  if (smoothHeading < 0) smoothHeading += 360;
-  if (smoothHeading >= 360) smoothHeading -= 360;
+  smoothQuat.w() = smoothQuat.w() + (currentQuat.w() - smoothQuat.w()) * SMOOTH_FACTOR;
+  smoothQuat.x() = smoothQuat.x() + (currentQuat.x() - smoothQuat.x()) * SMOOTH_FACTOR;
+  smoothQuat.y() = smoothQuat.y() + (currentQuat.y() - smoothQuat.y()) * SMOOTH_FACTOR;
+  smoothQuat.z() = smoothQuat.z() + (currentQuat.z() - smoothQuat.z()) * SMOOTH_FACTOR;
 
-  // Roll & Pitch
-  smoothRoll += (roll - smoothRoll) * SMOOTH_FACTOR;
-  smoothPitch += (pitch - smoothPitch) * SMOOTH_FACTOR;
+  // Normalisieren (wichtig für Quaternionen!)
+  float length = sqrt(smoothQuat.w() * smoothQuat.w() +
+                      smoothQuat.x() * smoothQuat.x() +
+                      smoothQuat.y() * smoothQuat.y() +
+                      smoothQuat.z() * smoothQuat.z());
+
+  if (length > 0.0001) {
+    smoothQuat.w() /= length;
+    smoothQuat.x() /= length;
+    smoothQuat.y() /= length;
+    smoothQuat.z() /= length;
+  }
 }
 
 // ===== TOUCH HANDLING =====
@@ -428,56 +477,24 @@ void renderCube() {
 }
 
 void rotateCube() {
-  // Inverse Kamera-Rotation: Das CYD-Board ist die Kamera, die sich um den Würfel bewegt
-  // Der Würfel selbst "steht still" im Raum - wir bewegen die Kamera (= das Board)
+  // Quaternion-Rotation: Vermeidet Gimbal Lock!
+  // Das CYD-Board ist die Kamera → Invertiere Quaternion (Konjugat)
 
-  // EXPERIMENTELL: Verschiedene Achsen-Konfigurationen testen
-  // Problem: Bei bestimmten Achsen "wilde Rotation"
+  // Konjugat des Quaternions = Inverse Rotation (für Kamera-Perspektive)
+  imu::Quaternion invQuat = smoothQuat.conjugate();
 
-  // Konvertiere Grad zu Radiant
-  // Option 1: Alle invertiert (aktuell)
-  float yaw = -smoothHeading * PI / 180.0;
-  float pitch_rad = -smoothPitch * PI / 180.0;
-  float roll_rad = -smoothRoll * PI / 180.0;
-
-  // Option 2: Nur Yaw invertiert (zum Testen auskommentieren)
-  // float yaw = -smoothHeading * PI / 180.0;
-  // float pitch_rad = smoothPitch * PI / 180.0;
-  // float roll_rad = smoothRoll * PI / 180.0;
-
-  // Option 3: Nur Pitch und Roll invertiert (zum Testen auskommentieren)
-  // float yaw = smoothHeading * PI / 180.0;
-  // float pitch_rad = -smoothPitch * PI / 180.0;
-  // float roll_rad = -smoothRoll * PI / 180.0;
-
-  // Trigonometrische Werte vorberechnen
-  float cosY = cos(yaw);
-  float sinY = sin(yaw);
-  float cosP = cos(pitch_rad);
-  float sinP = sin(pitch_rad);
-  float cosR = cos(roll_rad);
-  float sinR = sin(roll_rad);
-
-  // Für jeden Vertex
+  // Für jeden Vertex: Quaternion-Rotation anwenden
   for (int i = 0; i < 8; i++) {
     Vec3 v = cubeVertices[i] * CUBE_SIZE;
 
-    // Rotation um Y-Achse (Yaw)
-    float x1 = v.x * cosY - v.z * sinY;
-    float z1 = v.x * sinY + v.z * cosY;
-    float y1 = v.y;
+    // Konvertiere Vec3 zu Quaternion (0, x, y, z)
+    imu::Quaternion vQuat(0, v.x, v.y, v.z);
 
-    // Rotation um X-Achse (Pitch)
-    float y2 = y1 * cosP - z1 * sinP;
-    float z2 = y1 * sinP + z1 * cosP;
-    float x2 = x1;
+    // Rotation: q * v * q^(-1)
+    imu::Quaternion rotated = invQuat * vQuat * invQuat.conjugate();
 
-    // Rotation um Z-Achse (Roll)
-    float x3 = x2 * cosR - y2 * sinR;
-    float y3 = x2 * sinR + y2 * cosR;
-    float z3 = z2;
-
-    transformedVertices[i] = Vec3(x3, y3, z3);
+    // Extrahiere rotierte Koordinaten
+    transformedVertices[i] = Vec3(rotated.x(), rotated.y(), rotated.z());
   }
 }
 
