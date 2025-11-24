@@ -1,6 +1,8 @@
 # Beispiel 23: 3D-Würfel mit BNO055 Orientierungssensor
 
-Ein interaktiver 3D-Würfel, der sich entsprechend der Orientierung des CYD im Raum bewegt. Durch Drehen des Boards kann man den Würfel von allen Seiten betrachten - als würde man das Board um einen echten Würfel herum bewegen!
+Ein interaktiver 3D-Würfel, der virtuell im Raum "schwebt". Das CYD-Board funktioniert wie eine Kamera, die du um den Würfel herum bewegen kannst. Drehe das Board nach rechts → siehst du den Würfel von rechts. Kippe es nach vorne → siehst du den Würfel von oben. Genau wie bei einem echten Objekt, das du von allen Seiten betrachten kannst!
+
+**Das Konzept:** Das Board ist die Kamera, nicht der Würfel! Der Würfel "steht still" im virtuellen Raum, während du die Kamera (das CYD-Board) um ihn herum bewegst.
 
 ## 📸 Features
 
@@ -430,13 +432,17 @@ void renderCube() {
 }
 ```
 
-**1. Rotation:**
+**1. Rotation (Inverse Kamera-Transformation):**
 ```cpp
 void rotateCube() {
-  // Euler-Winkel → Radiant
-  float yaw = -smoothHeading * PI / 180.0;
-  float pitch_rad = smoothPitch * PI / 180.0;
-  float roll_rad = smoothRoll * PI / 180.0;
+  // WICHTIG: Inverse Rotation für Kamera-Effekt!
+  // Das Board ist die Kamera, die sich um den Würfel bewegt
+  // → Sensor-Orientierung wird invertiert
+
+  // Euler-Winkel → Radiant (alle negiert für Kamera-Perspektive)
+  float yaw = -smoothHeading * PI / 180.0;      // Board nach Norden → Würfel von Norden sehen
+  float pitch_rad = -smoothPitch * PI / 180.0;  // Board nach vorne → Würfel von oben sehen
+  float roll_rad = -smoothRoll * PI / 180.0;    // Board nach rechts → Würfel von rechts sehen
 
   // Trigonometrische Werte
   float cosY = cos(yaw), sinY = sin(yaw);
@@ -655,7 +661,10 @@ Partition Scheme: Default 4MB
 4. **3D-Würfel erscheint**
 
 **Interaktion:**
-- **Drehe das CYD**: Würfel rotiert entsprechend (quasi "um den Würfel herum bewegen")
+- **Bewege das CYD um den Würfel herum**: Board = Kamera
+  - Nach rechts neigen → Würfel von rechts betrachten
+  - Nach vorne kippen → Würfel von oben betrachten
+  - Drehen → Würfel von allen Seiten sehen
 - **Touch Links**: Demo-Modus aktivieren/deaktivieren (automatische Rotation)
 - **Touch Rechts**: Wireframe-Modus aktivieren/deaktivieren (nur Kanten)
 - **Touch Mitte**: Kalibrierungs-Hilfe anzeigen

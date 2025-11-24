@@ -1,9 +1,11 @@
 /*
   23_3D_Dice_BNO055 - Interaktiver 3D-Würfel mit Orientierungssensor
 
-  Dieses Beispiel zeigt einen 3D-Würfel mit Würfelaugen, der sich entsprechend
-  der Orientierung des CYD im Raum bewegt. Durch Drehen des Boards kann man
-  den Würfel von allen Seiten betrachten.
+  Dieses Beispiel zeigt einen 3D-Würfel mit Würfelaugen, der virtuell im Raum
+  "schwebt". Das CYD-Board funktioniert wie eine Kamera, die du um den Würfel
+  herum bewegen kannst. Drehe das Board nach rechts → siehst du den Würfel von
+  rechts. Kippe es nach vorne → siehst du den Würfel von oben. Genau wie bei
+  einem echten Objekt, das du von allen Seiten betrachten kannst!
 
   Funktionen:
   - BNO055 9-DoF Sensor für absolute Orientierung
@@ -46,9 +48,12 @@
      #define extSCL 27
 
   Steuerung:
-  - Drehe das CYD: Würfel rotiert entsprechend
+  - Bewege das CYD um den virtuellen Würfel herum (Board = Kamera)
+    • Nach rechts neigen → Würfel von rechts betrachten
+    • Nach vorne kippen → Würfel von oben betrachten
+    • Drehen → Würfel von allen Seiten sehen
   - Touch Links: Demo-Rotation aktivieren/deaktivieren
-  - Touch Rechts: Würfel-Style wechseln
+  - Touch Rechts: Wireframe-Modus (nur Kanten)
   - Touch Mitte: Kalibrierungshilfe anzeigen
 */
 
@@ -280,7 +285,7 @@ void setup() {
     delay(3000);
   }
 
-  Serial.println("Setup complete! Rotate the board to see the dice from all sides.");
+  Serial.println("Setup complete! Move the board around the virtual dice (board = camera).");
   lcd.fillScreen(COLOR_BG);
 }
 
@@ -417,11 +422,14 @@ void renderCube() {
 }
 
 void rotateCube() {
-  // Rotations-Matrizen anwenden (Yaw → Pitch → Roll)
-  // Konvertiere Grad zu Radiant
-  float yaw = -smoothHeading * PI / 180.0;   // Negiert für intuitive Steuerung
-  float pitch_rad = smoothPitch * PI / 180.0;
-  float roll_rad = smoothRoll * PI / 180.0;
+  // Inverse Kamera-Rotation: Das CYD-Board ist die Kamera, die sich um den Würfel bewegt
+  // Der Würfel selbst "steht still" im Raum - wir bewegen die Kamera (= das Board)
+  // Daher invertieren wir die Sensor-Orientierung für die Würfel-Rotation
+
+  // Konvertiere Grad zu Radiant und invertiere (Kamera-Bewegung = inverse Würfel-Rotation)
+  float yaw = -smoothHeading * PI / 180.0;   // Board dreht nach Norden → Würfel von Norden betrachten
+  float pitch_rad = -smoothPitch * PI / 180.0;  // Board kippt nach vorne → Würfel von oben betrachten
+  float roll_rad = -smoothRoll * PI / 180.0;    // Board kippt nach rechts → Würfel von rechts betrachten
 
   // Trigonometrische Werte vorberechnen
   float cosY = cos(yaw);
