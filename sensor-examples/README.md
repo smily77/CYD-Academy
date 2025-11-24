@@ -204,6 +204,39 @@ RESET   ------>   GPIO 4 (optional)
 
 ---
 
+### 3D-Visualisierung & Interaktive Grafik
+
+#### 23 - 3D Dice BNO055 (3D-Würfel)
+- **Sensor**: BNO055 Absolute Orientation Sensor
+- **Funktion**: Interaktiver 3D-Würfel mit Orientierungssteuerung
+- **Features**:
+  - Echtzeit 3D-Rendering mit Perspektive
+  - 6 farbige Seiten mit Würfelaugen (1-6)
+  - Back-face Culling für realistische Darstellung
+  - Painter's Algorithm für Tiefensortierung
+  - Smooth Animation mit Exponential Smoothing
+  - Demo-Modus (ohne Sensor nutzbar)
+  - Wireframe-Modus
+  - Touch-Interaktion
+
+**Hardware:**
+```
+BNO055            CYD (ESP32)
+------            -----------
+VCC     ------>   3.3V (oder 5V)
+GND     ------>   GND
+SDA     ------>   GPIO 22
+SCL     ------>   GPIO 27
+```
+
+**Anwendungsfälle:**
+- 3D-Grafik lernen
+- Spielwürfel-Simulation
+- Orientierungs-Visualisierung
+- AR/VR-Prototyping
+
+---
+
 ## 🔧 Allgemeine Hinweise
 
 ### I2C-Verkabelung (Standard)
