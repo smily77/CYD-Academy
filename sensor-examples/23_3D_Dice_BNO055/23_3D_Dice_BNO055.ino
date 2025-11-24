@@ -336,12 +336,14 @@ void readSensor() {
   uint8_t calGyro, calAccel, calMag;
   bno.getCalibration(&calSystem, &calGyro, &calAccel, &calMag);
 
-  // Debug (alle 2 Sekunden)
+  // Debug (alle 500ms für besseres Tracking)
   static unsigned long lastDebug = 0;
-  if (millis() - lastDebug > 2000) {
+  if (millis() - lastDebug > 500) {
     lastDebug = millis();
-    Serial.printf("Heading: %.1f°  Roll: %.1f°  Pitch: %.1f°  Cal: %d\n",
-                  heading, roll, pitch, calSystem);
+    Serial.printf("RAW - Heading: %6.1f°  Pitch: %6.1f°  Roll: %6.1f°  Cal: %d\n",
+                  heading, pitch, roll, calSystem);
+    Serial.printf("SMOOTH - H: %6.1f°  P: %6.1f°  R: %6.1f°\n",
+                  smoothHeading, smoothPitch, smoothRoll);
   }
 }
 
@@ -428,12 +430,25 @@ void renderCube() {
 void rotateCube() {
   // Inverse Kamera-Rotation: Das CYD-Board ist die Kamera, die sich um den Würfel bewegt
   // Der Würfel selbst "steht still" im Raum - wir bewegen die Kamera (= das Board)
-  // Daher invertieren wir die Sensor-Orientierung für die Würfel-Rotation
 
-  // Konvertiere Grad zu Radiant und invertiere (Kamera-Bewegung = inverse Würfel-Rotation)
-  float yaw = -smoothHeading * PI / 180.0;   // Board dreht nach Norden → Würfel von Norden betrachten
-  float pitch_rad = -smoothPitch * PI / 180.0;  // Board kippt nach vorne → Würfel von oben betrachten
-  float roll_rad = -smoothRoll * PI / 180.0;    // Board kippt nach rechts → Würfel von rechts betrachten
+  // EXPERIMENTELL: Verschiedene Achsen-Konfigurationen testen
+  // Problem: Bei bestimmten Achsen "wilde Rotation"
+
+  // Konvertiere Grad zu Radiant
+  // Option 1: Alle invertiert (aktuell)
+  float yaw = -smoothHeading * PI / 180.0;
+  float pitch_rad = -smoothPitch * PI / 180.0;
+  float roll_rad = -smoothRoll * PI / 180.0;
+
+  // Option 2: Nur Yaw invertiert (zum Testen auskommentieren)
+  // float yaw = -smoothHeading * PI / 180.0;
+  // float pitch_rad = smoothPitch * PI / 180.0;
+  // float roll_rad = smoothRoll * PI / 180.0;
+
+  // Option 3: Nur Pitch und Roll invertiert (zum Testen auskommentieren)
+  // float yaw = smoothHeading * PI / 180.0;
+  // float pitch_rad = -smoothPitch * PI / 180.0;
+  // float roll_rad = -smoothRoll * PI / 180.0;
 
   // Trigonometrische Werte vorberechnen
   float cosY = cos(yaw);
@@ -539,8 +554,8 @@ void drawFaces() {
       lcd.drawLine(p[2].x, p[2].y, p[3].x, p[3].y, DICE_EDGE);
       lcd.drawLine(p[3].x, p[3].y, p[0].x, p[0].y, DICE_EDGE);
 
-      // Würfelaugen zeichnen
-      drawDiceDots(p, face.diceValue);
+      // Würfelaugen entfernt (Perspektive stimmt nicht in 3D)
+      // drawDiceDots(p, face.diceValue);
     }
   }
 }
