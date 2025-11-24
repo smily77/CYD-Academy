@@ -66,7 +66,7 @@ SCL     ------→   GPIO 27 (extSCL)
 ```
 
 **Wichtig:**
-- **I2C-Adresse**: Standard 0x28 (alternativ 0x29 wenn ADR-Pin auf HIGH)
+- **I2C-Adresse**: Standard 0x29 in diesem Code (alternativ 0x28 - siehe Zeile 183 im Code)
 - **Pull-Up-Widerstände**: Meist auf BNO055-Breakout-Boards bereits vorhanden (4.7kΩ)
 - **Spannungsversorgung**: 3.3V empfohlen (5V funktioniert auch, Sensor hat Spannungsregler)
 - **I2C-Geschwindigkeit**: Standard 100 kHz oder Fast-Mode 400 kHz
@@ -715,8 +715,8 @@ Wireframe: ON
 
 2. **I2C-Adresse prüfen:**
    ```cpp
-   // Im Code ändern (Zeile ~104):
-   Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);  // oder 0x29
+   // Im Code ändern (Zeile 183):
+   Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);  // oder 0x28
    ```
 
    Adresse herausfinden mit I2C-Scanner:

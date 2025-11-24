@@ -35,6 +35,7 @@
   - GND → GND
   - SDA → GPIO 22 (extSDA)
   - SCL → GPIO 27 (extSCL)
+  - I2C-Adresse: 0x29 (Standard in diesem Code, alternativ 0x28)
 
   Installation:
   1. Adafruit BNO055 Library installieren:
@@ -180,7 +181,7 @@ struct Face {
 // ===== GLOBALE VARIABLEN =====
 
 LGFX lcd;
-Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);
 
 // Sensor-Status
 bool sensorConnected = false;
@@ -307,6 +308,9 @@ void loop() {
 
   // Touch-Handling
   handleTouch();
+
+  // Bildschirm löschen (für sauberes Rendering, besonders wichtig für Wireframe)
+  lcd.fillScreen(COLOR_BG);
 
   // 3D-Würfel rendern
   renderCube();
