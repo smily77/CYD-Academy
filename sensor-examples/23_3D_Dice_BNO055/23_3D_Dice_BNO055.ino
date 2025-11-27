@@ -81,15 +81,15 @@
 
 // ACHSEN-MAPPING: Welche Sensor-Achse → Würfel-Achse?
 // Standard-Konfiguration (wenn BNO055-Chip nach oben zeigt):
-#define CUBE_X_FROM_PITCH    // X-Achse des Würfels ← Pitch des Sensors
-#define CUBE_Y_FROM_HEADING  // Y-Achse des Würfels ← Heading des Sensors
-#define CUBE_Z_FROM_ROLL     // Z-Achse des Würfels ← Roll des Sensors
-
-// Alternative Konfiguration (falls Z und X vertauscht):
-// Kommentiere oben aus und aktiviere diese:
-// #define CUBE_X_FROM_ROLL     // X-Achse des Würfels ← Roll des Sensors
+// #define CUBE_X_FROM_PITCH    // X-Achse des Würfels ← Pitch des Sensors
 // #define CUBE_Y_FROM_HEADING  // Y-Achse des Würfels ← Heading des Sensors
-// #define CUBE_Z_FROM_PITCH    // Z-Achse des Würfels ← Pitch des Sensors
+// #define CUBE_Z_FROM_ROLL     // Z-Achse des Würfels ← Roll des Sensors
+
+// Alternative Konfiguration (Z und X vertauscht - AKTIVIERT):
+// Diese Konfiguration ist nun aktiv:
+#define CUBE_X_FROM_ROLL     // X-Achse des Würfels ← Roll des Sensors
+#define CUBE_Y_FROM_HEADING  // Y-Achse des Würfels ← Heading des Sensors
+#define CUBE_Z_FROM_PITCH    // Z-Achse des Würfels ← Pitch des Sensors
 
 // VORZEICHEN-INVERSIONEN: Dreht Achse falsch herum?
 // Aktiviere die entsprechende Zeile (entferne //)
@@ -344,7 +344,8 @@ void loop() {
 
   // Nur Würfel-Bereich löschen (reduziert Flackern)
   // Bereich: Zentrum ± (CUBE_SIZE + Rand)
-  int clearMargin = 100;  // Rand um Würfel
+  // Größerer Rand für Perspektiv-Effekt und Rotation
+  int clearMargin = 130;  // Vergrößert um Artefakte zu vermeiden
   lcd.fillRect(SCREEN_CENTER_X - clearMargin, SCREEN_CENTER_Y - clearMargin,
                clearMargin * 2, clearMargin * 2, COLOR_BG);
 
@@ -394,17 +395,17 @@ void readSensor() {
       Serial.printf(">>> Y-ACHSE (Heading/Yaw) %s  [%.1f°]  Cal:%d\n",
                     direction.c_str(), heading, calSystem);
     }
-    else if (deltaP > threshold && deltaP > deltaH && deltaP > deltaR) {
-      // Pitch (X-Achse im Würfel-Space) bewegt sich
-      String direction = (pitch > lastPitch) ? "POSITIV" : "NEGATIV";
-      Serial.printf(">>> X-ACHSE (Pitch) %s  [%.1f°]  Cal:%d\n",
-                    direction.c_str(), pitch, calSystem);
-    }
-    else if (deltaR > threshold && deltaR > deltaP && deltaR > deltaH) {
-      // Roll (Z-Achse im Würfel-Space) bewegt sich
+    else if (deltaR > threshold && deltaR > deltaH && deltaR > deltaP) {
+      // Roll (X-Achse im Würfel-Space, da CUBE_X_FROM_ROLL) bewegt sich
       String direction = (roll > lastRoll) ? "POSITIV" : "NEGATIV";
-      Serial.printf(">>> Z-ACHSE (Roll) %s  [%.1f°]  Cal:%d\n",
+      Serial.printf(">>> X-ACHSE (Roll) %s  [%.1f°]  Cal:%d\n",
                     direction.c_str(), roll, calSystem);
+    }
+    else if (deltaP > threshold && deltaP > deltaH && deltaP > deltaR) {
+      // Pitch (Z-Achse im Würfel-Space, da CUBE_Z_FROM_PITCH) bewegt sich
+      String direction = (pitch > lastPitch) ? "POSITIV" : "NEGATIV";
+      Serial.printf(">>> Z-ACHSE (Pitch) %s  [%.1f°]  Cal:%d\n",
+                    direction.c_str(), pitch, calSystem);
     }
 
     // Speichere aktuelle Werte für nächsten Vergleich
