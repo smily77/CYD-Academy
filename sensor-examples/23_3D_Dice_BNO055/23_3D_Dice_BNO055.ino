@@ -205,6 +205,8 @@ struct Face {
 // ===== GLOBALE VARIABLEN =====
 
 LGFX lcd;
+LGFX_Sprite cubeSprite(&lcd);  // Sprite für Double-Buffering (reduziert Flackern)
+LGFX* renderTarget = &lcd;     // Aktuelles Render-Ziel (lcd oder cubeSprite)
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);
 
 // Sensor-Status
@@ -319,6 +321,12 @@ void setup() {
     delay(3000);
   }
 
+  // Sprite für Double-Buffering erstellen (reduziert Flackern bei gefüllten Flächen)
+  Serial.println("Creating sprite buffer for smooth rendering...");
+  cubeSprite.createSprite(240, 260);  // 240x260px Sprite (Würfel-Bereich + UI oben)
+  cubeSprite.fillSprite(COLOR_BG);
+  Serial.printf("Sprite created: 240x260px (%.1f KB RAM)\n", (240.0 * 260.0 * 2.0) / 1024.0);
+
   Serial.println("Setup complete! Move the board around the virtual dice (board = camera).");
   lcd.fillScreen(COLOR_BG);
 }
@@ -342,18 +350,21 @@ void loop() {
   // Touch-Handling
   handleTouch();
 
-  // Nur Würfel-Bereich löschen (reduziert Flackern)
-  // Bereich: Zentrum ± (CUBE_SIZE + Rand)
-  // Optimierter Rand: Balance zwischen Artefakten und Flackern
-  int clearMargin = 115;  // 230x230px - groß genug für Perspektive, klein genug gegen Flackern
-  lcd.fillRect(SCREEN_CENTER_X - clearMargin, SCREEN_CENTER_Y - clearMargin,
-               clearMargin * 2, clearMargin * 2, COLOR_BG);
-
-  // 3D-Würfel rendern
-  renderCube();
-
-  // UI-Elemente (außerhalb Würfel-Bereich, nicht übermalt)
-  drawUI();
+  // RENDERING: Sprite-basiert (gefüllt) oder direkt (wireframe)
+  if (showWireframe) {
+    // Wireframe-Modus: Direkt auf Display zeichnen (kein Flackern)
+    int clearMargin = 115;
+    lcd.fillRect(SCREEN_CENTER_X - clearMargin, SCREEN_CENTER_Y - clearMargin,
+                 clearMargin * 2, clearMargin * 2, COLOR_BG);
+    renderCube();  // Zeichnet direkt auf lcd
+    drawUI();      // UI direkt auf lcd
+  } else {
+    // Filled-Modus: Double-Buffering mit Sprite (eliminiert Flackern!)
+    cubeSprite.fillSprite(COLOR_BG);  // Clear sprite
+    renderCubeToSprite();              // Zeichnet in Sprite
+    cubeSprite.pushSprite(0, 0);       // Sprite → Display (atomare Operation)
+    drawUI();                          // UI direkt auf lcd (über Sprite)
+  }
 
   delay(20);  // ~50 FPS
 }
@@ -498,7 +509,20 @@ void renderCube() {
   calculateFaceDepths();
   sortFaces();
 
-  // 4. Flächen zeichnen
+  // 4. Flächen zeichnen (auf lcd)
+  renderTarget = &lcd;
+  drawFaces();
+}
+
+void renderCubeToSprite() {
+  // Gleicher Ablauf wie renderCube(), aber zeichnet in Sprite
+  rotateCube();
+  projectVertices();
+  calculateFaceDepths();
+  sortFaces();
+
+  // Flächen in Sprite zeichnen
+  renderTarget = &cubeSprite;
   drawFaces();
 }
 
@@ -604,7 +628,7 @@ void sortFaces() {
 }
 
 void drawFaces() {
-  // Zeichne Flächen von hinten nach vorne
+  // Zeichne Flächen von hinten nach vorne (auf renderTarget: lcd oder Sprite)
   for (int i = 0; i < 6; i++) {
     Face& face = cubeFaces[i];
 
@@ -619,19 +643,19 @@ void drawFaces() {
 
     if (showWireframe) {
       // Wireframe-Modus: Nur Kanten
-      lcd.drawLine(p[0].x, p[0].y, p[1].x, p[1].y, face.color);
-      lcd.drawLine(p[1].x, p[1].y, p[2].x, p[2].y, face.color);
-      lcd.drawLine(p[2].x, p[2].y, p[3].x, p[3].y, face.color);
-      lcd.drawLine(p[3].x, p[3].y, p[0].x, p[0].y, face.color);
+      renderTarget->drawLine(p[0].x, p[0].y, p[1].x, p[1].y, face.color);
+      renderTarget->drawLine(p[1].x, p[1].y, p[2].x, p[2].y, face.color);
+      renderTarget->drawLine(p[2].x, p[2].y, p[3].x, p[3].y, face.color);
+      renderTarget->drawLine(p[3].x, p[3].y, p[0].x, p[0].y, face.color);
     } else {
       // Gefülltes Polygon
       drawFilledQuad(p[0], p[1], p[2], p[3], face.color);
 
       // Kanten (schwarz)
-      lcd.drawLine(p[0].x, p[0].y, p[1].x, p[1].y, DICE_EDGE);
-      lcd.drawLine(p[1].x, p[1].y, p[2].x, p[2].y, DICE_EDGE);
-      lcd.drawLine(p[2].x, p[2].y, p[3].x, p[3].y, DICE_EDGE);
-      lcd.drawLine(p[3].x, p[3].y, p[0].x, p[0].y, DICE_EDGE);
+      renderTarget->drawLine(p[0].x, p[0].y, p[1].x, p[1].y, DICE_EDGE);
+      renderTarget->drawLine(p[1].x, p[1].y, p[2].x, p[2].y, DICE_EDGE);
+      renderTarget->drawLine(p[2].x, p[2].y, p[3].x, p[3].y, DICE_EDGE);
+      renderTarget->drawLine(p[3].x, p[3].y, p[0].x, p[0].y, DICE_EDGE);
 
       // Würfelaugen entfernt (Perspektive stimmt nicht in 3D)
       // drawDiceDots(p, face.diceValue);
@@ -660,9 +684,9 @@ bool isFacingCamera(const Face& face) {
 }
 
 void drawFilledQuad(Point2D p0, Point2D p1, Point2D p2, Point2D p3, uint16_t color) {
-  // Zeichne gefülltes Viereck als zwei Dreiecke
-  lcd.fillTriangle(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, color);
-  lcd.fillTriangle(p0.x, p0.y, p2.x, p2.y, p3.x, p3.y, color);
+  // Zeichne gefülltes Viereck als zwei Dreiecke (auf renderTarget)
+  renderTarget->fillTriangle(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, color);
+  renderTarget->fillTriangle(p0.x, p0.y, p2.x, p2.y, p3.x, p3.y, color);
 }
 
 void drawDiceDots(Point2D p[4], int value) {
