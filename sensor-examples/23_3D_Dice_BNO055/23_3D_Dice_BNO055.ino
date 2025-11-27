@@ -549,17 +549,12 @@ void rotateCube() {
     transformedQuat = smoothQuat;
   #endif
 
-  // VORZEICHEN-INVERSIONEN: Für Kamera-Effekt und falsche Richtung
+  // INVERSE KAMERA-ROTATION
   // Konjugat = Inverse Rotation (für "Board = Kamera")
   imu::Quaternion invQuat = transformedQuat.conjugate();
 
-  // Y-Achsen-Inversion (mathematisch korrekt mit 180°-Rotation um Y-Achse)
-  // Quaternion für 180° um Y: (w=0, x=0, y=1, z=0)
-  imu::Quaternion rotY180(0, 0, 1, 0);
-  invQuat = rotY180 * invQuat;  // Kombiniere Rotationen
-
-  // Alte INVERT-Flags entfernt (waren mathematisch inkorrekt)
-  // #ifdef INVERT_CUBE_Y ... #endif
+  // Hinweis: Falls eine Achse "verkehrt herum" dreht, liegt das meist an der
+  // Sensor-Montage. Das Konjugat invertiert alle Achsen korrekt für die Kamera-Perspektive.
 
   #ifdef INVERT_CUBE_X
     // X-Achse extra invertieren (negiere x-Komponente)
