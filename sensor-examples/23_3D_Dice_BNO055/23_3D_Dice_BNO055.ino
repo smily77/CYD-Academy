@@ -80,16 +80,15 @@
 // Problem: Falsche Rotations-Richtung? → Aktiviere entsprechende INVERT-Flags
 
 // ACHSEN-MAPPING: Welche Sensor-Achse → Würfel-Achse?
-// Standard-Konfiguration (AKTIVIERT):
-#define CUBE_X_FROM_PITCH    // X-Achse des Würfels ← Pitch des Sensors
-#define CUBE_Y_FROM_HEADING  // Y-Achse des Würfels ← Heading des Sensors
-#define CUBE_Z_FROM_ROLL     // Z-Achse des Würfels ← Roll des Sensors
-
-// Alternative Konfiguration (Z und X vertauscht):
-// Falls benötigt, kommentiere oben aus und aktiviere diese:
-// #define CUBE_X_FROM_ROLL     // X-Achse des Würfels ← Roll des Sensors
+// Standard-Konfiguration (bei dir vertauscht, daher auskommentiert):
+// #define CUBE_X_FROM_PITCH    // X-Achse des Würfels ← Pitch des Sensors
 // #define CUBE_Y_FROM_HEADING  // Y-Achse des Würfels ← Heading des Sensors
-// #define CUBE_Z_FROM_PITCH    // Z-Achse des Würfels ← Pitch des Sensors
+// #define CUBE_Z_FROM_ROLL     // Z-Achse des Würfels ← Roll des Sensors
+
+// Alternative Konfiguration (Z und X vertauscht - AKTIVIERT):
+#define CUBE_X_FROM_ROLL     // X-Achse des Würfels ← Roll des Sensors
+#define CUBE_Y_FROM_HEADING  // Y-Achse des Würfels ← Heading des Sensors
+#define CUBE_Z_FROM_PITCH    // Z-Achse des Würfels ← Pitch des Sensors
 
 // VORZEICHEN-INVERSIONEN: Dreht Achse falsch herum?
 // WICHTIG: Diese Flags sind mathematisch problematisch mit Quaternionen!
@@ -407,17 +406,17 @@ void readSensor() {
       Serial.printf(">>> Y-ACHSE (Heading/Yaw) %s  [%.1f°]  Cal:%d\n",
                     direction.c_str(), heading, calSystem);
     }
-    else if (deltaP > threshold && deltaP > deltaH && deltaP > deltaR) {
-      // Pitch (X-Achse im Würfel-Space, da CUBE_X_FROM_PITCH) bewegt sich
-      String direction = (pitch > lastPitch) ? "POSITIV" : "NEGATIV";
-      Serial.printf(">>> X-ACHSE (Pitch) %s  [%.1f°]  Cal:%d\n",
-                    direction.c_str(), pitch, calSystem);
-    }
-    else if (deltaR > threshold && deltaR > deltaP && deltaR > deltaH) {
-      // Roll (Z-Achse im Würfel-Space, da CUBE_Z_FROM_ROLL) bewegt sich
+    else if (deltaR > threshold && deltaR > deltaH && deltaR > deltaP) {
+      // Roll (X-Achse im Würfel-Space, da CUBE_X_FROM_ROLL) bewegt sich
       String direction = (roll > lastRoll) ? "POSITIV" : "NEGATIV";
-      Serial.printf(">>> Z-ACHSE (Roll) %s  [%.1f°]  Cal:%d\n",
+      Serial.printf(">>> X-ACHSE (Roll) %s  [%.1f°]  Cal:%d\n",
                     direction.c_str(), roll, calSystem);
+    }
+    else if (deltaP > threshold && deltaP > deltaH && deltaP > deltaR) {
+      // Pitch (Z-Achse im Würfel-Space, da CUBE_Z_FROM_PITCH) bewegt sich
+      String direction = (pitch > lastPitch) ? "POSITIV" : "NEGATIV";
+      Serial.printf(">>> Z-ACHSE (Pitch) %s  [%.1f°]  Cal:%d\n",
+                    direction.c_str(), pitch, calSystem);
     }
 
     // Speichere aktuelle Werte für nächsten Vergleich
@@ -554,11 +553,13 @@ void rotateCube() {
   // Konjugat = Inverse Rotation (für "Board = Kamera")
   imu::Quaternion invQuat = transformedQuat.conjugate();
 
-  // Zusätzliche Inversionen basierend auf Konfiguration
-  #ifdef INVERT_CUBE_Y
-    // Y-Achse extra invertieren (negiere y-Komponente)
-    invQuat = imu::Quaternion(invQuat.w(), invQuat.x(), -invQuat.y(), invQuat.z());
-  #endif
+  // Y-Achsen-Inversion (mathematisch korrekt mit 180°-Rotation um Y-Achse)
+  // Quaternion für 180° um Y: (w=0, x=0, y=1, z=0)
+  imu::Quaternion rotY180(0, 0, 1, 0);
+  invQuat = rotY180 * invQuat;  // Kombiniere Rotationen
+
+  // Alte INVERT-Flags entfernt (waren mathematisch inkorrekt)
+  // #ifdef INVERT_CUBE_Y ... #endif
 
   #ifdef INVERT_CUBE_X
     // X-Achse extra invertieren (negiere x-Komponente)
