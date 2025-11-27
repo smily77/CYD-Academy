@@ -92,9 +92,10 @@
 // #define CUBE_Z_FROM_PITCH    // Z-Achse des Würfels ← Pitch des Sensors
 
 // VORZEICHEN-INVERSIONEN: Dreht Achse falsch herum?
-// Aktiviere die entsprechende Zeile (entferne //)
+// WICHTIG: Diese Flags sind mathematisch problematisch mit Quaternionen!
+// Verwende nur das Konjugat für die inverse Kamera-Rotation.
 // #define INVERT_CUBE_X      // X-Achse umkehren
-#define INVERT_CUBE_Y        // Y-Achse umkehren (bei dir aktiviert, da falsch herum)
+// #define INVERT_CUBE_Y      // Y-Achse umkehren (DEAKTIVIERT - stört Quaternion-Rotation)
 // #define INVERT_CUBE_Z      // Z-Achse umkehren
 
 // ===== KONSTANTEN =====
