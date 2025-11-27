@@ -80,17 +80,17 @@
 // Problem: Falsche Rotations-Richtung? → Aktiviere entsprechende INVERT-Flags
 
 // ACHSEN-MAPPING: Welche Sensor-Achse → Würfel-Achse?
-// KORRIGIERT basierend auf Achsenkreuz-Feedback!
+// KORRIGIERT basierend auf Sensor-Datenblatt + Achsenkreuz-Feedback!
 //
-// Alte Konfigurationen (beide falsch):
-// #define CUBE_X_FROM_PITCH
-// #define CUBE_X_FROM_ROLL
+// Sensor-Achsen (BNO055 Datenblatt):
+// - Heading/Yaw: Rotation um Sensor-Z (Board flach drehen)
+// - Pitch: Rotation um Sensor-X (Board kippen vorwärts/rückwärts)
+// - Roll: Rotation um Sensor-Y (Board kippen links/rechts)
 //
-// NEUE KONFIGURATION (basiert auf Achsenkreuz-Test):
-// Board flach auf Tisch drehen → X-Achse (Rot) dreht sich → Heading!
-#define CUBE_X_FROM_HEADING  // X-Achse des Würfels ← Heading des Sensors (Yaw)
-#define CUBE_Y_FROM_ROLL     // Y-Achse des Würfels ← Roll des Sensors
-#define CUBE_Z_FROM_PITCH    // Z-Achse des Würfels ← Pitch des Sensors
+// KORREKTE STANDARD-KONFIGURATION:
+#define CUBE_X_FROM_PITCH    // X-Achse des Würfels ← Pitch des Sensors
+#define CUBE_Y_FROM_HEADING  // Y-Achse des Würfels ← Heading/Yaw (Sensor-Z!)
+#define CUBE_Z_FROM_ROLL     // Z-Achse des Würfels ← Roll des Sensors
 
 // VORZEICHEN-INVERSIONEN: Dreht Achse falsch herum?
 // WICHTIG: Diese Flags sind mathematisch problematisch mit Quaternionen!
@@ -406,22 +406,22 @@ void readSensor() {
 
     // Finde die Achse mit der größten Bewegung
     if (deltaH > threshold && deltaH > deltaP && deltaH > deltaR) {
-      // Heading (X-Achse im Würfel-Space, da CUBE_X_FROM_HEADING) bewegt sich
+      // Heading (Y-Achse im Würfel-Space, da CUBE_Y_FROM_HEADING) bewegt sich
       String direction = (heading > lastHeading) ? "POSITIV" : "NEGATIV";
-      Serial.printf(">>> X-ACHSE (Heading/Yaw) %s  [%.1f°]  Cal:%d\n",
+      Serial.printf(">>> Y-ACHSE (Heading/Yaw) %s  [%.1f°]  Cal:%d\n",
                     direction.c_str(), heading, calSystem);
     }
-    else if (deltaR > threshold && deltaR > deltaH && deltaR > deltaP) {
-      // Roll (Y-Achse im Würfel-Space, da CUBE_Y_FROM_ROLL) bewegt sich
-      String direction = (roll > lastRoll) ? "POSITIV" : "NEGATIV";
-      Serial.printf(">>> Y-ACHSE (Roll) %s  [%.1f°]  Cal:%d\n",
-                    direction.c_str(), roll, calSystem);
-    }
     else if (deltaP > threshold && deltaP > deltaH && deltaP > deltaR) {
-      // Pitch (Z-Achse im Würfel-Space, da CUBE_Z_FROM_PITCH) bewegt sich
+      // Pitch (X-Achse im Würfel-Space, da CUBE_X_FROM_PITCH) bewegt sich
       String direction = (pitch > lastPitch) ? "POSITIV" : "NEGATIV";
-      Serial.printf(">>> Z-ACHSE (Pitch) %s  [%.1f°]  Cal:%d\n",
+      Serial.printf(">>> X-ACHSE (Pitch) %s  [%.1f°]  Cal:%d\n",
                     direction.c_str(), pitch, calSystem);
+    }
+    else if (deltaR > threshold && deltaR > deltaH && deltaR > deltaP) {
+      // Roll (Z-Achse im Würfel-Space, da CUBE_Z_FROM_ROLL) bewegt sich
+      String direction = (roll > lastRoll) ? "POSITIV" : "NEGATIV";
+      Serial.printf(">>> Z-ACHSE (Roll) %s  [%.1f°]  Cal:%d\n",
+                    direction.c_str(), roll, calSystem);
     }
 
     // Speichere aktuelle Werte für nächsten Vergleich
@@ -558,14 +558,18 @@ void rotateCube() {
   float qz = adjustedQuat.z();  // Roll
 
   // Wende Achsen-Mapping an
-  #if defined(CUBE_X_FROM_HEADING) && defined(CUBE_Y_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
-    // Neue Konfiguration: X←Heading, Y←Roll, Z←Pitch
+  #if defined(CUBE_X_FROM_PITCH) && defined(CUBE_Y_FROM_HEADING) && defined(CUBE_Z_FROM_ROLL)
+    // Standard-Konfiguration: KEINE Permutation nötig!
+    // BNO055: qx=Pitch, qy=Heading, qz=Roll → passt direkt
+    transformedQuat = adjustedQuat;
+  #elif defined(CUBE_X_FROM_HEADING) && defined(CUBE_Y_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
+    // Alternative: X←Heading, Y←Roll, Z←Pitch
     transformedQuat = imu::Quaternion(qw, qy, qz, qx);  // Zyklische Permutation
   #elif defined(CUBE_X_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
-    // Alte Konfiguration: X←Roll, Z←Pitch
+    // Alternative: X←Roll, Z←Pitch
     transformedQuat = imu::Quaternion(qw, qz, qy, qx);  // Tausche x und z
   #else
-    // Standard: direkt verwenden
+    // Fallback
     transformedQuat = adjustedQuat;
   #endif
 
@@ -820,10 +824,12 @@ void drawAxisIndicator() {
   float qy = adjustedQuat.y();  // Heading
   float qz = adjustedQuat.z();  // Roll
 
-  #if defined(CUBE_X_FROM_HEADING) && defined(CUBE_Y_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
-    transformedQuat = imu::Quaternion(qw, qy, qz, qx);  // Zyklische Permutation
+  #if defined(CUBE_X_FROM_PITCH) && defined(CUBE_Y_FROM_HEADING) && defined(CUBE_Z_FROM_ROLL)
+    transformedQuat = adjustedQuat;  // Standard: keine Permutation
+  #elif defined(CUBE_X_FROM_HEADING) && defined(CUBE_Y_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
+    transformedQuat = imu::Quaternion(qw, qy, qz, qx);
   #elif defined(CUBE_X_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
-    transformedQuat = imu::Quaternion(qw, qz, qy, qx);  // Tausche x und z
+    transformedQuat = imu::Quaternion(qw, qz, qy, qx);
   #endif
 
   imu::Quaternion invQuat = transformedQuat.conjugate();
