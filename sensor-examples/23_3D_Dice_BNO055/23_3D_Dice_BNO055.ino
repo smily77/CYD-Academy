@@ -573,14 +573,13 @@ void rotateCube() {
     transformedQuat = adjustedQuat;
   #endif
 
-  // INVERSE KAMERA-ROTATION - TEST: Negiere Y-Komponente!
-  // Wenn Board flach auf Tisch liegt und dreht = Y-Achsen-Rotation
-  // Negiere Y-Komponente des Quaternions für inverse Rotation
+  // INVERSE KAMERA-ROTATION: Negiere Y und Z Komponenten!
+  // Nach X-Y Vertauschung: Y und Z müssen negiert werden für inverse Rotation
   imu::Quaternion invQuat = imu::Quaternion(
     transformedQuat.w(),
-    transformedQuat.x(),
-    -transformedQuat.y(),  // Y-Komponente negiert!
-    transformedQuat.z()
+    transformedQuat.x(),      // X bleibt positiv
+    -transformedQuat.y(),     // Y negiert!
+    -transformedQuat.z()      // Z negiert!
   );
 
   // Hinweis: Falls eine Achse "verkehrt herum" dreht, liegt das meist an der
