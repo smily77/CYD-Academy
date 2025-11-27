@@ -502,95 +502,60 @@ void renderCube() {
 }
 
 void rotateCube() {
-  // Konfigurierbare Rotation basierend auf Sensor-Montage
-  // Konvertiere Quaternion zurück zu Euler für Achsen-Mapping
+  // Quaternion-Rotation mit konfigurierbarer Achsen-Transformation
+  // Vermeidet Gimbal Lock!
 
-  // Extrahiere Euler-Winkel aus geglättetem Quaternion
-  // (Vereinfachte Konvertierung für unsere Zwecke)
-  float w = smoothQuat.w();
-  float x = smoothQuat.x();
-  float y = smoothQuat.y();
-  float z = smoothQuat.z();
+  // Erstelle Achsen-Transformations-Quaternion basierend auf Konfiguration
+  imu::Quaternion transformedQuat = smoothQuat;
 
-  // Quaternion → Euler (Tait-Bryan, ZYX)
-  float qHeading = atan2(2*(w*z + x*y), 1 - 2*(y*y + z*z));
-  float qPitch = asin(2*(w*y - z*x));
-  float qRoll = atan2(2*(w*x + y*z), 1 - 2*(x*x + y*y));
+  // ACHSEN-PERMUTATION: Vertausche Quaternion-Komponenten für Achsen-Mapping
+  // Standard: x=Pitch, y=Heading, z=Roll (BNO055)
+  float qw = smoothQuat.w();
+  float qx = smoothQuat.x();
+  float qy = smoothQuat.y();
+  float qz = smoothQuat.z();
 
-  // ACHSEN-MAPPING: Wende Konfiguration an
-  float cubeX, cubeY, cubeZ;
-
-  // X-Achse des Würfels
-  #ifdef CUBE_X_FROM_PITCH
-    cubeX = qPitch;
-  #elif defined(CUBE_X_FROM_ROLL)
-    cubeX = qRoll;
-  #elif defined(CUBE_X_FROM_HEADING)
-    cubeX = qHeading;
-  #endif
-
-  // Y-Achse des Würfels
-  #ifdef CUBE_Y_FROM_HEADING
-    cubeY = qHeading;
-  #elif defined(CUBE_Y_FROM_PITCH)
-    cubeY = qPitch;
-  #elif defined(CUBE_Y_FROM_ROLL)
-    cubeY = qRoll;
-  #endif
-
-  // Z-Achse des Würfels
-  #ifdef CUBE_Z_FROM_ROLL
-    cubeZ = qRoll;
-  #elif defined(CUBE_Z_FROM_PITCH)
-    cubeZ = qPitch;
-  #elif defined(CUBE_Z_FROM_HEADING)
-    cubeZ = qHeading;
-  #endif
-
-  // VORZEICHEN-INVERSIONEN: Für inverse Kamera-Rotation UND Konfiguration
-  #ifdef INVERT_CUBE_X
-    cubeX = -cubeX;
+  // Wende Achsen-Mapping an (tausche Komponenten)
+  #if defined(CUBE_X_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
+    // Z und X vertauscht: Roll→X, Pitch→Z
+    transformedQuat = imu::Quaternion(qw, qz, qy, qx);  // Tausche x und z
   #else
-    cubeX = -cubeX;  // Immer invertieren für Kamera-Effekt
+    // Standard: Pitch→X, Roll→Z
+    transformedQuat = smoothQuat;
   #endif
 
+  // VORZEICHEN-INVERSIONEN: Für Kamera-Effekt und falsche Richtung
+  // Konjugat = Inverse Rotation (für "Board = Kamera")
+  imu::Quaternion invQuat = transformedQuat.conjugate();
+
+  // Zusätzliche Inversionen basierend auf Konfiguration
   #ifdef INVERT_CUBE_Y
-    cubeY = -cubeY;
-  #else
-    cubeY = -cubeY;  // Immer invertieren für Kamera-Effekt
+    // Y-Achse extra invertieren (negiere y-Komponente)
+    invQuat = imu::Quaternion(invQuat.w(), invQuat.x(), -invQuat.y(), invQuat.z());
+  #endif
+
+  #ifdef INVERT_CUBE_X
+    // X-Achse extra invertieren (negiere x-Komponente)
+    invQuat = imu::Quaternion(invQuat.w(), -invQuat.x(), invQuat.y(), invQuat.z());
   #endif
 
   #ifdef INVERT_CUBE_Z
-    cubeZ = -cubeZ;
-  #else
-    cubeZ = -cubeZ;  // Immer invertieren für Kamera-Effekt
+    // Z-Achse extra invertieren (negiere z-Komponente)
+    invQuat = imu::Quaternion(invQuat.w(), invQuat.x(), invQuat.y(), -invQuat.z());
   #endif
 
-  // Trigonometrische Werte
-  float cosX = cos(cubeX), sinX = sin(cubeX);
-  float cosY = cos(cubeY), sinY = sin(cubeY);
-  float cosZ = cos(cubeZ), sinZ = sin(cubeZ);
-
-  // Rotations-Matrizen anwenden (Y → X → Z)
+  // Für jeden Vertex: Quaternion-Rotation anwenden
   for (int i = 0; i < 8; i++) {
     Vec3 v = cubeVertices[i] * CUBE_SIZE;
 
-    // Rotation um Y-Achse
-    float x1 = v.x * cosY - v.z * sinY;
-    float z1 = v.x * sinY + v.z * cosY;
-    float y1 = v.y;
+    // Konvertiere Vec3 zu Quaternion (0, x, y, z)
+    imu::Quaternion vQuat(0, v.x, v.y, v.z);
 
-    // Rotation um X-Achse
-    float y2 = y1 * cosX - z1 * sinX;
-    float z2 = y1 * sinX + z1 * cosX;
-    float x2 = x1;
+    // Rotation: q * v * q^(-1)
+    imu::Quaternion rotated = invQuat * vQuat * invQuat.conjugate();
 
-    // Rotation um Z-Achse
-    float x3 = x2 * cosZ - y2 * sinZ;
-    float y3 = x2 * sinZ + y2 * cosZ;
-    float z3 = z2;
-
-    transformedVertices[i] = Vec3(x3, y3, z3);
+    // Extrahiere rotierte Koordinaten
+    transformedVertices[i] = Vec3(rotated.x(), rotated.y(), rotated.z());
   }
 }
 
