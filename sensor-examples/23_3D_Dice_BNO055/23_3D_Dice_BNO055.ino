@@ -252,6 +252,7 @@ float smoothPitch = 0.0;
 // Quaternionen (vermeidet Gimbal Lock - DAS IST DER FIX!)
 imu::Quaternion currentQuat(1, 0, 0, 0);  // Identity Quaternion
 imu::Quaternion smoothQuat(1, 0, 0, 0);
+imu::Quaternion zeroQuat(1, 0, 0, 0);     // Nullpunkt-Quaternion (für Achsen-Reset)
 
 // Kalibrierungsstatus
 uint8_t calSystem = 0;
@@ -356,13 +357,15 @@ void loop() {
     int clearMargin = 115;
     lcd.fillRect(SCREEN_CENTER_X - clearMargin, SCREEN_CENTER_Y - clearMargin,
                  clearMargin * 2, clearMargin * 2, COLOR_BG);
-    renderCube();  // Zeichnet direkt auf lcd
-    drawUI();      // UI direkt auf lcd
+    renderCube();         // Zeichnet direkt auf lcd
+    drawAxisIndicator();  // Achsenkreuz in Ecke
+    drawUI();             // UI direkt auf lcd
   } else {
     // Filled-Modus: Double-Buffering mit Sprite (eliminiert Flackern!)
     cubeSprite.fillSprite(COLOR_BG);  // Clear sprite
     renderCubeToSprite();              // Zeichnet in Sprite
     cubeSprite.pushSprite(0, 0);       // Sprite → Display (atomare Operation)
+    drawAxisIndicator();               // Achsenkreuz in Ecke (über Sprite)
     drawUI();                          // UI direkt auf lcd (über Sprite)
   }
 
@@ -485,11 +488,20 @@ void handleTouch() {
     lcd.drawString(showWireframe ? "WIRE ON" : "WIRE OFF", 200, 302);
     delay(500);
   }
-  // Mitte: Kalibrierungshilfe
+  // Mitte: Z-Achse nullen (Reset Nullpunkt)
   else {
-    if (sensorConnected) {
-      drawCalibrationHint();
-      delay(2000);
+    if (sensorConnected && !demoMode) {
+      // Speichere aktuelles Quaternion als Nullpunkt
+      zeroQuat = smoothQuat.conjugate();
+      Serial.println(">>> Z-ACHSE GENULLT! (Nullpunkt gesetzt)");
+
+      // Feedback
+      lcd.fillRect(80, 290, 80, 25, COLOR_CAL_MED);
+      lcd.setTextSize(1);
+      lcd.setTextColor(COLOR_BG);
+      lcd.setTextDatum(MC_DATUM);
+      lcd.drawString("Z-RESET", 120, 302);
+      delay(500);
     }
   }
 
@@ -530,15 +542,18 @@ void rotateCube() {
   // Quaternion-Rotation mit konfigurierbarer Achsen-Transformation
   // Vermeidet Gimbal Lock!
 
+  // Wende Nullpunkt an (für Achsen-Reset)
+  imu::Quaternion adjustedQuat = zeroQuat * smoothQuat;
+
   // Erstelle Achsen-Transformations-Quaternion basierend auf Konfiguration
-  imu::Quaternion transformedQuat = smoothQuat;
+  imu::Quaternion transformedQuat = adjustedQuat;
 
   // ACHSEN-PERMUTATION: Vertausche Quaternion-Komponenten für Achsen-Mapping
   // Standard: x=Pitch, y=Heading, z=Roll (BNO055)
-  float qw = smoothQuat.w();
-  float qx = smoothQuat.x();
-  float qy = smoothQuat.y();
-  float qz = smoothQuat.z();
+  float qw = adjustedQuat.w();
+  float qx = adjustedQuat.x();
+  float qy = adjustedQuat.y();
+  float qz = adjustedQuat.z();
 
   // Wende Achsen-Mapping an (tausche Komponenten)
   #if defined(CUBE_X_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
@@ -776,6 +791,73 @@ void drawDiceDots(Point2D p[4], int value) {
 }
 
 // ===== UI FUNKTIONEN =====
+
+void drawAxisIndicator() {
+  // Zeichne 3D-Achsenkreuz in der Ecke (oben links)
+  // Zeigt die aktuelle Orientierung der Achsen an
+
+  const int originX = 40;   // Ursprung X (Ecke oben links)
+  const int originY = 50;   // Ursprung Y
+  const float axisLength = 25.0;  // Länge der Achsen
+
+  // Definiere Achsen-Endpunkte (im lokalen Koordinatensystem)
+  Vec3 xAxis(axisLength, 0, 0);  // X-Achse: Rot
+  Vec3 yAxis(0, axisLength, 0);  // Y-Achse: Grün
+  Vec3 zAxis(0, 0, axisLength);  // Z-Achse: Blau
+
+  // Hole das aktuelle inverse Quaternion (gleiche Rotation wie Würfel)
+  // Wiederhole die Rotation aus rotateCube()
+  imu::Quaternion adjustedQuat = zeroQuat * smoothQuat;
+  imu::Quaternion transformedQuat = adjustedQuat;
+
+  #if defined(CUBE_X_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
+    float qw = adjustedQuat.w();
+    float qx = adjustedQuat.x();
+    float qy = adjustedQuat.y();
+    float qz = adjustedQuat.z();
+    transformedQuat = imu::Quaternion(qw, qz, qy, qx);
+  #endif
+
+  imu::Quaternion invQuat = transformedQuat.conjugate();
+
+  // Rotiere Achsen
+  imu::Quaternion xQ(0, xAxis.x, xAxis.y, xAxis.z);
+  imu::Quaternion yQ(0, yAxis.x, yAxis.y, yAxis.z);
+  imu::Quaternion zQ(0, zAxis.x, zAxis.y, zAxis.z);
+
+  imu::Quaternion xRot = invQuat * xQ * invQuat.conjugate();
+  imu::Quaternion yRot = invQuat * yQ * invQuat.conjugate();
+  imu::Quaternion zRot = invQuat * zQ * invQuat.conjugate();
+
+  Vec3 xRotated(xRot.x(), xRot.y(), xRot.z());
+  Vec3 yRotated(yRot.x(), yRot.y(), yRot.z());
+  Vec3 zRotated(zRot.x(), zRot.y(), zRot.z());
+
+  // Einfache orthografische Projektion (nur X und Y, ignoriere Z)
+  int x1 = originX + (int)xRotated.x;
+  int y1 = originY - (int)xRotated.y;  // Y invertiert
+  int x2 = originX + (int)yRotated.x;
+  int y2 = originY - (int)yRotated.y;
+  int x3 = originX + (int)zRotated.x;
+  int y3 = originY - (int)zRotated.y;
+
+  // Zeichne Achsen mit Farben
+  lcd.drawLine(originX, originY, x1, y1, 0xF800);  // X-Achse: Rot
+  lcd.drawLine(originX, originY, x2, y2, 0x07E0);  // Y-Achse: Grün
+  lcd.drawLine(originX, originY, x3, y3, 0x001F);  // Z-Achse: Blau
+
+  // Zeichne Ursprung
+  lcd.fillCircle(originX, originY, 3, COLOR_TEXT);
+
+  // Labels
+  lcd.setTextSize(1);
+  lcd.setTextColor(0xF800);  // Rot
+  lcd.drawString("X", x1 + 5, y1 - 5);
+  lcd.setTextColor(0x07E0);  // Grün
+  lcd.drawString("Y", x2 + 5, y2 - 5);
+  lcd.setTextColor(0x001F);  // Blau
+  lcd.drawString("Z", x3 + 5, y3 - 5);
+}
 
 void drawUI() {
   // Kalibrierungs-Indikator (oben rechts)
