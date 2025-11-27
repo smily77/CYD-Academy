@@ -559,9 +559,9 @@ void rotateCube() {
 
   // Wende Achsen-Mapping an
   #if defined(CUBE_X_FROM_PITCH) && defined(CUBE_Y_FROM_HEADING) && defined(CUBE_Z_FROM_ROLL)
-    // Standard-Konfiguration: KEINE Permutation nötig!
-    // BNO055: qx=Pitch, qy=Heading, qz=Roll → passt direkt
-    transformedQuat = adjustedQuat;
+    // FIX: Vertausche X und Y Komponenten!
+    // Board dreht um Y (Heading) → Würfel muss um Y drehen (nicht um X!)
+    transformedQuat = imu::Quaternion(qw, qy, qx, qz);  // Tausche x und y!
   #elif defined(CUBE_X_FROM_HEADING) && defined(CUBE_Y_FROM_ROLL) && defined(CUBE_Z_FROM_PITCH)
     // Alternative: X←Heading, Y←Roll, Z←Pitch
     transformedQuat = imu::Quaternion(qw, qy, qz, qx);  // Zyklische Permutation
