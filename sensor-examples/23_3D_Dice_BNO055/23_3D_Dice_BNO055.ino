@@ -73,6 +73,30 @@
 #define extSCL 27
 #endif
 
+// ===== SENSOR-ORIENTIERUNG KONFIGURATION =====
+// WICHTIG: Passe diese Werte an deine BNO055-Montage an!
+//
+// Problem: Z- und X-Achse vertauscht? → Ändere Achsen-Mapping unten
+// Problem: Falsche Rotations-Richtung? → Aktiviere entsprechende INVERT-Flags
+
+// ACHSEN-MAPPING: Welche Sensor-Achse → Würfel-Achse?
+// Standard-Konfiguration (wenn BNO055-Chip nach oben zeigt):
+#define CUBE_X_FROM_PITCH    // X-Achse des Würfels ← Pitch des Sensors
+#define CUBE_Y_FROM_HEADING  // Y-Achse des Würfels ← Heading des Sensors
+#define CUBE_Z_FROM_ROLL     // Z-Achse des Würfels ← Roll des Sensors
+
+// Alternative Konfiguration (falls Z und X vertauscht):
+// Kommentiere oben aus und aktiviere diese:
+// #define CUBE_X_FROM_ROLL     // X-Achse des Würfels ← Roll des Sensors
+// #define CUBE_Y_FROM_HEADING  // Y-Achse des Würfels ← Heading des Sensors
+// #define CUBE_Z_FROM_PITCH    // Z-Achse des Würfels ← Pitch des Sensors
+
+// VORZEICHEN-INVERSIONEN: Dreht Achse falsch herum?
+// Aktiviere die entsprechende Zeile (entferne //)
+// #define INVERT_CUBE_X      // X-Achse umkehren
+#define INVERT_CUBE_Y        // Y-Achse umkehren (bei dir aktiviert, da falsch herum)
+// #define INVERT_CUBE_Z      // Z-Achse umkehren
+
 // ===== KONSTANTEN =====
 
 // Farben (Dark Theme)
@@ -318,15 +342,16 @@ void loop() {
   // Touch-Handling
   handleTouch();
 
-  // Bildschirm löschen (nur im Wireframe-Modus nötig, sonst übermalen Flächen sich gegenseitig)
-  if (showWireframe) {
-    lcd.fillScreen(COLOR_BG);
-  }
+  // Nur Würfel-Bereich löschen (reduziert Flackern)
+  // Bereich: Zentrum ± (CUBE_SIZE + Rand)
+  int clearMargin = 100;  // Rand um Würfel
+  lcd.fillRect(SCREEN_CENTER_X - clearMargin, SCREEN_CENTER_Y - clearMargin,
+               clearMargin * 2, clearMargin * 2, COLOR_BG);
 
   // 3D-Würfel rendern
   renderCube();
 
-  // UI-Elemente (immer neu zeichnen, da sie übermalt werden könnten)
+  // UI-Elemente (außerhalb Würfel-Bereich, nicht übermalt)
   drawUI();
 
   delay(20);  // ~50 FPS
@@ -477,24 +502,95 @@ void renderCube() {
 }
 
 void rotateCube() {
-  // Quaternion-Rotation: Vermeidet Gimbal Lock!
-  // Das CYD-Board ist die Kamera → Invertiere Quaternion (Konjugat)
+  // Konfigurierbare Rotation basierend auf Sensor-Montage
+  // Konvertiere Quaternion zurück zu Euler für Achsen-Mapping
 
-  // Konjugat des Quaternions = Inverse Rotation (für Kamera-Perspektive)
-  imu::Quaternion invQuat = smoothQuat.conjugate();
+  // Extrahiere Euler-Winkel aus geglättetem Quaternion
+  // (Vereinfachte Konvertierung für unsere Zwecke)
+  float w = smoothQuat.w();
+  float x = smoothQuat.x();
+  float y = smoothQuat.y();
+  float z = smoothQuat.z();
 
-  // Für jeden Vertex: Quaternion-Rotation anwenden
+  // Quaternion → Euler (Tait-Bryan, ZYX)
+  float qHeading = atan2(2*(w*z + x*y), 1 - 2*(y*y + z*z));
+  float qPitch = asin(2*(w*y - z*x));
+  float qRoll = atan2(2*(w*x + y*z), 1 - 2*(x*x + y*y));
+
+  // ACHSEN-MAPPING: Wende Konfiguration an
+  float cubeX, cubeY, cubeZ;
+
+  // X-Achse des Würfels
+  #ifdef CUBE_X_FROM_PITCH
+    cubeX = qPitch;
+  #elif defined(CUBE_X_FROM_ROLL)
+    cubeX = qRoll;
+  #elif defined(CUBE_X_FROM_HEADING)
+    cubeX = qHeading;
+  #endif
+
+  // Y-Achse des Würfels
+  #ifdef CUBE_Y_FROM_HEADING
+    cubeY = qHeading;
+  #elif defined(CUBE_Y_FROM_PITCH)
+    cubeY = qPitch;
+  #elif defined(CUBE_Y_FROM_ROLL)
+    cubeY = qRoll;
+  #endif
+
+  // Z-Achse des Würfels
+  #ifdef CUBE_Z_FROM_ROLL
+    cubeZ = qRoll;
+  #elif defined(CUBE_Z_FROM_PITCH)
+    cubeZ = qPitch;
+  #elif defined(CUBE_Z_FROM_HEADING)
+    cubeZ = qHeading;
+  #endif
+
+  // VORZEICHEN-INVERSIONEN: Für inverse Kamera-Rotation UND Konfiguration
+  #ifdef INVERT_CUBE_X
+    cubeX = -cubeX;
+  #else
+    cubeX = -cubeX;  // Immer invertieren für Kamera-Effekt
+  #endif
+
+  #ifdef INVERT_CUBE_Y
+    cubeY = -cubeY;
+  #else
+    cubeY = -cubeY;  // Immer invertieren für Kamera-Effekt
+  #endif
+
+  #ifdef INVERT_CUBE_Z
+    cubeZ = -cubeZ;
+  #else
+    cubeZ = -cubeZ;  // Immer invertieren für Kamera-Effekt
+  #endif
+
+  // Trigonometrische Werte
+  float cosX = cos(cubeX), sinX = sin(cubeX);
+  float cosY = cos(cubeY), sinY = sin(cubeY);
+  float cosZ = cos(cubeZ), sinZ = sin(cubeZ);
+
+  // Rotations-Matrizen anwenden (Y → X → Z)
   for (int i = 0; i < 8; i++) {
     Vec3 v = cubeVertices[i] * CUBE_SIZE;
 
-    // Konvertiere Vec3 zu Quaternion (0, x, y, z)
-    imu::Quaternion vQuat(0, v.x, v.y, v.z);
+    // Rotation um Y-Achse
+    float x1 = v.x * cosY - v.z * sinY;
+    float z1 = v.x * sinY + v.z * cosY;
+    float y1 = v.y;
 
-    // Rotation: q * v * q^(-1)
-    imu::Quaternion rotated = invQuat * vQuat * invQuat.conjugate();
+    // Rotation um X-Achse
+    float y2 = y1 * cosX - z1 * sinX;
+    float z2 = y1 * sinX + z1 * cosX;
+    float x2 = x1;
 
-    // Extrahiere rotierte Koordinaten
-    transformedVertices[i] = Vec3(rotated.x(), rotated.y(), rotated.z());
+    // Rotation um Z-Achse
+    float x3 = x2 * cosZ - y2 * sinZ;
+    float y3 = x2 * sinZ + y2 * cosZ;
+    float z3 = z2;
+
+    transformedVertices[i] = Vec3(x3, y3, z3);
   }
 }
 
