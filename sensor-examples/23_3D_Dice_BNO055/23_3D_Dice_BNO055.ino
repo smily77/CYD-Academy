@@ -573,9 +573,9 @@ void rotateCube() {
     transformedQuat = adjustedQuat;
   #endif
 
-  // INVERSE KAMERA-ROTATION
-  // Konjugat = Inverse Rotation (für "Board = Kamera")
-  imu::Quaternion invQuat = transformedQuat.conjugate();
+  // INVERSE KAMERA-ROTATION - TEST: OHNE Konjugat!
+  // Das Konjugat hat die falsche Richtung erzeugt - testen wir ohne!
+  imu::Quaternion invQuat = transformedQuat;
 
   // Hinweis: Falls eine Achse "verkehrt herum" dreht, liegt das meist an der
   // Sensor-Montage. Das Konjugat invertiert alle Achsen korrekt für die Kamera-Perspektive.
