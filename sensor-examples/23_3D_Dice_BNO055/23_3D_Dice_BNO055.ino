@@ -573,13 +573,15 @@ void rotateCube() {
     transformedQuat = adjustedQuat;
   #endif
 
-  // INVERSE KAMERA-ROTATION: Negiere Y und Z Komponenten!
-  // Nach X-Y Vertauschung: Y und Z müssen negiert werden für inverse Rotation
+  // INVERSE KAMERA-ROTATION: Negiere X und Z Komponenten!
+  // X und Z drehen falsch → negieren für korrekte inverse Rotation
+  // Y dreht korrekt → bleibt positiv
+  // (Sensor ist auf Z-Achse kopfüber eingebaut)
   imu::Quaternion invQuat = imu::Quaternion(
     transformedQuat.w(),
-    transformedQuat.x(),      // X bleibt positiv
-    -transformedQuat.y(),     // Y negiert!
-    -transformedQuat.z()      // Z negiert!
+    -transformedQuat.x(),     // X negiert!
+    transformedQuat.y(),      // Y bleibt positiv
+    -transformedQuat.z()      // Z negiert! (Sensor kopfüber)
   );
 
   // Hinweis: Falls eine Achse "verkehrt herum" dreht, liegt das meist an der
