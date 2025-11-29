@@ -276,22 +276,24 @@ private:
     }
 
     // Verhindere 180-Grad Wendungen
+    // WICHTIG: Alle Buttons einzeln prüfen (NICHT else if!)
+    // So werden alle Tasten geprüft, auch wenn eine floatet
     if (CYD_Input::readButton(CYD_BTN_A) && currentDirection != SNAKE_DIR_DOWN) {
       nextDirection = SNAKE_DIR_UP;
       lastButtonPress = now;
       Serial.println("Button: UP");
     }
-    else if (CYD_Input::readButton(CYD_BTN_D) && currentDirection != SNAKE_DIR_UP) {
+    if (CYD_Input::readButton(CYD_BTN_D) && currentDirection != SNAKE_DIR_UP) {
       nextDirection = SNAKE_DIR_DOWN;
       lastButtonPress = now;
       Serial.println("Button: DOWN");
     }
-    else if (CYD_Input::readButton(CYD_BTN_B) && currentDirection != SNAKE_DIR_RIGHT) {
+    if (CYD_Input::readButton(CYD_BTN_B) && currentDirection != SNAKE_DIR_RIGHT) {
       nextDirection = SNAKE_DIR_LEFT;
       lastButtonPress = now;
       Serial.println("Button: LEFT");
     }
-    else if (CYD_Input::readButton(CYD_BTN_C) && currentDirection != SNAKE_DIR_LEFT) {
+    if (CYD_Input::readButton(CYD_BTN_C) && currentDirection != SNAKE_DIR_LEFT) {
       nextDirection = SNAKE_DIR_RIGHT;
       lastButtonPress = now;
       Serial.println("Button: RIGHT");

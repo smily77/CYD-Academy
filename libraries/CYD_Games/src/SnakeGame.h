@@ -190,19 +190,21 @@ private:
     }
 
     // Verhindere 180-Grad Wendungen
+    // WICHTIG: Alle Buttons einzeln prüfen (NICHT else if!)
+    // So werden alle Tasten geprüft, auch wenn eine floatet
     if (CYD_Input::readButton(CYD_BTN_A) && currentDirection != DIR_DOWN) {
       nextDirection = DIR_UP;
       lastButtonPress = now;
     }
-    else if (CYD_Input::readButton(CYD_BTN_D) && currentDirection != DIR_UP) {
+    if (CYD_Input::readButton(CYD_BTN_D) && currentDirection != DIR_UP) {
       nextDirection = DIR_DOWN;
       lastButtonPress = now;
     }
-    else if (CYD_Input::readButton(CYD_BTN_B) && currentDirection != DIR_RIGHT) {
+    if (CYD_Input::readButton(CYD_BTN_B) && currentDirection != DIR_RIGHT) {
       nextDirection = DIR_LEFT;
       lastButtonPress = now;
     }
-    else if (CYD_Input::readButton(CYD_BTN_C) && currentDirection != DIR_LEFT) {
+    if (CYD_Input::readButton(CYD_BTN_C) && currentDirection != DIR_LEFT) {
       nextDirection = DIR_RIGHT;
       lastButtonPress = now;
     }
