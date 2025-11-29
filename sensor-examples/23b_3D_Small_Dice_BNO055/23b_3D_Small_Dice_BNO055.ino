@@ -10,13 +10,19 @@
   einem echten Objekt, das du von allen Seiten betrachten kannst!
 
   Funktionen:
-  - BNO055 9-DoF Sensor für absolute Orientierung
+  - BNO055 Sensor im IMU-Modus (Gyro + Accelerometer, KEIN Magnetometer)
   - 3D-Würfel-Rendering mit Perspektive
   - 6 verschiedenfarbige Seiten mit Würfelaugen (1-6)
   - Direkte Sensor-Werte ohne Smoothing (maximale Responsiveness)
   - Back-face Culling für realistische Darstellung
   - Kalibrierungsstatus-Anzeige
   - Touch für Wireframe-Modus
+
+  WICHTIG - IMU-Modus (IMUPLUS):
+  - Nutzt NUR Gyroskop + Beschleunigungssensor
+  - KEIN Magnetometer (Kompass) → keine Z-Achsen-Störungen durch Metalle/Elektronik
+  - Resultat: Stabile, präzise Rotation um alle Achsen
+  - Perfekt für Indoor-Nutzung (keine Magnetfeld-Abhängigkeit)
 
   Lernziele:
   - 3D-Grafik-Programmierung (Rotation, Projektion)
@@ -302,7 +308,14 @@ void setup() {
     // Setze zu externem Crystal (genauer)
     bno.setExtCrystalUse(true);
 
-    Serial.println("BNO055 initialized!");
+    // WICHTIG: IMU-Modus (ohne Magnetometer/Kompass)
+    // Grund: Magnetometer wird von Metallen/Elektronik gestört → Z-Achsen-Instabilität
+    // IMUPLUS = Gyro + Accelerometer (kein Kompass)
+    // Ergebnis: Stabile Z-Achse, keine Magnetfeld-Störungen
+    bno.setMode(Adafruit_BNO055::OPERATION_MODE_IMUPLUS);
+    delay(100);  // Kurze Pause nach Mode-Wechsel
+
+    Serial.println("BNO055 initialized in IMUPLUS mode (no magnetometer)!");
   }
 
   // Initiale Anzeige
