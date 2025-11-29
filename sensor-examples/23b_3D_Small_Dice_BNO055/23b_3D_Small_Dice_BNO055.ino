@@ -316,23 +316,32 @@ void setup() {
     bno.setExtCrystalUse(true);
     delay(10);
 
-    // 3. IMUPLUS-Modus aktivieren (ohne Magnetometer/Kompass)
+    // 3. IMUPLUS-Modus aktivieren (ohne Magnetometer/Kompass) - direkt mit Hex
     // Grund: Magnetometer wird von Metallen/Elektronik gestört → Z-Achsen-Instabilität
-    // IMUPLUS = Gyro + Accelerometer (kein Kompass)
-    // Ergebnis: Stabile Z-Achse, keine Magnetfeld-Störungen
-    Serial.println("Setting mode to IMUPLUS (no magnetometer)...");
-    bno.setMode(OPERATION_MODE_IMUPLUS);
-    delay(20);  // Warte bis Modus gewechselt ist
+    // 0x08 = IMUPLUS = Gyro + Accelerometer (kein Kompass)
+    // 0x0C = NDOF = Gyro + Accelerometer + Magnetometer (mit Kompass)
+    Serial.println("Setting mode to IMUPLUS (0x08, no magnetometer)...");
+    bno.setMode((adafruit_bno055_opmode_t)0x08);  // Direkt Hex statt Konstante
+    delay(650);  // WICHTIG: BNO055 braucht ~600ms nach Mode-Wechsel!
 
     // 4. Prüfe ob Modus wirklich gesetzt wurde
     uint8_t currentMode = bno.getMode();
     Serial.printf("Current BNO055 Mode: 0x%02X (IMUPLUS=0x08, NDOF=0x0C)\n", currentMode);
 
-    if (currentMode == OPERATION_MODE_IMUPLUS) {
+    if (currentMode == 0x08) {
       Serial.println("✓ SUCCESS: IMUPLUS mode active - NO magnetometer!");
     } else {
       Serial.printf("✗ ERROR: Mode is 0x%02X (expected 0x08)\n", currentMode);
-      Serial.println("  → Z-axis will be unstable (magnetometer active)");
+      Serial.println("  → Falling back to NDOF mode (with magnetometer)...");
+
+      // Fallback auf NDOF (Standard-Modus mit Magnetometer)
+      bno.setMode(OPERATION_MODE_CONFIG);
+      delay(25);
+      bno.setMode(OPERATION_MODE_NDOF);  // 0x0C
+      delay(650);
+
+      currentMode = bno.getMode();
+      Serial.printf("  → Fallback mode: 0x%02X\n", currentMode);
     }
   }
 
