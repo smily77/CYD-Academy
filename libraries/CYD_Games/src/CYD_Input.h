@@ -77,8 +77,9 @@
   #error "FEHLER: Genau EINE Eingabemethode muss definiert sein!"
 #endif
 
-// PCF8574 Library nur laden wenn i2cSwitch oder i2cEnc aktiv
+// PCF8574 Library und Wire nur laden wenn i2cSwitch oder i2cEnc aktiv
 #if defined(i2cSwitch) || defined(i2cEnc)
+  #include <Wire.h>
   #include <PCF8574.h>
 #endif
 
@@ -154,6 +155,12 @@ public:
         #error "FEHLER: pcfAddress muss definiert sein wenn i2cSwitch aktiv ist!"
       #endif
 
+      // I2C Bus initialisieren (extSDA und extSCL aus CYD_Display_Config.h)
+      Wire.begin(extSDA, extSCL);
+      Serial.println("CYD_Input: I2C Bus initialisiert");
+      Serial.printf("  SDA: GPIO %d\n", extSDA);
+      Serial.printf("  SCL: GPIO %d\n", extSCL);
+
       pcf = PCF8574(pcfAddress);
 
       // Alle Pins als Input mit Pullup
@@ -165,6 +172,10 @@ public:
       // PCF8574 starten
       if (!pcf.begin()) {
         Serial.println("FEHLER: PCF8574 nicht gefunden!");
+        Serial.println("Prüfe:");
+        Serial.println("  - PCF8574 korrekt verkabelt? (VCC, GND, SDA, SCL)");
+        Serial.printf("  - I2C-Adresse 0x%02X korrekt?\n", pcfAddress);
+        Serial.println("  - I2C Pullup-Widerstände vorhanden? (4.7k auf SDA und SCL)");
         return false;
       }
 
@@ -204,6 +215,12 @@ public:
         #error "FEHLER: pcfAddress muss definiert sein wenn i2cEnc aktiv ist!"
       #endif
 
+      // I2C Bus initialisieren (extSDA und extSCL aus CYD_Display_Config.h)
+      Wire.begin(extSDA, extSCL);
+      Serial.println("CYD_Input: I2C Bus initialisiert");
+      Serial.printf("  SDA: GPIO %d\n", extSDA);
+      Serial.printf("  SCL: GPIO %d\n", extSCL);
+
       pcf = PCF8574(pcfAddress);
 
       // Encoder-Pins als Input
@@ -214,6 +231,10 @@ public:
       // PCF8574 starten
       if (!pcf.begin()) {
         Serial.println("FEHLER: PCF8574 nicht gefunden!");
+        Serial.println("Prüfe:");
+        Serial.println("  - PCF8574 korrekt verkabelt? (VCC, GND, SDA, SCL)");
+        Serial.printf("  - I2C-Adresse 0x%02X korrekt?\n", pcfAddress);
+        Serial.println("  - I2C Pullup-Widerstände vorhanden? (4.7k auf SDA und SCL)");
         return false;
       }
 
