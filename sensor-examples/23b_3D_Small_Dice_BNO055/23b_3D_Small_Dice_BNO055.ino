@@ -13,7 +13,7 @@
   - BNO055 9-DoF Sensor für absolute Orientierung
   - 3D-Würfel-Rendering mit Perspektive
   - 6 verschiedenfarbige Seiten mit Würfelaugen (1-6)
-  - Smooth Animation mit Exponential Smoothing
+  - SLERP-basiertes Smoothing (4 Modi: NONE/LOW/MEDIUM/HIGH)
   - Back-face Culling für realistische Darstellung
   - Kalibrierungsstatus-Anzeige
   - Touch-Interaktion für Einstellungen
@@ -57,7 +57,11 @@
     • Drehen → Würfel von allen Seiten sehen
   - Touch Links: Demo-Rotation aktivieren/deaktivieren
   - Touch Rechts: Wireframe-Modus (nur Kanten)
-  - Touch Mitte: Kalibrierungshilfe anzeigen
+  - Touch Mitte: Smoothing-Modus umschalten (NONE→LOW→MED→HIGH)
+    • NONE (Rot): Kein Smoothing, direkt vom Sensor (beste Responsiveness)
+    • LOW (Gelb): Minimales Smoothing, sehr responsiv
+    • MEDIUM (Grün): Ausgewogen
+    • HIGH (Blau): Starkes Smoothing, sehr flüssig
 */
 
 #include <CYD_Display_Config.h>
@@ -128,9 +132,20 @@ const float PERSPECTIVE_DISTANCE = 250.0; // Kamera-Distanz (größer = weniger 
 const int SCREEN_CENTER_X = 120;        // Bildschirm-Mitte X (240/2)
 const int SCREEN_CENTER_Y = 140;        // Bildschirm-Mitte Y (etwas unten)
 
-// Animation
-const float SMOOTH_FACTOR = 0.15;       // Smoothing-Faktor (0.0-1.0)
+// Animation & Smoothing
 const float DEMO_ROTATION_SPEED = 0.5;  // Grad pro Frame für Demo
+
+// Smoothing-Modi (0=NONE, 1=LOW, 2=MEDIUM, 3=HIGH)
+enum SmoothingMode {
+  SMOOTH_NONE = 0,    // 1.0 - Kein Smoothing (direkt vom Sensor)
+  SMOOTH_LOW = 1,     // 0.6 - Sehr responsiv, minimales Smoothing
+  SMOOTH_MEDIUM = 2,  // 0.3 - Ausgewogen
+  SMOOTH_HIGH = 3     // 0.15 - Sehr smooth (Original)
+};
+
+const float SMOOTH_FACTORS[4] = {1.0, 0.6, 0.3, 0.15};
+const char* SMOOTH_NAMES[4] = {"NONE", "LOW", "MED", "HIGH"};
+SmoothingMode currentSmoothMode = SMOOTH_LOW;  // Standard: LOW (bessere Responsiveness)
 
 // ===== STRUKTUREN =====
 
@@ -434,20 +449,73 @@ void readSensor() {
 }
 
 void smoothValues() {
-  // Quaternion-Smoothing (SLERP - Spherical Linear Interpolation)
-  // Einfache Version: Lineares Interpolieren und dann normalisieren
+  // Quaternion-Smoothing mit SLERP (Spherical Linear Interpolation)
+  // SLERP ist die mathematisch korrekte Methode für Quaternion-Interpolation
 
-  smoothQuat.w() = smoothQuat.w() + (currentQuat.w() - smoothQuat.w()) * SMOOTH_FACTOR;
-  smoothQuat.x() = smoothQuat.x() + (currentQuat.x() - smoothQuat.x()) * SMOOTH_FACTOR;
-  smoothQuat.y() = smoothQuat.y() + (currentQuat.y() - smoothQuat.y()) * SMOOTH_FACTOR;
-  smoothQuat.z() = smoothQuat.z() + (currentQuat.z() - smoothQuat.z()) * SMOOTH_FACTOR;
+  float t = SMOOTH_FACTORS[currentSmoothMode];  // Interpolations-Faktor
 
-  // Normalisieren (wichtig für Quaternionen!)
+  // Spezialfall: Kein Smoothing (t=1.0) → direkt übernehmen
+  if (t >= 0.99) {
+    smoothQuat = currentQuat;
+    return;
+  }
+
+  // SLERP Implementation
+  // q(t) = (sin((1-t)θ) / sin(θ)) * q1 + (sin(t·θ) / sin(θ)) * q2
+
+  // 1. Berechne Dot-Product (Kosinus des Winkels zwischen Quaternionen)
+  float dot = smoothQuat.w() * currentQuat.w() +
+              smoothQuat.x() * currentQuat.x() +
+              smoothQuat.y() * currentQuat.y() +
+              smoothQuat.z() * currentQuat.z();
+
+  // 2. Falls Dot-Product negativ: kürzeren Weg nehmen (negiere ein Quaternion)
+  imu::Quaternion q2 = currentQuat;
+  if (dot < 0.0) {
+    q2 = imu::Quaternion(-currentQuat.w(), -currentQuat.x(), -currentQuat.y(), -currentQuat.z());
+    dot = -dot;
+  }
+
+  // 3. Spezialfall: Quaternionen sind fast identisch (dot ≈ 1) → LERP verwenden
+  if (dot > 0.9995) {
+    // Linear interpolation (für sehr kleine Winkel)
+    smoothQuat.w() = smoothQuat.w() + (q2.w() - smoothQuat.w()) * t;
+    smoothQuat.x() = smoothQuat.x() + (q2.x() - smoothQuat.x()) * t;
+    smoothQuat.y() = smoothQuat.y() + (q2.y() - smoothQuat.y()) * t;
+    smoothQuat.z() = smoothQuat.z() + (q2.z() - smoothQuat.z()) * t;
+
+    // Normalisieren
+    float length = sqrt(smoothQuat.w() * smoothQuat.w() +
+                        smoothQuat.x() * smoothQuat.x() +
+                        smoothQuat.y() * smoothQuat.y() +
+                        smoothQuat.z() * smoothQuat.z());
+    if (length > 0.0001) {
+      smoothQuat.w() /= length;
+      smoothQuat.x() /= length;
+      smoothQuat.y() /= length;
+      smoothQuat.z() /= length;
+    }
+    return;
+  }
+
+  // 4. Echtes SLERP für größere Winkel
+  float theta = acos(dot);           // Winkel zwischen Quaternionen
+  float sinTheta = sin(theta);       // sin(θ)
+
+  float ratio1 = sin((1.0 - t) * theta) / sinTheta;  // Gewicht für q1
+  float ratio2 = sin(t * theta) / sinTheta;          // Gewicht für q2
+
+  // Interpoliertes Quaternion
+  smoothQuat.w() = smoothQuat.w() * ratio1 + q2.w() * ratio2;
+  smoothQuat.x() = smoothQuat.x() * ratio1 + q2.x() * ratio2;
+  smoothQuat.y() = smoothQuat.y() * ratio1 + q2.y() * ratio2;
+  smoothQuat.z() = smoothQuat.z() * ratio1 + q2.z() * ratio2;
+
+  // SLERP garantiert normalisierte Quaternionen, aber Floating-Point-Fehler können auftreten
   float length = sqrt(smoothQuat.w() * smoothQuat.w() +
                       smoothQuat.x() * smoothQuat.x() +
                       smoothQuat.y() * smoothQuat.y() +
                       smoothQuat.z() * smoothQuat.z());
-
   if (length > 0.0001) {
     smoothQuat.w() /= length;
     smoothQuat.x() /= length;
@@ -492,21 +560,29 @@ void handleTouch() {
     lcd.drawString(showWireframe ? "WIRE ON" : "WIRE OFF", 200, 302);
     delay(500);
   }
-  // Mitte: Z-Achse nullen (Reset Nullpunkt)
+  // Mitte: Smoothing-Modus umschalten
   else {
-    if (sensorConnected && !demoMode) {
-      // Speichere aktuelles Quaternion als Nullpunkt
-      zeroQuat = smoothQuat.conjugate();
-      Serial.println(">>> Z-ACHSE GENULLT! (Nullpunkt gesetzt)");
+    // Cycle durch Modi: LOW → MEDIUM → HIGH → NONE → LOW ...
+    currentSmoothMode = (SmoothingMode)((currentSmoothMode + 1) % 4);
+    Serial.printf("Smoothing Mode: %s (factor=%.2f)\n",
+                  SMOOTH_NAMES[currentSmoothMode],
+                  SMOOTH_FACTORS[currentSmoothMode]);
 
-      // Feedback
-      lcd.fillRect(80, 290, 80, 25, COLOR_CAL_MED);
-      lcd.setTextSize(1);
-      lcd.setTextColor(COLOR_BG);
-      lcd.setTextDatum(MC_DATUM);
-      lcd.drawString("Z-RESET", 120, 302);
-      delay(500);
+    // Feedback mit Farbe je nach Modus
+    uint16_t modeColor;
+    switch (currentSmoothMode) {
+      case SMOOTH_NONE:   modeColor = 0xF800; break;  // Rot (kein Smoothing)
+      case SMOOTH_LOW:    modeColor = 0xFFE0; break;  // Gelb (wenig)
+      case SMOOTH_MEDIUM: modeColor = 0x07E0; break;  // Grün (mittel)
+      case SMOOTH_HIGH:   modeColor = 0x001F; break;  // Blau (viel)
     }
+
+    lcd.fillRect(80, 290, 80, 25, modeColor);
+    lcd.setTextSize(1);
+    lcd.setTextColor(COLOR_BG);
+    lcd.setTextDatum(MC_DATUM);
+    lcd.drawString(String("SMOOTH: ") + SMOOTH_NAMES[currentSmoothMode], 120, 302);
+    delay(500);
   }
 
   lcd.fillScreen(COLOR_BG);
@@ -904,6 +980,19 @@ void drawUI() {
     lcd.setTextDatum(TL_DATUM);
     lcd.drawString("DEMO", 5, 5);
   }
+
+  // Smoothing-Modus Indikator (unten links)
+  lcd.setTextSize(1);
+  uint16_t smoothColor;
+  switch (currentSmoothMode) {
+    case SMOOTH_NONE:   smoothColor = 0xF800; break;  // Rot
+    case SMOOTH_LOW:    smoothColor = 0xFFE0; break;  // Gelb
+    case SMOOTH_MEDIUM: smoothColor = 0x07E0; break;  // Grün
+    case SMOOTH_HIGH:   smoothColor = 0x001F; break;  // Blau
+  }
+  lcd.setTextColor(smoothColor);
+  lcd.setTextDatum(BL_DATUM);
+  lcd.drawString(String("SM:") + SMOOTH_NAMES[currentSmoothMode], 5, 315);
 
   // Orientierungs-Werte (unten)
   lcd.setTextSize(1);
