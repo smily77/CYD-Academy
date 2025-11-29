@@ -13,10 +13,10 @@
   - BNO055 9-DoF Sensor für absolute Orientierung
   - 3D-Würfel-Rendering mit Perspektive
   - 6 verschiedenfarbige Seiten mit Würfelaugen (1-6)
-  - SLERP-basiertes Smoothing (4 Modi: NONE/LOW/MEDIUM/HIGH)
+  - Direkte Sensor-Werte ohne Smoothing (maximale Responsiveness)
   - Back-face Culling für realistische Darstellung
   - Kalibrierungsstatus-Anzeige
-  - Touch-Interaktion für Einstellungen
+  - Touch für Wireframe-Modus
 
   Lernziele:
   - 3D-Grafik-Programmierung (Rotation, Projektion)
@@ -55,13 +55,7 @@
     • Nach rechts neigen → Würfel von rechts betrachten
     • Nach vorne kippen → Würfel von oben betrachten
     • Drehen → Würfel von allen Seiten sehen
-  - Touch Links: Demo-Rotation aktivieren/deaktivieren
-  - Touch Rechts: Wireframe-Modus (nur Kanten)
-  - Touch Mitte: Smoothing-Modus umschalten (NONE→LOW→MED→HIGH)
-    • NONE (Rot): Kein Smoothing, direkt vom Sensor (beste Responsiveness)
-    • LOW (Gelb): Minimales Smoothing, sehr responsiv
-    • MEDIUM (Grün): Ausgewogen
-    • HIGH (Blau): Starkes Smoothing, sehr flüssig
+  - Touch irgendwo: Wireframe-Modus umschalten (gefüllt ↔ nur Kanten)
 */
 
 #include <CYD_Display_Config.h>
@@ -132,20 +126,8 @@ const float PERSPECTIVE_DISTANCE = 250.0; // Kamera-Distanz (größer = weniger 
 const int SCREEN_CENTER_X = 120;        // Bildschirm-Mitte X (240/2)
 const int SCREEN_CENTER_Y = 140;        // Bildschirm-Mitte Y (etwas unten)
 
-// Animation & Smoothing
-const float DEMO_ROTATION_SPEED = 0.5;  // Grad pro Frame für Demo
-
-// Smoothing-Modi (0=NONE, 1=LOW, 2=MEDIUM, 3=HIGH)
-enum SmoothingMode {
-  SMOOTH_NONE = 0,    // 1.0 - Kein Smoothing (direkt vom Sensor)
-  SMOOTH_LOW = 1,     // 0.6 - Sehr responsiv, minimales Smoothing
-  SMOOTH_MEDIUM = 2,  // 0.3 - Ausgewogen
-  SMOOTH_HIGH = 3     // 0.15 - Sehr smooth (Original)
-};
-
-const float SMOOTH_FACTORS[4] = {1.0, 0.6, 0.3, 0.15};
-const char* SMOOTH_NAMES[4] = {"NONE", "LOW", "MED", "HIGH"};
-SmoothingMode currentSmoothMode = SMOOTH_LOW;  // Standard: LOW (bessere Responsiveness)
+// Animation
+// Kein Smoothing - direkte Sensor-Werte für maximale Responsiveness und Präzision
 
 // ===== STRUKTUREN =====
 
@@ -263,22 +245,12 @@ float lastHeading = 0.0;
 float lastPitch = 0.0;
 float lastRoll = 0.0;
 
-// Geglättete Orientierung (für Demo-Modus)
-float smoothHeading = 0.0;
-float smoothRoll = 0.0;
-float smoothPitch = 0.0;
-
-// Quaternionen (vermeidet Gimbal Lock - DAS IST DER FIX!)
-imu::Quaternion currentQuat(1, 0, 0, 0);  // Identity Quaternion
-imu::Quaternion smoothQuat(1, 0, 0, 0);
+// Quaternionen (direkt vom Sensor, kein Smoothing)
+imu::Quaternion currentQuat(1, 0, 0, 0);  // Aktuelle Orientierung
 imu::Quaternion zeroQuat(1, 0, 0, 0);     // Nullpunkt-Quaternion (für Achsen-Reset)
 
 // Kalibrierungsstatus
 uint8_t calSystem = 0;
-
-// Demo-Modus
-bool demoMode = false;
-float demoAngle = 0.0;
 
 // Touch-Handling
 unsigned long lastTouchTime = 0;
@@ -318,8 +290,8 @@ void setup() {
     Serial.println("BNO055 not found!");
     drawErrorScreen();
     sensorConnected = false;
-    // Im Demo-Modus weiterlaufen
-    demoMode = true;
+    // Stoppe Programm wenn Sensor nicht gefunden
+    while(1) { delay(1000); }
   } else {
     sensorConnected = true;
     Serial.println("BNO055 found!");
@@ -354,18 +326,8 @@ void setup() {
 // ===== LOOP =====
 
 void loop() {
-  // Sensor auslesen (oder Demo-Rotation)
-  if (sensorConnected && !demoMode) {
-    readSensor();
-    smoothValues();
-  } else {
-    // Demo-Rotation
-    demoAngle += DEMO_ROTATION_SPEED;
-    if (demoAngle >= 360) demoAngle -= 360;
-    smoothHeading = demoAngle;
-    smoothRoll = sin(demoAngle * PI / 180.0) * 30;
-    smoothPitch = cos(demoAngle * PI / 180.0) * 30;
-  }
+  // Sensor auslesen (direkt, kein Smoothing)
+  readSensor();
 
   // Touch-Handling
   handleTouch();
@@ -448,82 +410,6 @@ void readSensor() {
   }
 }
 
-void smoothValues() {
-  // Quaternion-Smoothing mit SLERP (Spherical Linear Interpolation)
-  // SLERP ist die mathematisch korrekte Methode für Quaternion-Interpolation
-
-  float t = SMOOTH_FACTORS[currentSmoothMode];  // Interpolations-Faktor
-
-  // Spezialfall: Kein Smoothing (t=1.0) → direkt übernehmen
-  if (t >= 0.99) {
-    smoothQuat = currentQuat;
-    return;
-  }
-
-  // SLERP Implementation
-  // q(t) = (sin((1-t)θ) / sin(θ)) * q1 + (sin(t·θ) / sin(θ)) * q2
-
-  // 1. Berechne Dot-Product (Kosinus des Winkels zwischen Quaternionen)
-  float dot = smoothQuat.w() * currentQuat.w() +
-              smoothQuat.x() * currentQuat.x() +
-              smoothQuat.y() * currentQuat.y() +
-              smoothQuat.z() * currentQuat.z();
-
-  // 2. Falls Dot-Product negativ: kürzeren Weg nehmen (negiere ein Quaternion)
-  imu::Quaternion q2 = currentQuat;
-  if (dot < 0.0) {
-    q2 = imu::Quaternion(-currentQuat.w(), -currentQuat.x(), -currentQuat.y(), -currentQuat.z());
-    dot = -dot;
-  }
-
-  // 3. Spezialfall: Quaternionen sind fast identisch (dot ≈ 1) → LERP verwenden
-  if (dot > 0.9995) {
-    // Linear interpolation (für sehr kleine Winkel)
-    smoothQuat.w() = smoothQuat.w() + (q2.w() - smoothQuat.w()) * t;
-    smoothQuat.x() = smoothQuat.x() + (q2.x() - smoothQuat.x()) * t;
-    smoothQuat.y() = smoothQuat.y() + (q2.y() - smoothQuat.y()) * t;
-    smoothQuat.z() = smoothQuat.z() + (q2.z() - smoothQuat.z()) * t;
-
-    // Normalisieren
-    float length = sqrt(smoothQuat.w() * smoothQuat.w() +
-                        smoothQuat.x() * smoothQuat.x() +
-                        smoothQuat.y() * smoothQuat.y() +
-                        smoothQuat.z() * smoothQuat.z());
-    if (length > 0.0001) {
-      smoothQuat.w() /= length;
-      smoothQuat.x() /= length;
-      smoothQuat.y() /= length;
-      smoothQuat.z() /= length;
-    }
-    return;
-  }
-
-  // 4. Echtes SLERP für größere Winkel
-  float theta = acos(dot);           // Winkel zwischen Quaternionen
-  float sinTheta = sin(theta);       // sin(θ)
-
-  float ratio1 = sin((1.0 - t) * theta) / sinTheta;  // Gewicht für q1
-  float ratio2 = sin(t * theta) / sinTheta;          // Gewicht für q2
-
-  // Interpoliertes Quaternion
-  smoothQuat.w() = smoothQuat.w() * ratio1 + q2.w() * ratio2;
-  smoothQuat.x() = smoothQuat.x() * ratio1 + q2.x() * ratio2;
-  smoothQuat.y() = smoothQuat.y() * ratio1 + q2.y() * ratio2;
-  smoothQuat.z() = smoothQuat.z() * ratio1 + q2.z() * ratio2;
-
-  // SLERP garantiert normalisierte Quaternionen, aber Floating-Point-Fehler können auftreten
-  float length = sqrt(smoothQuat.w() * smoothQuat.w() +
-                      smoothQuat.x() * smoothQuat.x() +
-                      smoothQuat.y() * smoothQuat.y() +
-                      smoothQuat.z() * smoothQuat.z());
-  if (length > 0.0001) {
-    smoothQuat.w() /= length;
-    smoothQuat.x() /= length;
-    smoothQuat.y() /= length;
-    smoothQuat.z() /= length;
-  }
-}
-
 // ===== TOUCH HANDLING =====
 
 void handleTouch() {
@@ -534,56 +420,17 @@ void handleTouch() {
   if (millis() - lastTouchTime < 500) return;
   lastTouchTime = millis();
 
-  // Linker Bereich: Demo-Modus toggle
-  if (x < 80) {
-    demoMode = !demoMode;
-    Serial.printf("Demo Mode: %s\n", demoMode ? "ON" : "OFF");
+  // Touch irgendwo: Wireframe toggle
+  showWireframe = !showWireframe;
+  Serial.printf("Wireframe: %s\n", showWireframe ? "ON" : "OFF");
 
-    // Feedback
-    lcd.fillRect(5, 290, 70, 25, demoMode ? COLOR_CAL_FULL : COLOR_CAL_NONE);
-    lcd.setTextSize(1);
-    lcd.setTextColor(COLOR_BG);
-    lcd.setTextDatum(MC_DATUM);
-    lcd.drawString(demoMode ? "DEMO ON" : "DEMO OFF", 40, 302);
-    delay(500);
-  }
-  // Rechter Bereich: Wireframe toggle
-  else if (x > 160) {
-    showWireframe = !showWireframe;
-    Serial.printf("Wireframe: %s\n", showWireframe ? "ON" : "OFF");
-
-    // Feedback
-    lcd.fillRect(165, 290, 70, 25, showWireframe ? COLOR_CAL_FULL : COLOR_CAL_NONE);
-    lcd.setTextSize(1);
-    lcd.setTextColor(COLOR_BG);
-    lcd.setTextDatum(MC_DATUM);
-    lcd.drawString(showWireframe ? "WIRE ON" : "WIRE OFF", 200, 302);
-    delay(500);
-  }
-  // Mitte: Smoothing-Modus umschalten
-  else {
-    // Cycle durch Modi: LOW → MEDIUM → HIGH → NONE → LOW ...
-    currentSmoothMode = (SmoothingMode)((currentSmoothMode + 1) % 4);
-    Serial.printf("Smoothing Mode: %s (factor=%.2f)\n",
-                  SMOOTH_NAMES[currentSmoothMode],
-                  SMOOTH_FACTORS[currentSmoothMode]);
-
-    // Feedback mit Farbe je nach Modus
-    uint16_t modeColor;
-    switch (currentSmoothMode) {
-      case SMOOTH_NONE:   modeColor = 0xF800; break;  // Rot (kein Smoothing)
-      case SMOOTH_LOW:    modeColor = 0xFFE0; break;  // Gelb (wenig)
-      case SMOOTH_MEDIUM: modeColor = 0x07E0; break;  // Grün (mittel)
-      case SMOOTH_HIGH:   modeColor = 0x001F; break;  // Blau (viel)
-    }
-
-    lcd.fillRect(80, 290, 80, 25, modeColor);
-    lcd.setTextSize(1);
-    lcd.setTextColor(COLOR_BG);
-    lcd.setTextDatum(MC_DATUM);
-    lcd.drawString(String("SMOOTH: ") + SMOOTH_NAMES[currentSmoothMode], 120, 302);
-    delay(500);
-  }
+  // Feedback
+  lcd.fillRect(60, 290, 120, 25, showWireframe ? COLOR_CAL_FULL : COLOR_CAL_NONE);
+  lcd.setTextSize(1);
+  lcd.setTextColor(COLOR_BG);
+  lcd.setTextDatum(MC_DATUM);
+  lcd.drawString(showWireframe ? "WIRE ON" : "WIRE OFF", 120, 302);
+  delay(500);
 
   lcd.fillScreen(COLOR_BG);
 }
@@ -623,7 +470,7 @@ void rotateCube() {
   // Vermeidet Gimbal Lock!
 
   // Wende Nullpunkt an (für Achsen-Reset)
-  imu::Quaternion adjustedQuat = zeroQuat * smoothQuat;
+  imu::Quaternion adjustedQuat = zeroQuat * currentQuat;
 
   // Erstelle Achsen-Transformations-Quaternion basierend auf Konfiguration
   imu::Quaternion transformedQuat = adjustedQuat;
@@ -901,7 +748,7 @@ void drawAxisIndicator() {
 
   // Hole das aktuelle inverse Quaternion (gleiche Rotation wie Würfel)
   // Wiederhole die Rotation aus rotateCube()
-  imu::Quaternion adjustedQuat = zeroQuat * smoothQuat;
+  imu::Quaternion adjustedQuat = zeroQuat * currentQuat;
   imu::Quaternion transformedQuat = adjustedQuat;
 
   float qw = adjustedQuat.w();
@@ -960,39 +807,16 @@ void drawAxisIndicator() {
 
 void drawUI() {
   // Kalibrierungs-Indikator (oben rechts)
-  if (sensorConnected && !demoMode) {
-    lcd.setTextSize(1);
-    lcd.setTextColor(COLOR_TEXT_DIM);
-    lcd.setTextDatum(TL_DATUM);
-    lcd.drawString("CAL:", 180, 5);
-
-    uint16_t calColor = getCalibrationColor(calSystem);
-    lcd.fillCircle(215, 9, 6, calColor);
-    lcd.setTextColor(COLOR_BG);
-    lcd.setTextDatum(MC_DATUM);
-    lcd.drawString(String(calSystem), 215, 9);
-  }
-
-  // Demo-Modus Indikator
-  if (demoMode) {
-    lcd.setTextSize(1);
-    lcd.setTextColor(COLOR_CAL_LOW);
-    lcd.setTextDatum(TL_DATUM);
-    lcd.drawString("DEMO", 5, 5);
-  }
-
-  // Smoothing-Modus Indikator (unten links)
   lcd.setTextSize(1);
-  uint16_t smoothColor;
-  switch (currentSmoothMode) {
-    case SMOOTH_NONE:   smoothColor = 0xF800; break;  // Rot
-    case SMOOTH_LOW:    smoothColor = 0xFFE0; break;  // Gelb
-    case SMOOTH_MEDIUM: smoothColor = 0x07E0; break;  // Grün
-    case SMOOTH_HIGH:   smoothColor = 0x001F; break;  // Blau
-  }
-  lcd.setTextColor(smoothColor);
-  lcd.setTextDatum(BL_DATUM);
-  lcd.drawString(String("SM:") + SMOOTH_NAMES[currentSmoothMode], 5, 315);
+  lcd.setTextColor(COLOR_TEXT_DIM);
+  lcd.setTextDatum(TL_DATUM);
+  lcd.drawString("CAL:", 180, 5);
+
+  uint16_t calColor = getCalibrationColor(calSystem);
+  lcd.fillCircle(215, 9, 6, calColor);
+  lcd.setTextColor(COLOR_BG);
+  lcd.setTextDatum(MC_DATUM);
+  lcd.drawString(String(calSystem), 215, 9);
 
   // Orientierungs-Werte (unten)
   lcd.setTextSize(1);
@@ -1000,7 +824,7 @@ void drawUI() {
   lcd.setTextDatum(BC_DATUM);
 
   char buf[40];
-  sprintf(buf, "Y:%.0f R:%.0f P:%.0f", smoothHeading, smoothRoll, smoothPitch);
+  sprintf(buf, "Y:%.0f R:%.0f P:%.0f", heading, roll, pitch);
   lcd.drawString(buf, 120, 285);
 }
 
@@ -1067,9 +891,10 @@ void drawErrorScreen() {
   lcd.drawString("I2C Address:", 10, 210);
   lcd.drawString("0x28 or 0x29", 10, 225);
 
-  lcd.setTextColor(COLOR_CAL_LOW);
+  lcd.setTextColor(COLOR_CAL_NONE);
   lcd.setTextDatum(MC_DATUM);
-  lcd.drawString("Running in DEMO mode", 120, 260);
+  lcd.drawString("Program halted", 120, 260);
+  lcd.drawString("Fix wiring & restart", 120, 280);
 
   delay(3000);
 }
