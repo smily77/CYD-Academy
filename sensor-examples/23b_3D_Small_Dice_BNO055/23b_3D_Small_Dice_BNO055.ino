@@ -10,13 +10,19 @@
   einem echten Objekt, das du von allen Seiten betrachten kannst!
 
   Funktionen:
-  - BNO055 9-DoF Sensor für absolute Orientierung
+  - BNO055 Sensor im IMU-Modus (Gyro + Accelerometer, KEIN Magnetometer)
   - 3D-Würfel-Rendering mit Perspektive
   - 6 verschiedenfarbige Seiten mit Würfelaugen (1-6)
   - Direkte Sensor-Werte ohne Smoothing (maximale Responsiveness)
   - Back-face Culling für realistische Darstellung
   - Kalibrierungsstatus-Anzeige
   - Touch für Wireframe-Modus
+
+  WICHTIG - IMU-Modus (IMUPLUS):
+  - Nutzt NUR Gyroskop + Beschleunigungssensor
+  - KEIN Magnetometer (Kompass) → keine Z-Achsen-Störungen durch Metalle/Elektronik
+  - Resultat: Stabile, präzise Rotation um alle Achsen
+  - Perfekt für Indoor-Nutzung (keine Magnetfeld-Abhängigkeit)
 
   Lernziele:
   - 3D-Grafik-Programmierung (Rotation, Projektion)
@@ -299,10 +305,44 @@ void setup() {
     // Warte auf Sensor-Initialisierung
     delay(1000);
 
-    // Setze zu externem Crystal (genauer)
-    bno.setExtCrystalUse(true);
+    // WICHTIG: Reihenfolge für Mode-Wechsel!
+    // 1. CONFIG-Modus aktivieren (erlaubt Einstellungs-Änderungen)
+    Serial.println("Switching to CONFIG mode...");
+    bno.setMode(OPERATION_MODE_CONFIG);
+    delay(25);  // Muss warten bis CONFIG-Modus aktiv ist
 
-    Serial.println("BNO055 initialized!");
+    // 2. Externes Crystal aktivieren (genauer)
+    Serial.println("Enabling external crystal...");
+    bno.setExtCrystalUse(true);
+    delay(10);
+
+    // 3. IMUPLUS-Modus aktivieren (ohne Magnetometer/Kompass) - direkt mit Hex
+    // Grund: Magnetometer wird von Metallen/Elektronik gestört → Z-Achsen-Instabilität
+    // 0x08 = IMUPLUS = Gyro + Accelerometer (kein Kompass)
+    // 0x0C = NDOF = Gyro + Accelerometer + Magnetometer (mit Kompass)
+    Serial.println("Setting mode to IMUPLUS (0x08, no magnetometer)...");
+    bno.setMode((adafruit_bno055_opmode_t)0x08);  // Direkt Hex statt Konstante
+    delay(650);  // WICHTIG: BNO055 braucht ~600ms nach Mode-Wechsel!
+
+    // 4. Prüfe ob Modus wirklich gesetzt wurde
+    uint8_t currentMode = bno.getMode();
+    Serial.printf("Current BNO055 Mode: 0x%02X (IMUPLUS=0x08, NDOF=0x0C)\n", currentMode);
+
+    if (currentMode == 0x08) {
+      Serial.println("✓ SUCCESS: IMUPLUS mode active - NO magnetometer!");
+    } else {
+      Serial.printf("✗ ERROR: Mode is 0x%02X (expected 0x08)\n", currentMode);
+      Serial.println("  → Falling back to NDOF mode (with magnetometer)...");
+
+      // Fallback auf NDOF (Standard-Modus mit Magnetometer)
+      bno.setMode(OPERATION_MODE_CONFIG);
+      delay(25);
+      bno.setMode(OPERATION_MODE_NDOF);  // 0x0C
+      delay(650);
+
+      currentMode = bno.getMode();
+      Serial.printf("  → Fallback mode: 0x%02X\n", currentMode);
+    }
   }
 
   // Initiale Anzeige
@@ -817,15 +857,6 @@ void drawUI() {
   lcd.setTextColor(COLOR_BG);
   lcd.setTextDatum(MC_DATUM);
   lcd.drawString(String(calSystem), 215, 9);
-
-  // Orientierungs-Werte (unten)
-  lcd.setTextSize(1);
-  lcd.setTextColor(COLOR_TEXT_DIM);
-  lcd.setTextDatum(BC_DATUM);
-
-  char buf[40];
-  sprintf(buf, "Y:%.0f R:%.0f P:%.0f", heading, roll, pitch);
-  lcd.drawString(buf, 120, 285);
 }
 
 uint16_t getCalibrationColor(uint8_t calValue) {
