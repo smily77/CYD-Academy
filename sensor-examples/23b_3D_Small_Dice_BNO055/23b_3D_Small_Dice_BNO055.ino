@@ -305,26 +305,34 @@ void setup() {
     // Warte auf Sensor-Initialisierung
     delay(1000);
 
-    // Setze zu externem Crystal (genauer)
-    bno.setExtCrystalUse(true);
+    // WICHTIG: Reihenfolge für Mode-Wechsel!
+    // 1. CONFIG-Modus aktivieren (erlaubt Einstellungs-Änderungen)
+    Serial.println("Switching to CONFIG mode...");
+    bno.setMode(OPERATION_MODE_CONFIG);
+    delay(25);  // Muss warten bis CONFIG-Modus aktiv ist
 
-    // WICHTIG: IMU-Modus (ohne Magnetometer/Kompass)
+    // 2. Externes Crystal aktivieren (genauer)
+    Serial.println("Enabling external crystal...");
+    bno.setExtCrystalUse(true);
+    delay(10);
+
+    // 3. IMUPLUS-Modus aktivieren (ohne Magnetometer/Kompass)
     // Grund: Magnetometer wird von Metallen/Elektronik gestört → Z-Achsen-Instabilität
     // IMUPLUS = Gyro + Accelerometer (kein Kompass)
     // Ergebnis: Stabile Z-Achse, keine Magnetfeld-Störungen
-
-    Serial.println("Setting mode to IMUPLUS...");
+    Serial.println("Setting mode to IMUPLUS (no magnetometer)...");
     bno.setMode(OPERATION_MODE_IMUPLUS);
-    delay(100);  // Kurze Pause nach Mode-Wechsel
+    delay(20);  // Warte bis Modus gewechselt ist
 
-    // Prüfe ob Modus wirklich gesetzt wurde
+    // 4. Prüfe ob Modus wirklich gesetzt wurde
     uint8_t currentMode = bno.getMode();
-    Serial.printf("Current BNO055 Mode: 0x%02X (IMUPLUS=0x08)\n", currentMode);
+    Serial.printf("Current BNO055 Mode: 0x%02X (IMUPLUS=0x08, NDOF=0x0C)\n", currentMode);
 
     if (currentMode == OPERATION_MODE_IMUPLUS) {
-      Serial.println("✓ IMUPLUS mode active - NO magnetometer");
+      Serial.println("✓ SUCCESS: IMUPLUS mode active - NO magnetometer!");
     } else {
-      Serial.printf("✗ WARNING: Mode is NOT IMUPLUS! (Mode=0x%02X)\n", currentMode);
+      Serial.printf("✗ ERROR: Mode is 0x%02X (expected 0x08)\n", currentMode);
+      Serial.println("  → Z-axis will be unstable (magnetometer active)");
     }
   }
 
