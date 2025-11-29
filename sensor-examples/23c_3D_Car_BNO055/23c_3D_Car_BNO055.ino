@@ -663,75 +663,7 @@ void drawFilledQuad(Point2D p0, Point2D p1, Point2D p2, Point2D p3, uint16_t col
   }
 }
 
-void drawDiceDots(Point2D p[4], int value) {
-  // Berechne Mittelpunkt und Größe der Fläche
-  int cx = (p[0].x + p[1].x + p[2].x + p[3].x) / 4;
-  int cy = (p[0].y + p[1].y + p[2].y + p[3].y) / 4;
-
-  // Berechne durchschnittliche Größe (Distanz vom Zentrum zu Ecken)
-  float avgDist = 0;
-  for (int i = 0; i < 4; i++) {
-    float dx = p[i].x - cx;
-    float dy = p[i].y - cy;
-    avgDist += sqrt(dx*dx + dy*dy);
-  }
-  avgDist /= 4.0;
-
-  // Punkt-Radius (proportional zur Flächengröße)
-  int dotRadius = max(2, (int)(avgDist * 0.15));
-  int spacing = (int)(avgDist * 0.5);
-
-  // Zu klein? Nicht zeichnen
-  if (dotRadius < 2 || spacing < 6) return;
-
-  // Zeichne Würfelaugen basierend auf Wert
-  switch (value) {
-    case 1:
-      // Mitte
-      lcd.fillCircle(cx, cy, dotRadius, DICE_DOT);
-      break;
-
-    case 2:
-      // Diagonal (links-oben, rechts-unten)
-      lcd.fillCircle(cx - spacing/2, cy - spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx + spacing/2, cy + spacing/2, dotRadius, DICE_DOT);
-      break;
-
-    case 3:
-      // Diagonal + Mitte
-      lcd.fillCircle(cx - spacing/2, cy - spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx, cy, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx + spacing/2, cy + spacing/2, dotRadius, DICE_DOT);
-      break;
-
-    case 4:
-      // Vier Ecken
-      lcd.fillCircle(cx - spacing/2, cy - spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx + spacing/2, cy - spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx - spacing/2, cy + spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx + spacing/2, cy + spacing/2, dotRadius, DICE_DOT);
-      break;
-
-    case 5:
-      // Vier Ecken + Mitte
-      lcd.fillCircle(cx - spacing/2, cy - spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx + spacing/2, cy - spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx, cy, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx - spacing/2, cy + spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx + spacing/2, cy + spacing/2, dotRadius, DICE_DOT);
-      break;
-
-    case 6:
-      // Zwei Spalten mit je 3 Punkten
-      lcd.fillCircle(cx - spacing/2, cy - spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx - spacing/2, cy, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx - spacing/2, cy + spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx + spacing/2, cy - spacing/2, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx + spacing/2, cy, dotRadius, DICE_DOT);
-      lcd.fillCircle(cx + spacing/2, cy + spacing/2, dotRadius, DICE_DOT);
-      break;
-  }
-}
+// drawDiceDots() removed - not needed for car model
 
 // ===== UI FUNKTIONEN =====
 
