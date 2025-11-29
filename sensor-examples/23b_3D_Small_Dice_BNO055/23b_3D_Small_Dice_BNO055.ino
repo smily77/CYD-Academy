@@ -305,44 +305,13 @@ void setup() {
     // Warte auf Sensor-Initialisierung
     delay(1000);
 
-    // WICHTIG: Reihenfolge für Mode-Wechsel!
-    // 1. CONFIG-Modus aktivieren (erlaubt Einstellungs-Änderungen)
-    Serial.println("Switching to CONFIG mode...");
-    bno.setMode(OPERATION_MODE_CONFIG);
-    delay(25);  // Muss warten bis CONFIG-Modus aktiv ist
-
-    // 2. Externes Crystal aktivieren (genauer)
-    Serial.println("Enabling external crystal...");
+    // Setze zu externem Crystal (genauer)
+    // WICHTIG: KEIN explizites setMode() - bno.begin() setzt automatisch NDOF!
     bno.setExtCrystalUse(true);
-    delay(10);
 
-    // 3. IMUPLUS-Modus aktivieren (ohne Magnetometer/Kompass) - direkt mit Hex
-    // Grund: Magnetometer wird von Metallen/Elektronik gestört → Z-Achsen-Instabilität
-    // 0x08 = IMUPLUS = Gyro + Accelerometer (kein Kompass)
-    // 0x0C = NDOF = Gyro + Accelerometer + Magnetometer (mit Kompass)
-    Serial.println("Setting mode to IMUPLUS (0x08, no magnetometer)...");
-    bno.setMode((adafruit_bno055_opmode_t)0x08);  // Direkt Hex statt Konstante
-    delay(650);  // WICHTIG: BNO055 braucht ~600ms nach Mode-Wechsel!
-
-    // 4. Prüfe ob Modus wirklich gesetzt wurde
-    uint8_t currentMode = bno.getMode();
-    Serial.printf("Current BNO055 Mode: 0x%02X (IMUPLUS=0x08, NDOF=0x0C)\n", currentMode);
-
-    if (currentMode == 0x08) {
-      Serial.println("✓ SUCCESS: IMUPLUS mode active - NO magnetometer!");
-    } else {
-      Serial.printf("✗ ERROR: Mode is 0x%02X (expected 0x08)\n", currentMode);
-      Serial.println("  → Falling back to NDOF mode (with magnetometer)...");
-
-      // Fallback auf NDOF (Standard-Modus mit Magnetometer)
-      bno.setMode(OPERATION_MODE_CONFIG);
-      delay(25);
-      bno.setMode(OPERATION_MODE_NDOF);  // 0x0C
-      delay(650);
-
-      currentMode = bno.getMode();
-      Serial.printf("  → Fallback mode: 0x%02X\n", currentMode);
-    }
+    Serial.println("BNO055 initialized!");
+    Serial.println("Note: Using NDOF mode (Gyro + Accel + Magnetometer)");
+    Serial.println("      Z-axis may drift indoors due to magnetic interference");
   }
 
   // Initiale Anzeige
