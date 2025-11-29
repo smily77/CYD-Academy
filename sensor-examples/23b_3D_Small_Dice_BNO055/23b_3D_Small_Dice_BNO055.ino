@@ -312,7 +312,7 @@ void setup() {
     // Grund: Magnetometer wird von Metallen/Elektronik gestört → Z-Achsen-Instabilität
     // IMUPLUS = Gyro + Accelerometer (kein Kompass)
     // Ergebnis: Stabile Z-Achse, keine Magnetfeld-Störungen
-    bno.setMode(Adafruit_BNO055::OPERATION_MODE_IMUPLUS);
+    bno.setMode(OPERATION_MODE_IMUPLUS);
     delay(100);  // Kurze Pause nach Mode-Wechsel
 
     Serial.println("BNO055 initialized in IMUPLUS mode (no magnetometer)!");
