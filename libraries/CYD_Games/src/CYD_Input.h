@@ -135,6 +135,12 @@ public:
   // ===== INITIALISIERUNG =====
 
   static bool init() {
+    // Prüfe ob bereits initialisiert (verhindert mehrfache I2C-Initialisierung)
+    if (initialized) {
+      Serial.println("CYD_Input: Bereits initialisiert (überspringe)");
+      return true;
+    }
+
     #ifdef gpioSwitch
       // GPIO-Buttons initialisieren
       pinMode(tasteA, INPUT_PULLUP);
@@ -303,6 +309,9 @@ public:
       Serial.println("  Warte auf Pairing mit Sender...");
       Serial.println("  (Sender einschalten zum Pairen)");
     #endif
+
+    // Markiere als initialisiert
+    initialized = true;
 
     return true;
   }
@@ -547,6 +556,9 @@ public:
   }
 
 private:
+  // Initialisierungs-Flag (verhindert mehrfache I2C-Initialisierung)
+  static bool initialized;
+
   #if defined(i2cSwitch) || defined(i2cEnc)
     static PCF8574 pcf;
   #endif
@@ -573,6 +585,8 @@ private:
 };
 
 // Statische Member initialisieren
+bool CYD_Input::initialized = false;
+
 #if defined(i2cSwitch) || defined(i2cEnc)
   PCF8574 CYD_Input::pcf(0x20);  // Wird in init() mit richtiger Adresse überschrieben
 #endif
