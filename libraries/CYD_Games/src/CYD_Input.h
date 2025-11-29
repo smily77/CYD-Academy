@@ -169,13 +169,7 @@ public:
 
       pcf = PCF8574(pcfAddress);
 
-      // Alle Pins als Input mit Pullup
-      pcf.pinMode(tasteA, INPUT);
-      pcf.pinMode(tasteB, INPUT);
-      pcf.pinMode(tasteC, INPUT);
-      pcf.pinMode(tasteD, INPUT);
-
-      // PCF8574 starten
+      // PCF8574 starten (MUSS vor pinMode/digitalWrite aufgerufen werden!)
       if (!pcf.begin()) {
         Serial.println("FEHLER: PCF8574 nicht gefunden!");
         Serial.println("Prüfe:");
@@ -184,6 +178,18 @@ public:
         Serial.println("  - I2C Pullup-Widerstände vorhanden? (4.7k auf SDA und SCL)");
         return false;
       }
+
+      // Alle Pins als Input mit Pullup
+      pcf.pinMode(tasteA, INPUT);
+      pcf.pinMode(tasteB, INPUT);
+      pcf.pinMode(tasteC, INPUT);
+      pcf.pinMode(tasteD, INPUT);
+
+      // WICHTIG: PCF8574 Pull-Ups aktivieren (Pins auf HIGH setzen)
+      pcf.digitalWrite(tasteA, HIGH);
+      pcf.digitalWrite(tasteB, HIGH);
+      pcf.digitalWrite(tasteC, HIGH);
+      pcf.digitalWrite(tasteD, HIGH);
 
       Serial.println("CYD_Input: I2C-Buttons (PCF8574) initialisiert");
       Serial.printf("  I2C-Adresse: 0x%02X\n", pcfAddress);
@@ -229,12 +235,7 @@ public:
 
       pcf = PCF8574(pcfAddress);
 
-      // Encoder-Pins als Input
-      pcf.pinMode(encA, INPUT);
-      pcf.pinMode(encB, INPUT);
-      pcf.pinMode(encSW, INPUT);
-
-      // PCF8574 starten
+      // PCF8574 starten (MUSS vor pinMode/digitalWrite aufgerufen werden!)
       if (!pcf.begin()) {
         Serial.println("FEHLER: PCF8574 nicht gefunden!");
         Serial.println("Prüfe:");
@@ -243,6 +244,16 @@ public:
         Serial.println("  - I2C Pullup-Widerstände vorhanden? (4.7k auf SDA und SCL)");
         return false;
       }
+
+      // Encoder-Pins als Input
+      pcf.pinMode(encA, INPUT);
+      pcf.pinMode(encB, INPUT);
+      pcf.pinMode(encSW, INPUT);
+
+      // WICHTIG: PCF8574 Pull-Ups aktivieren (Pins auf HIGH setzen)
+      pcf.digitalWrite(encA, HIGH);
+      pcf.digitalWrite(encB, HIGH);
+      pcf.digitalWrite(encSW, HIGH);
 
       // Initialen Status lesen
       lastEncA = pcf.digitalRead(encA);
