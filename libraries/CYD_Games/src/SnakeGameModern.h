@@ -275,25 +275,39 @@ private:
       return;
     }
 
+    // Alle Button-States gleichzeitig lesen
+    bool btnA = CYD_Input::readButton(CYD_BTN_A);
+    bool btnB = CYD_Input::readButton(CYD_BTN_B);
+    bool btnC = CYD_Input::readButton(CYD_BTN_C);
+    bool btnD = CYD_Input::readButton(CYD_BTN_D);
+
+    // Zähle gedrückte Tasten
+    int pressedCount = btnA + btnB + btnC + btnD;
+
+    // Nur reagieren wenn GENAU EINE Taste gedrückt ist
+    // Verhindert Probleme mit floatenden Pins oder mehreren Tasten
+    if (pressedCount != 1) {
+      return;
+    }
+
+    // Jetzt ist sicher: genau eine Taste ist gedrückt
     // Verhindere 180-Grad Wendungen
-    // WICHTIG: Alle Buttons einzeln prüfen (NICHT else if!)
-    // So werden alle Tasten geprüft, auch wenn eine floatet
-    if (CYD_Input::readButton(CYD_BTN_A) && currentDirection != SNAKE_DIR_DOWN) {
+    if (btnA && currentDirection != SNAKE_DIR_DOWN) {
       nextDirection = SNAKE_DIR_UP;
       lastButtonPress = now;
       Serial.println("Button: UP");
     }
-    if (CYD_Input::readButton(CYD_BTN_D) && currentDirection != SNAKE_DIR_UP) {
+    else if (btnD && currentDirection != SNAKE_DIR_UP) {
       nextDirection = SNAKE_DIR_DOWN;
       lastButtonPress = now;
       Serial.println("Button: DOWN");
     }
-    if (CYD_Input::readButton(CYD_BTN_B) && currentDirection != SNAKE_DIR_RIGHT) {
+    else if (btnB && currentDirection != SNAKE_DIR_RIGHT) {
       nextDirection = SNAKE_DIR_LEFT;
       lastButtonPress = now;
       Serial.println("Button: LEFT");
     }
-    if (CYD_Input::readButton(CYD_BTN_C) && currentDirection != SNAKE_DIR_LEFT) {
+    else if (btnC && currentDirection != SNAKE_DIR_LEFT) {
       nextDirection = SNAKE_DIR_RIGHT;
       lastButtonPress = now;
       Serial.println("Button: RIGHT");
