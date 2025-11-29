@@ -189,20 +189,36 @@ private:
       return;
     }
 
+    // Alle Button-States gleichzeitig lesen
+    bool btnA = CYD_Input::readButton(CYD_BTN_A);
+    bool btnB = CYD_Input::readButton(CYD_BTN_B);
+    bool btnC = CYD_Input::readButton(CYD_BTN_C);
+    bool btnD = CYD_Input::readButton(CYD_BTN_D);
+
+    // Zähle gedrückte Tasten
+    int pressedCount = btnA + btnB + btnC + btnD;
+
+    // Nur reagieren wenn GENAU EINE Taste gedrückt ist
+    // Verhindert Probleme mit floatenden Pins oder mehreren Tasten
+    if (pressedCount != 1) {
+      return;
+    }
+
+    // Jetzt ist sicher: genau eine Taste ist gedrückt
     // Verhindere 180-Grad Wendungen
-    if (CYD_Input::readButton(CYD_BTN_A) && currentDirection != DIR_DOWN) {
+    if (btnA && currentDirection != DIR_DOWN) {
       nextDirection = DIR_UP;
       lastButtonPress = now;
     }
-    else if (CYD_Input::readButton(CYD_BTN_D) && currentDirection != DIR_UP) {
+    else if (btnD && currentDirection != DIR_UP) {
       nextDirection = DIR_DOWN;
       lastButtonPress = now;
     }
-    else if (CYD_Input::readButton(CYD_BTN_B) && currentDirection != DIR_RIGHT) {
+    else if (btnB && currentDirection != DIR_RIGHT) {
       nextDirection = DIR_LEFT;
       lastButtonPress = now;
     }
-    else if (CYD_Input::readButton(CYD_BTN_C) && currentDirection != DIR_LEFT) {
+    else if (btnC && currentDirection != DIR_LEFT) {
       nextDirection = DIR_RIGHT;
       lastButtonPress = now;
     }
