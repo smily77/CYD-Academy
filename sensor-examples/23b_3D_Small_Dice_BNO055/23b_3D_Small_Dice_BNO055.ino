@@ -305,43 +305,32 @@ void setup() {
     // Warte auf Sensor-Initialisierung
     delay(1000);
 
-    // WICHTIG: Reihenfolge für Mode-Wechsel!
-    // 1. CONFIG-Modus aktivieren (erlaubt Einstellungs-Änderungen)
-    Serial.println("Switching to CONFIG mode...");
+    // VEREINFACHTE MODE-EINSTELLUNG: Direkt NDOF verwenden (bewährt)
+    //
+    // WICHTIG: IMUPLUS (0x08) funktioniert mit dieser Adafruit-Bibliothek
+    // nicht zuverlässig - Sensor bleibt in CONFIG mode (0x00) hängen.
+    //
+    // NDOF (0x0C) = Gyro + Accelerometer + Magnetometer
+    // → Magnetometer kann durch Metall/Elektronik gestört werden
+    // → Z-Achsen-Drift bei Indoor-Nutzung ist NORMAL
+    // → X/Y-Achsen (Pitch/Roll) bleiben stabil (nutzen Schwerkraft)
+    //
+    Serial.println("Setting BNO055 to NDOF mode (with magnetometer)...");
     bno.setMode(OPERATION_MODE_CONFIG);
-    delay(25);  // Muss warten bis CONFIG-Modus aktiv ist
-
-    // 2. Externes Crystal aktivieren (genauer)
-    Serial.println("Enabling external crystal...");
+    delay(25);
     bno.setExtCrystalUse(true);
     delay(10);
+    bno.setMode(OPERATION_MODE_NDOF);
+    delay(1000);  // Extra Zeit für Sensor-Fusion-Start
 
-    // 3. IMUPLUS-Modus aktivieren (ohne Magnetometer/Kompass) - direkt mit Hex
-    // Grund: Magnetometer wird von Metallen/Elektronik gestört → Z-Achsen-Instabilität
-    // 0x08 = IMUPLUS = Gyro + Accelerometer (kein Kompass)
-    // 0x0C = NDOF = Gyro + Accelerometer + Magnetometer (mit Kompass)
-    Serial.println("Setting mode to IMUPLUS (0x08, no magnetometer)...");
-    bno.setMode((adafruit_bno055_opmode_t)0x08);  // Direkt Hex statt Konstante
-    delay(650);  // WICHTIG: BNO055 braucht ~600ms nach Mode-Wechsel!
-
-    // 4. Prüfe ob Modus wirklich gesetzt wurde
     uint8_t currentMode = bno.getMode();
-    Serial.printf("Current BNO055 Mode: 0x%02X (IMUPLUS=0x08, NDOF=0x0C)\n", currentMode);
+    Serial.printf("BNO055 Mode: 0x%02X (NDOF=0x0C)\n", currentMode);
 
-    if (currentMode == 0x08) {
-      Serial.println("✓ SUCCESS: IMUPLUS mode active - NO magnetometer!");
+    if (currentMode == 0x0C) {
+      Serial.println("SUCCESS: NDOF mode active");
+      Serial.println("Note: Z-axis may drift indoors (magnetometer interference)");
     } else {
-      Serial.printf("✗ ERROR: Mode is 0x%02X (expected 0x08)\n", currentMode);
-      Serial.println("  → Falling back to NDOF mode (with magnetometer)...");
-
-      // Fallback auf NDOF (Standard-Modus mit Magnetometer)
-      bno.setMode(OPERATION_MODE_CONFIG);
-      delay(25);
-      bno.setMode(OPERATION_MODE_NDOF);  // 0x0C
-      delay(650);
-
-      currentMode = bno.getMode();
-      Serial.printf("  → Fallback mode: 0x%02X\n", currentMode);
+      Serial.printf("WARNING: Unexpected mode 0x%02X\n", currentMode);
     }
   }
 
