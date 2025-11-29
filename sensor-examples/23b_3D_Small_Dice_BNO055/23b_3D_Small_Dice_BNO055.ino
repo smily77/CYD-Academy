@@ -305,33 +305,13 @@ void setup() {
     // Warte auf Sensor-Initialisierung
     delay(1000);
 
-    // VEREINFACHTE MODE-EINSTELLUNG: Direkt NDOF verwenden (bewährt)
-    //
-    // WICHTIG: IMUPLUS (0x08) funktioniert mit dieser Adafruit-Bibliothek
-    // nicht zuverlässig - Sensor bleibt in CONFIG mode (0x00) hängen.
-    //
-    // NDOF (0x0C) = Gyro + Accelerometer + Magnetometer
-    // → Magnetometer kann durch Metall/Elektronik gestört werden
-    // → Z-Achsen-Drift bei Indoor-Nutzung ist NORMAL
-    // → X/Y-Achsen (Pitch/Roll) bleiben stabil (nutzen Schwerkraft)
-    //
-    Serial.println("Setting BNO055 to NDOF mode (with magnetometer)...");
-    bno.setMode(OPERATION_MODE_CONFIG);
-    delay(25);
+    // Setze zu externem Crystal (genauer)
+    // WICHTIG: KEIN explizites setMode() - bno.begin() setzt automatisch NDOF!
     bno.setExtCrystalUse(true);
-    delay(10);
-    bno.setMode(OPERATION_MODE_NDOF);
-    delay(1000);  // Extra Zeit für Sensor-Fusion-Start
 
-    uint8_t currentMode = bno.getMode();
-    Serial.printf("BNO055 Mode: 0x%02X (NDOF=0x0C)\n", currentMode);
-
-    if (currentMode == 0x0C) {
-      Serial.println("SUCCESS: NDOF mode active");
-      Serial.println("Note: Z-axis may drift indoors (magnetometer interference)");
-    } else {
-      Serial.printf("WARNING: Unexpected mode 0x%02X\n", currentMode);
-    }
+    Serial.println("BNO055 initialized!");
+    Serial.println("Note: Using NDOF mode (Gyro + Accel + Magnetometer)");
+    Serial.println("      Z-axis may drift indoors due to magnetic interference");
   }
 
   // Initiale Anzeige
