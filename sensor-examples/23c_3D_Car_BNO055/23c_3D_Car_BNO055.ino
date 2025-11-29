@@ -91,9 +91,9 @@
 // ===== KONSTANTEN =====
 
 // Farben (Dark Theme)
-#define COLOR_BG 0x0841          // Dunkles Blau-Grau
+#define COLOR_BG 0x7BEF          // Grau (damit Auto besser sichtbar)
 #define COLOR_TEXT 0xFFFF        // Weiß
-#define COLOR_TEXT_DIM 0x7BEF    // Grau
+#define COLOR_TEXT_DIM 0x4208    // Dunkelgrau
 #define COLOR_CAL_NONE 0xF800    // Rot (nicht kalibriert)
 #define COLOR_CAL_LOW 0xFD20     // Orange (teilweise)
 #define COLOR_CAL_MED 0xFFE0     // Gelb (mittel)
@@ -102,12 +102,13 @@
 // Auto-Farben (blocky retro car)
 #define CAR_BODY 0xF800          // Rot (Karosserie)
 #define CAR_CABIN_TOP 0xC000     // Dunkelrot (Dach)
-#define CAR_WINDOW 0x1084        // Dunkelblau (Fenster)
-#define CAR_WINDOW_FRONT 0x2104  // Helleres Blau (Windschutzscheibe)
+#define CAR_WINDOW 0x3D1F        // Hellblau (Fenster)
+#define CAR_WINDOW_FRONT 0x5D3F  // Noch helleres Blau (Windschutzscheibe)
+#define CAR_WHEEL 0x2945         // Dunkelgrau (Räder)
 #define CAR_EDGE 0x0000          // Schwarz (Kanten)
 
 // 3D-Parameter
-const float CAR_SCALE = 1.0;            // Skalierungsfaktor für Auto-Größe
+const float CAR_SCALE = 1.8;            // Skalierungsfaktor für Auto-Größe (1.8x größer)
 const float PERSPECTIVE_DISTANCE = 300.0; // Kamera-Distanz (größer = weniger Perspektive)
 const int SCREEN_CENTER_X = 120;        // Bildschirm-Mitte X (240/2)
 const int SCREEN_CENTER_Y = 140;        // Bildschirm-Mitte Y (etwas unten)
@@ -199,27 +200,37 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);
 // Sensor-Status
 bool sensorConnected = false;
 
-// Auto-Eckpunkte (16 Vertices = 8 Karosserie + 8 Kabine)
+// Auto-Eckpunkte (32 Vertices = 8 Karosserie + 8 Kabine + 16 Räder)
 // Koordinaten: X=Breite, Y=Höhe, Z=Länge (vorne ist +Z)
-Vec3 carVertices[16] = {
+Vec3 carVertices[32] = {
   // Karosserie (unterer Block) - Vertices 0-7
   Vec3(-15, -10, -30), Vec3( 15, -10, -30), Vec3( 15, -10,  30), Vec3(-15, -10,  30), // Boden (Y-)
   Vec3(-15,   5, -30), Vec3( 15,   5, -30), Vec3( 15,   5,  30), Vec3(-15,   5,  30), // Karosserie-Top (Y+)
 
   // Kabine/Dach (oberer Block, schmaler, nach hinten versetzt) - Vertices 8-15
   Vec3(-12,   5,  -5), Vec3( 12,   5,  -5), Vec3( 12,   5,  25), Vec3(-12,   5,  25), // Kabine-Boden (teilt Y mit Karosserie-Top)
-  Vec3(-12,  20,  -5), Vec3( 12,  20,  -5), Vec3( 12,  20,  25), Vec3(-12,  20,  25)  // Dach (Y+)
+  Vec3(-12,  20,  -5), Vec3( 12,  20,  -5), Vec3( 12,  20,  25), Vec3(-12,  20,  25), // Dach (Y+)
+
+  // Räder (4 Räder, je 4 Vertices = Rechteck Außenseite) - Vertices 16-31
+  // Vorne Links (Rad 1) - Vertices 16-19
+  Vec3(-18, -16, 22), Vec3(-18, -4, 22), Vec3(-18, -4, 16), Vec3(-18, -16, 16),
+  // Vorne Rechts (Rad 2) - Vertices 20-23
+  Vec3( 18, -16, 22), Vec3( 18, -4, 22), Vec3( 18, -4, 16), Vec3( 18, -16, 16),
+  // Hinten Links (Rad 3) - Vertices 24-27
+  Vec3(-18, -16, -16), Vec3(-18, -4, -16), Vec3(-18, -4, -22), Vec3(-18, -16, -22),
+  // Hinten Rechts (Rad 4) - Vertices 28-31
+  Vec3( 18, -16, -16), Vec3( 18, -4, -16), Vec3( 18, -4, -22), Vec3( 18, -16, -22)
 };
 
 // Transformierte Vertices (nach Rotation)
-Vec3 transformedVertices[16];
+Vec3 transformedVertices[32];
 
 // Projizierte 2D-Punkte
-Point2D projectedPoints[16];
+Point2D projectedPoints[32];
 
-// Auto-Flächen (12 Faces = 6 Karosserie + 6 Kabine)
+// Auto-Flächen (16 Faces = 6 Karosserie + 6 Kabine + 4 Räder)
 // CCW von außen gesehen für korrektes Back-face Culling
-Face carFaces[12] = {
+Face carFaces[16] = {
   // Karosserie (unterer Block)
   Face(2, 1, 0, 3, CAR_BODY, 0),        // Boden (Y-)
   Face(4, 5, 6, 7, CAR_BODY, 0),        // Karosserie-Top (wird teilweise von Kabine verdeckt)
@@ -234,7 +245,13 @@ Face carFaces[12] = {
   Face(14, 10, 11, 15, CAR_WINDOW_FRONT, 0), // Windschutzscheibe (Z+)
   Face(13, 12, 8, 9, CAR_WINDOW, 0),    // Heckscheibe (Z-)
   Face(15, 11, 8, 12, CAR_WINDOW, 0),   // Linkes Fenster (X-)
-  Face(14, 13, 9, 10, CAR_WINDOW, 0)    // Rechtes Fenster (X+)
+  Face(14, 13, 9, 10, CAR_WINDOW, 0),   // Rechtes Fenster (X+)
+
+  // Räder (4 Faces, Außenseite)
+  Face(16, 17, 18, 19, CAR_WHEEL, 0),   // Vorne Links
+  Face(20, 21, 22, 23, CAR_WHEEL, 0),   // Vorne Rechts
+  Face(24, 25, 26, 27, CAR_WHEEL, 0),   // Hinten Links
+  Face(28, 29, 30, 31, CAR_WHEEL, 0)    // Hinten Rechts
 };
 
 // Orientierungs-Daten
@@ -528,7 +545,7 @@ void rotateCube() {
   #endif
 
   // Für jeden Vertex: Quaternion-Rotation anwenden
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < 32; i++) {
     Vec3 v = carVertices[i] * CAR_SCALE;
 
     // Konvertiere Vec3 zu Quaternion (0, x, y, z)
@@ -544,7 +561,7 @@ void rotateCube() {
 
 void projectVertices() {
   // Perspektiv-Projektion: 3D → 2D
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < 32; i++) {
     Vec3 v = transformedVertices[i];
 
     // Perspektiv-Division
@@ -562,7 +579,7 @@ void projectVertices() {
 
 void calculateFaceDepths() {
   // Berechne durchschnittliche Z-Tiefe für jede Fläche (für Painter's Algorithm)
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < 16; i++) {
     float avgZ = 0;
     for (int j = 0; j < 4; j++) {
       avgZ += transformedVertices[carFaces[i].vertices[j]].z;
@@ -573,8 +590,8 @@ void calculateFaceDepths() {
 
 void sortFaces() {
   // Bubble Sort nach Z-Tiefe (von hinten nach vorne zeichnen)
-  for (int i = 0; i < 11; i++) {
-    for (int j = 0; j < 11 - i; j++) {
+  for (int i = 0; i < 15; i++) {
+    for (int j = 0; j < 15 - i; j++) {
       if (carFaces[j].avgZ > carFaces[j + 1].avgZ) {
         // Swap
         Face temp = carFaces[j];
@@ -587,7 +604,7 @@ void sortFaces() {
 
 void drawFaces() {
   // Zeichne Flächen von hinten nach vorne (auf lcd oder Sprite, je nach renderToSprite Flag)
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < 16; i++) {
     Face& face = carFaces[i];
 
     // Back-face Culling (nur Flächen zeichnen die zur Kamera zeigen)
