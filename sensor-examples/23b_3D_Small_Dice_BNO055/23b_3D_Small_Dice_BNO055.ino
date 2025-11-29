@@ -830,15 +830,6 @@ void drawUI() {
   lcd.setTextColor(COLOR_BG);
   lcd.setTextDatum(MC_DATUM);
   lcd.drawString(String(calSystem), 215, 9);
-
-  // Orientierungs-Werte (unten)
-  lcd.setTextSize(1);
-  lcd.setTextColor(COLOR_TEXT_DIM);
-  lcd.setTextDatum(BC_DATUM);
-
-  char buf[40];
-  sprintf(buf, "Y:%.0f R:%.0f P:%.0f", heading, roll, pitch);
-  lcd.drawString(buf, 120, 285);
 }
 
 uint16_t getCalibrationColor(uint8_t calValue) {
