@@ -75,9 +75,9 @@ bool lastTouchState = false;
 #define SCREEN_HEIGHT 320  // Portrait: höher (mehr Platz für Buttons!)
 
 #define MENU_ITEM_WIDTH  220  // Angepasst für Portrait
-#define MENU_ITEM_HEIGHT 35   // Groß genug, passt für 7 Spiele (war 38)
+#define MENU_ITEM_HEIGHT 35   // Groß genug, passt für 7 Spiele
 #define MENU_ITEM_SPACING 2   // Abstand zwischen Buttons
-#define MENU_START_Y 45       // Start nach Header (7×37=259 + 45 = 304 < 320 ✓)
+#define MENU_START_Y 38       // Start nach Header (7×37=259 + 38 = 297 < 320 ✓)
 
 // Farben
 #define COLOR_BG        0x0000  // Schwarz
@@ -270,14 +270,12 @@ void loop() {
 void drawMenu() {
   lcd.fillScreen(COLOR_BG);
 
-  // Header (Portrait-Modus angepasst)
-  lcd.fillRect(0, 0, SCREEN_WIDTH, 42, COLOR_HEADER);
+  // Header (Portrait-Modus, nur "RETRO ARCADE")
+  lcd.fillRect(0, 0, SCREEN_WIDTH, 35, COLOR_HEADER);
   lcd.setTextSize(2);
   lcd.setTextColor(COLOR_TEXT, COLOR_HEADER);
-  lcd.setCursor(10, 8);
+  lcd.setCursor(20, 10);  // Zentriert
   lcd.println("RETRO ARCADE");
-  lcd.setCursor(45, 24);
-  lcd.println("GAMES");
 
   // Menu-Items (LARGE VERSION - Portrait, nur Titel!)
   int y = MENU_START_Y;
