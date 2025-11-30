@@ -70,14 +70,14 @@ GameState currentState = MENU;
 GameState lastState = MENU;
 bool lastTouchState = false;
 
-// Menu-Layout (LARGE VERSION - touchfreundlich!)
-#define SCREEN_WIDTH  320
-#define SCREEN_HEIGHT 240
+// Menu-Layout (LARGE VERSION - Portrait-Modus für mehr Platz!)
+#define SCREEN_WIDTH  240  // Portrait: schmaler
+#define SCREEN_HEIGHT 320  // Portrait: höher (mehr Platz für Buttons!)
 
-#define MENU_ITEM_WIDTH  290  // Breiter (mehr Platz)
-#define MENU_ITEM_HEIGHT 40   // HÖHER für besseres Treffen (war 26)
-#define MENU_ITEM_SPACING 4   // Etwas mehr Abstand
-#define MENU_START_Y 40       // Etwas tiefer (größerer Header)
+#define MENU_ITEM_WIDTH  220  // Angepasst für Portrait
+#define MENU_ITEM_HEIGHT 38   // Groß für besseres Treffen
+#define MENU_ITEM_SPACING 3   // Abstand zwischen Buttons
+#define MENU_START_Y 45       // Start nach Header
 
 // Farben
 #define COLOR_BG        0x0000  // Schwarz
@@ -134,11 +134,11 @@ void buildMenu() {
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("\n=== CYD RETRO GAMES ===\n");
+  Serial.println("\n=== CYD RETRO GAMES (LARGE) ===\n");
 
   // Display initialisieren
   lcd.init();
-  lcd.setRotation(1);  // Landscape
+  lcd.setRotation(0);  // Portrait für Menu (mehr Höhe für Buttons!)
   lcd.fillScreen(COLOR_BG);
   lcd.setBrightness(255);
 
@@ -159,19 +159,34 @@ void setup() {
 }
 
 void loop() {
-  // Bei Wechsel von/zu Tetris: Rotation ändern
+  // Bei Zustandswechsel: Rotation und Spiel-Init
   if (currentState != lastState) {
-    if (currentState == GAME_TETRIS && lastState != GAME_TETRIS) {
-      // Wechsel ZU Tetris: Portrait-Modus
-      lcd.setRotation(0);
+    // Wechsel ZU einem Spiel (außer Tetris): Landscape
+    if (currentState != MENU && currentState != GAME_TETRIS) {
+      lcd.setRotation(1);  // Landscape für alle Spiele außer Tetris
+      lcd.fillScreen(COLOR_BG);
+
+      // Init je nach Spiel
+      if (currentState == GAME_SNAKE) snakeGame.init(&lcd);
+      else if (currentState == GAME_PONG) pongGame.init(&lcd);
+      else if (currentState == GAME_BREAKOUT) breakoutGame.init(&lcd);
+      else if (currentState == GAME_SPACEINVADERS) spaceInvadersGame.init(&lcd);
+      else if (currentState == GAME_ASTEROIDS) asteroidsGame.init(&lcd);
+      else if (currentState == GAME_FROGGER) froggerGame.init(&lcd);
+    }
+    // Wechsel ZU Tetris: bleibt Portrait
+    else if (currentState == GAME_TETRIS) {
+      lcd.setRotation(0);  // Portrait (wie Menu)
       lcd.fillScreen(COLOR_BG);
       tetrisGame.init(&lcd);
-    } else if (lastState == GAME_TETRIS && currentState == MENU) {
-      // Wechsel VON Tetris zurück zum Menu: Landscape-Modus
-      lcd.setRotation(1);
+    }
+    // Wechsel ZU Menu: Portrait
+    else if (currentState == MENU) {
+      lcd.setRotation(0);  // Portrait für Menu
       lcd.fillScreen(COLOR_BG);
       drawMenu();
     }
+
     lastState = currentState;
   }
 
@@ -255,14 +270,16 @@ void loop() {
 void drawMenu() {
   lcd.fillScreen(COLOR_BG);
 
-  // Header (größer)
-  lcd.fillRect(0, 0, SCREEN_WIDTH, 38, COLOR_HEADER);
+  // Header (Portrait-Modus angepasst)
+  lcd.fillRect(0, 0, SCREEN_WIDTH, 42, COLOR_HEADER);
   lcd.setTextSize(2);
   lcd.setTextColor(COLOR_TEXT, COLOR_HEADER);
-  lcd.setCursor(30, 12);
-  lcd.println("RETRO ARCADE GAMES");
+  lcd.setCursor(10, 8);
+  lcd.println("RETRO ARCADE");
+  lcd.setCursor(45, 24);
+  lcd.println("GAMES");
 
-  // Menu-Items (LARGE VERSION - nur Titel!)
+  // Menu-Items (LARGE VERSION - Portrait, nur Titel!)
   int y = MENU_START_Y;
 
   for (int i = 0; i < menuItemCount; i++) {
@@ -272,17 +289,15 @@ void drawMenu() {
     lcd.fillRect(x, y, MENU_ITEM_WIDTH, MENU_ITEM_HEIGHT, COLOR_MENU_ITEM);
     lcd.drawRect(x, y, MENU_ITEM_WIDTH, MENU_ITEM_HEIGHT, COLOR_BORDER);
 
-    // Farbiges Symbol (größer für bessere Sichtbarkeit)
-    lcd.fillRect(x + 8, y + 8, 24, 24, menuItems[i].color);
-    lcd.drawRect(x + 8, y + 8, 24, 24, COLOR_TEXT);
+    // Farbiges Symbol (linksbündig)
+    lcd.fillRect(x + 6, y + 7, 24, 24, menuItems[i].color);
+    lcd.drawRect(x + 6, y + 7, 24, 24, COLOR_TEXT);
 
-    // Spiel-Name (GRÖßERE Schrift, zentriert in Button)
-    lcd.setTextSize(2);  // GRÖßER (war 1)
+    // Spiel-Name (GRÖßERE Schrift, vertikal zentriert)
+    lcd.setTextSize(2);
     lcd.setTextColor(COLOR_TEXT, COLOR_MENU_ITEM);
-    lcd.setCursor(x + 40, y + 12);  // Vertikal zentriert
+    lcd.setCursor(x + 36, y + 11);  // Vertikal zentriert
     lcd.println(menuItems[i].name);
-
-    // KEINE Beschreibung mehr (für bessere Lesbarkeit und größere Buttons)
 
     y += MENU_ITEM_HEIGHT + MENU_ITEM_SPACING;
   }
@@ -290,7 +305,7 @@ void drawMenu() {
   // Hinweis unten
   lcd.setTextSize(1);
   lcd.setTextColor(COLOR_TEXT, COLOR_BG);
-  lcd.setCursor(70, SCREEN_HEIGHT - 12);
+  lcd.setCursor(55, SCREEN_HEIGHT - 10);
   lcd.println("Touch zum Starten");
 }
 
