@@ -78,11 +78,29 @@
 // ===== SENSOR-ORIENTIERUNG KONFIGURATION =====
 // WICHTIG: Passe diese Werte an deine BNO055-Montage an!
 //
+// Problem: Z- und X-Achse vertauscht? → Ändere Achsen-Mapping unten
+// Problem: Falsche Rotations-Richtung? → Aktiviere entsprechende INVERT-Flags
+
+// ACHSEN-MAPPING: Welche Sensor-Achse → Auto-Achse?
+// KORRIGIERT basierend auf Sensor-Datenblatt + Achsenkreuz-Feedback!
+//
 // Sensor-Achsen (BNO055 Datenblatt):
 // - Heading/Yaw: Rotation um Sensor-Z (Board flach drehen)
 // - Pitch: Rotation um Sensor-X (Board kippen vorwärts/rückwärts)
 // - Roll: Rotation um Sensor-Y (Board kippen links/rechts)
 //
+// KORREKTE STANDARD-KONFIGURATION:
+#define CUBE_X_FROM_PITCH    // X-Achse des Autos ← Pitch des Sensors
+#define CUBE_Y_FROM_HEADING  // Y-Achse des Autos ← Heading/Yaw (Sensor-Z!)
+#define CUBE_Z_FROM_ROLL     // Z-Achse des Autos ← Roll des Sensors
+
+// VORZEICHEN-INVERSIONEN: Dreht Achse falsch herum?
+// WICHTIG: Diese Flags sind mathematisch problematisch mit Quaternionen!
+// Verwende nur das Konjugat für die inverse Kamera-Rotation.
+// #define INVERT_CUBE_X      // X-Achse umkehren
+// #define INVERT_CUBE_Y      // Y-Achse umkehren (DEAKTIVIERT - stört Quaternion-Rotation)
+// #define INVERT_CUBE_Z      // Z-Achse umkehren
+
 // Auto-Koordinatensystem:
 // - X = Breite (links/rechts)
 // - Y = Höhe (oben/unten)
