@@ -70,14 +70,14 @@ GameState currentState = MENU;
 GameState lastState = MENU;
 bool lastTouchState = false;
 
-// Menu-Layout (LARGE VERSION - Portrait-Modus für mehr Platz!)
+// Menu-Layout (LARGE VERSION - Portrait-Modus für alle 7 Spiele!)
 #define SCREEN_WIDTH  240  // Portrait: schmaler
 #define SCREEN_HEIGHT 320  // Portrait: höher (mehr Platz für Buttons!)
 
 #define MENU_ITEM_WIDTH  220  // Angepasst für Portrait
-#define MENU_ITEM_HEIGHT 38   // Groß für besseres Treffen
-#define MENU_ITEM_SPACING 3   // Abstand zwischen Buttons
-#define MENU_START_Y 45       // Start nach Header
+#define MENU_ITEM_HEIGHT 35   // Groß genug, passt für 7 Spiele (war 38)
+#define MENU_ITEM_SPACING 2   // Abstand zwischen Buttons
+#define MENU_START_Y 45       // Start nach Header (7×37=259 + 45 = 304 < 320 ✓)
 
 // Farben
 #define COLOR_BG        0x0000  // Schwarz
