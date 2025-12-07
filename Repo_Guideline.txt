@@ -149,6 +149,19 @@ public:
 #define extSDA 22
 #define extSCL 27
 
+// Serielle Schnittstelle (UART2) für GPS, Sensoren, etc.
+#define extRxD 16    // GPIO 16 - Empfangen von externen seriellen Geräten
+#define extTxD 17    // GPIO 17 - Senden zu externen seriellen Geräten
+
+// Verwendung der seriellen Schnittstelle:
+// Serial2.begin(9600, SERIAL_8N1, extRxD, extTxD);  // z.B. für GPS mit 9600 Baud
+//
+// Typische Anwendungen:
+// - GPS-Module (NMEA, 9600 Baud)
+// - Serielle Sensoren (PM2.5, CO2, etc.)
+// - Modbus/RS485 (mit Pegelwandler)
+// - Debug-Ausgabe zu zweitem Display/Logger
+
 // Optional: Interrupt Pin für Sensoren
 #ifdef HAS_INTERRUPT_PIN
   #define extIrqPin 35  // Beispiel
