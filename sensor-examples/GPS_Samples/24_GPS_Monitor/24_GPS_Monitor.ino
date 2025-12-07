@@ -12,8 +12,8 @@
  * GPS-Modul Verbindung:
  * - VCC: 3.3V (WICHTIG: Nicht 5V!)
  * - GND: GND
- * - TX (vom GPS): GPIO 16 (extRxD am CYD)
- * - RX (zum GPS): GPIO 17 (extTxD am CYD) - optional für Konfiguration
+ * - TX (vom GPS): extRxD am CYD (siehe CYD_Display_Config.h)
+ * - RX (zum GPS): extTxD am CYD (siehe CYD_Display_Config.h) - optional
  *
  * GPS Spezifikationen (Quectel L80-R):
  * - NMEA 0183 Protokoll
@@ -48,9 +48,10 @@
 // ========== Display Setup ==========
 LGFX lcd;  // Display-Objekt (aus CYD_Display_Config.h)
 
-// ========== Serielle Pins (aus CYD_Display_Config.h) ==========
-#define extRxD 16  // GPIO 16 - Empfang von GPS TX
-#define extTxD 17  // GPIO 17 - Senden zu GPS RX (optional)
+// ========== Serielle Pins ==========
+// extRxD und extTxD werden in CYD_Display_Config.h definiert!
+// WICHTIG: Nutze IMMER die Pins aus der Config, nicht hardcoden!
+// Falls nicht definiert: Standardwerte sind GPIO 16 (RX) und GPIO 17 (TX)
 
 // ========== GPS Konfiguration ==========
 #define GPS_BAUD 9600              // Standard Baudrate für Quectel L80-R

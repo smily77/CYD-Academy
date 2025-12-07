@@ -153,6 +153,10 @@ public:
 #define extRxD 16    // GPIO 16 - Empfangen von externen seriellen Geräten
 #define extTxD 17    // GPIO 17 - Senden zu externen seriellen Geräten
 
+// WICHTIG: Diese Pins werden IN CYD_Display_Config.h definiert!
+// Code-Beispiele dürfen diese Pins NICHT neu definieren, sondern müssen
+// die Werte aus der Config-Datei verwenden (genau wie extSDA/extSCL).
+//
 // Verwendung der seriellen Schnittstelle:
 // Serial2.begin(9600, SERIAL_8N1, extRxD, extTxD);  // z.B. für GPS mit 9600 Baud
 //
@@ -161,6 +165,9 @@ public:
 // - Serielle Sensoren (PM2.5, CO2, etc.)
 // - Modbus/RS485 (mit Pegelwandler)
 // - Debug-Ausgabe zu zweitem Display/Logger
+//
+// WICHTIG: Falls RGB-LED auf GPIO 16/17 verwendet wird (manche CYD-Varianten),
+// alternative Pins verwenden: GPIO 25, 26, 32, 33
 
 // Optional: Interrupt Pin für Sensoren
 #ifdef HAS_INTERRUPT_PIN
@@ -684,18 +691,45 @@ LGFX lcd;
 ### I2C-Verwendung
 
 ```cpp
-// IMMER die Pins aus CYD_Display_Config.h verwenden
-#define extSDA 22
-#define extSCL 27
+// RICHTIG: Pins aus CYD_Display_Config.h verwenden (NICHT neu definieren!)
+#include <CYD_Display_Config.h>
 
 void setup() {
-  Wire.begin(extSDA, extSCL);
+  Wire.begin(extSDA, extSCL);  // extSDA und extSCL kommen aus Config
 }
 ```
 
-**NICHT** Pins hardcoden:
+**NICHT** Pins hardcoden oder neu definieren:
 ```cpp
-Wire.begin(22, 27);  // ❌ FALSCH
+// ❌ FALSCH: Hardcoded
+Wire.begin(22, 27);
+
+// ❌ FALSCH: Neu definieren (überschreibt Config!)
+#define extSDA 22
+#define extSCL 27
+Wire.begin(extSDA, extSCL);
+```
+
+### Serielle Schnittstelle (UART2) Verwendung
+
+```cpp
+// RICHTIG: Pins aus CYD_Display_Config.h verwenden (NICHT neu definieren!)
+#include <CYD_Display_Config.h>
+
+void setup() {
+  Serial2.begin(9600, SERIAL_8N1, extRxD, extTxD);  // Pins aus Config
+}
+```
+
+**NICHT** Pins hardcoden oder neu definieren:
+```cpp
+// ❌ FALSCH: Hardcoded
+Serial2.begin(9600, SERIAL_8N1, 16, 17);
+
+// ❌ FALSCH: Neu definieren (überschreibt Config!)
+#define extRxD 16
+#define extTxD 17
+Serial2.begin(9600, SERIAL_8N1, extRxD, extTxD);
 ```
 
 ### Interrupt-Pins (Optional)

@@ -79,10 +79,12 @@ RX          ---> GPIO 17 (extTxD) [optional]
 
 **Pin-Funktionen**:
 
-| Pin Name | CYD GPIO | Funktion | Beschreibung |
-|----------|----------|----------|--------------|
-| extRxD   | GPIO 16  | UART2 RX | Empfängt Daten vom GPS TX |
-| extTxD   | GPIO 17  | UART2 TX | Sendet Kommandos zu GPS RX (optional) |
+| Pin Name | CYD GPIO (Standard) | Funktion | Beschreibung |
+|----------|---------------------|----------|--------------|
+| extRxD   | GPIO 16*            | UART2 RX | Empfängt Daten vom GPS TX |
+| extTxD   | GPIO 17*            | UART2 TX | Sendet Kommandos zu GPS RX (optional) |
+
+\* *Standard-Werte aus CYD_Display_Config.h - können je nach Board-Variante abweichen*
 
 **Wichtige Hinweise**:
 
@@ -503,14 +505,21 @@ Laut CYD-Academy Repository-Guideline werden die seriellen Pins in der **CYD_Dis
 ```cpp
 #include <CYD_Display_Config.h>
 
-// Serielle Pins aus Config verwenden (NICHT hardcoden!)
-#define extRxD 16
-#define extTxD 17
+// WICHTIG: extRxD und extTxD kommen aus CYD_Display_Config.h!
+// NICHT neu definieren! Die Config-Datei enthält die Pin-Definitionen.
 
 void setup() {
   // GPS mit 9600 Baud, 8 Datenbits, No Parity, 1 Stop-Bit
   Serial2.begin(9600, SERIAL_8N1, extRxD, extTxD);
+  // extRxD und extTxD werden aus CYD_Display_Config.h übernommen
 }
+```
+
+**❌ FALSCH - Pins NICHT neu definieren**:
+```cpp
+// Dies überschreibt die Config-Datei und führt zu Problemen!
+#define extRxD 16  // ❌ NICHT machen!
+#define extTxD 17  // ❌ NICHT machen!
 ```
 
 **Warum diese Pins?**
@@ -2454,10 +2463,11 @@ Serial2.println(cmd);
 ### CYD-Spezifisch
 
 - **CYD Display Config**: `libraries/MyLGFXConfigs/CYD_Display_Config.h`
-- **Serielle Pins**:
-  - extRxD (GPIO 16) - Empfang von GPS TX
-  - extTxD (GPIO 17) - Senden zu GPS RX
-- **I2C Pins** (für andere Sensoren): extSDA (GPIO 22), extSCL (GPIO 27)
+- **Serielle Pins** (in CYD_Display_Config.h definiert):
+  - extRxD (Standard: GPIO 16) - Empfang von GPS TX
+  - extTxD (Standard: GPIO 17) - Senden zu GPS RX
+  - *Hinweis: Pin-Nummern können je nach Board-Variante in Config angepasst werden*
+- **I2C Pins** (in CYD_Display_Config.h definiert): extSDA (GPIO 22), extSCL (GPIO 27)
 
 ### Arduino Libraries
 
