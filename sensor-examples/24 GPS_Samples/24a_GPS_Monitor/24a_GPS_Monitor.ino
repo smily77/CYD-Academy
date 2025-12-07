@@ -93,6 +93,9 @@ int lineIndex = 0;                 // Aktueller Index im Ringpuffer
 int nmeaCount = 0;                 // Anzahl empfangener NMEA Sentences
 int validSentences = 0;            // Anzahl gültiger Sentences (mit Checksum)
 
+// Touch-Variablen
+uint16_t touchX, touchY;
+
 // ========== Setup ==========
 void setup() {
   // Serial Monitor für Debug
@@ -312,9 +315,6 @@ void checkTouch() {
     Serial.println("\n=== Display gelöscht (Touch) ===\n");
   }
 }
-
-// Globale Touch-Variablen
-uint16_t touchX, touchY;
 
 // ========== Display löschen ==========
 void clearDisplay() {
