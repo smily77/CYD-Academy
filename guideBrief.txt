@@ -32,6 +32,11 @@ LGFX lcd;
 #define extSCL 27
 Wire.begin(extSDA, extSCL);
 
+// Serielle Schnittstelle (UART2) für GPS, Sensoren
+#define extRxD 16
+#define extTxD 17
+Serial2.begin(9600, SERIAL_8N1, extRxD, extTxD);
+
 // RGB LED (optional)
 #define rgbLedR 4
 #define rgbLedG 16
