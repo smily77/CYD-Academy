@@ -93,6 +93,9 @@ int lineIndex = 0;                 // Aktueller Index im Ringpuffer
 int nmeaCount = 0;                 // Anzahl empfangener NMEA Sentences
 int validSentences = 0;            // Anzahl gültiger Sentences (mit Checksum)
 
+// GPS-Daten
+int satelliteCount = 0;            // Anzahl verwendeter Satelliten (aus $GPGGA)
+
 // Touch-Variablen
 uint16_t touchX, touchY;
 
@@ -213,6 +216,24 @@ void processNMEASentence(String sentence) {
 
   if (sentence.startsWith("$GPGGA") || sentence.startsWith("$GNGGA")) {
     color = COLOR_GPGGA;  // Position - Grün
+
+    // Satelliten-Anzahl aus $GPGGA extrahieren (Feld 7)
+    // Format: $GPGGA,time,lat,N,lon,E,fix,sats,hdop,alt,M,...
+    int commaCount = 0;
+    int fieldStart = 0;
+    for (int i = 0; i < sentence.length(); i++) {
+      if (sentence.charAt(i) == ',') {
+        commaCount++;
+        if (commaCount == 7) {  // Nach 7. Komma kommt Satelliten-Anzahl
+          fieldStart = i + 1;
+        }
+        if (commaCount == 8) {  // 8. Komma beendet Satelliten-Feld
+          String satsStr = sentence.substring(fieldStart, i);
+          satelliteCount = satsStr.toInt();
+          break;
+        }
+      }
+    }
   }
   else if (sentence.startsWith("$GPRMC") || sentence.startsWith("$GNRMC")) {
     color = COLOR_GPRMC;  // Navigation - Gelb
@@ -285,6 +306,11 @@ void drawHeader() {
   lcd.setTextColor(COLOR_HEADER);
   lcd.setCursor(5, 2);
   lcd.print("GPS Monitor");
+
+  // Satelliten-Anzahl (in rot)
+  lcd.setTextColor(TFT_RED);
+  lcd.setCursor(85, 2);
+  lcd.printf("(%d)", satelliteCount);
 
   // Statistik anzeigen
   lcd.setTextColor(TFT_WHITE);
