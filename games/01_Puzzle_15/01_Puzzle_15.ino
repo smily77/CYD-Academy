@@ -136,6 +136,7 @@ void drawStats();
 void drawButtons();
 bool checkButtonPress(uint16_t x, uint16_t y, int buttonIndex);
 void handleTouch();
+void showHint();
 bool checkWin();
 void showWinAnimation();
 uint8_t getTileAt(int8_t x, int8_t y);
@@ -522,7 +523,7 @@ void drawStats() {
   if (isPaused) {
     lcd.setTextDatum(MC_DATUM);
     lcd.setTextColor(TFT_RED);
-    lcd.drawString("PAUSE", lcd.width() / 2, 30, 4);
+    lcd.drawString("PAUSE", lcd.width() / 2, 37, 4);  // 7 Pixel tiefer
   }
 
   // Cache aktualisieren
@@ -572,7 +573,7 @@ void handleTouch() {
       } else if (checkButtonPress(touchX, touchY, 3)) {
         // Button "HELP" gedrückt
         Serial.println("Button HELP gedrückt");
-        // TODO: Implementiere Hint-System
+        showHint();
         return;
       }
     }
@@ -597,6 +598,52 @@ void handleTouch() {
       }
     }
   }
+}
+
+// ========== Hinweis zeigen (markiert bewegbare Kacheln) ==========
+void showHint() {
+  Serial.println("Zeige Hinweis: Markiere bewegbare Kacheln");
+
+  // Finde alle bewegbaren Kacheln
+  std::vector<uint8_t> movableTiles;
+  for (uint8_t i = 0; i < TILE_COUNT; i++) {
+    if (tiles[i] != 0 && canMove(i)) {
+      movableTiles.push_back(i);
+    }
+  }
+
+  if (movableTiles.empty()) {
+    Serial.println("Keine bewegbaren Kacheln gefunden!");
+    return;
+  }
+
+  // Blinke 3 mal
+  for (int blink = 0; blink < 3; blink++) {
+    // Grünen Rahmen um bewegbare Kacheln zeichnen
+    for (uint8_t pos : movableTiles) {
+      int8_t x, y;
+      getXY(pos, x, y);
+
+      int16_t px = FIELD_X + FRAME_WIDTH + x * TILE_SIZE;
+      int16_t py = FIELD_Y + FRAME_WIDTH + y * TILE_SIZE;
+
+      // Dicker grüner Rahmen (4 Pixel)
+      for (int i = 0; i < 4; i++) {
+        lcd.drawRect(px + i, py + i, TILE_SIZE - i * 2, TILE_SIZE - i * 2, TFT_GREEN);
+      }
+    }
+
+    delay(400);
+
+    // Rahmen wieder entfernen (Kacheln neu zeichnen)
+    for (uint8_t pos : movableTiles) {
+      drawTile(pos, true);
+    }
+
+    delay(200);
+  }
+
+  Serial.printf("Hinweis: %d bewegbare Kacheln gefunden\n", movableTiles.size());
 }
 
 // ========== Prüfe ob gewonnen ==========
