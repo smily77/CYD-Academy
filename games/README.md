@@ -23,7 +23,7 @@ Die Games-Kategorie konzentriert sich auf **Denksport und Logik**, während die 
 | # | Spiel | Status | Beschreibung |
 |---|-------|--------|--------------|
 | 01 | **[15-Puzzle](01_Puzzle_15/)** | ✅ Fertig | Das legendäre Schiebepuzzle seit 1874 |
-| 02 | **Sudoku** | 🔜 Geplant | Logik-Rätsel mit Zahlen 1-9 |
+| 02 | **[Sudoku](02_Sudoku/)** | ✅ Fertig | Logik-Rätsel mit Zahlen 1-9 |
 | 03 | **2048** | 🔜 Geplant | Kombiniere Kacheln zu höheren Zahlen |
 | 04 | **Minesweeper** | 🔜 Geplant | Klassisches Minen-Such-Spiel |
 | 05 | **Sokoban** | 🔜 Geplant | Schiebe Kisten auf Zielpositionen |
@@ -162,22 +162,49 @@ Durch die Spiele in dieser Kategorie lernst du:
 
 ## 🔄 Geplante Erweiterungen
 
-### Sudoku (Spiel 02)
+## 🎮 Spiel 02: Sudoku
 
-**Konzept**: 9x9 Grid mit Zahlen 1-9, löse Logik-Rätsel
+### Über das Spiel
 
-**Features**:
-- Verschiedene Schwierigkeitsgrade (Easy, Medium, Hard, Expert)
-- Hint-System für Anfänger
-- Fehler-Detektion mit visuellem Feedback
-- Timer und Move-Counter
-- Puzzle-Generator mit garantiert eindeutiger Lösung
-- Notiz-Modus (Kandidaten eintragen)
+**Sudoku** ist das weltberühmte Zahlen-Logik-Puzzle. Fülle das 9×9 Grid mit Zahlen 1-9, sodass jede Zeile, Spalte und 3×3 Box alle Zahlen genau einmal enthält.
 
-**Technisch**:
-- Backtracking-Algorithmus für Generator
-- Constraint-Propagation für Hint-System
-- Touch-Grid mit Numpad
+**Ziel:** Löse das Puzzle durch logisches Denken – keine Mathematik erforderlich, nur reine Logik!
+
+### Features
+
+- 🎲 **3 Schwierigkeitsgrade**: Easy (35 Zahlen), Medium (30), Hard (25)
+- 📝 **Notizen-Modus**: Trage Kandidaten-Zahlen ein (Pencil Marks)
+- 🚨 **Fehler-Detektion**: Automatische Validierung, fehlerhafte Zahlen rot markiert
+- ⏱️ **Timer & Statistiken**: Spielzeit und Fehler-Counter
+- 🎆 **Gewinn-Animation**: Grüner Rahmen und Statistik-Anzeige
+- 🎲 **Puzzle-Generator**: Backtracking-basierte Generierung
+- 📱 **Touch-Steuerung**: Grid-Auswahl + 3×3 Numpad
+- 🖥️ **Auto-Scaling**: Funktioniert auf 2.8" und 3.5" Displays
+
+### Steuerung
+
+- **Touch Grid**: Zelle auswählen (gelb hervorgehoben)
+- **Numpad 1-9**: Zahl eintragen oder Notiz setzen
+- **Touch-Button "NEU"**: Neues Puzzle generieren
+- **Touch-Button "EASY/MEDIUM/HARD"**: Schwierigkeit wechseln
+- **Touch-Button "NOTIZ"**: Notizen-Modus (Kandidaten-Zahlen)
+- **Touch-Button "DEL"**: Gewählte Zelle löschen
+- **Touch-Button "CHECK"**: Fehler prüfen und rot markieren
+
+### Mathematik & Algorithmen
+
+Das Sudoku nutzt einen **Backtracking-Algorithmus** zur Puzzle-Generierung:
+
+1. **Fülle diagonale 3×3 Boxen** mit zufälligen Zahlen (unabhängig)
+2. **Löse Rest mit Backtracking** (rekursives Probieren)
+3. **Entferne Zahlen** basierend auf Schwierigkeit
+4. **Markiere vorgegebene Zahlen** (nicht änderbar)
+
+**Fun Fact**: Ein Sudoku hat mathematisch **6,67 × 10²¹** mögliche Lösungen!
+
+### Dokumentation
+
+Für detaillierte Informationen siehe: [02_Sudoku/README.md](02_Sudoku/README.md)
 
 ### 2048 (Spiel 03)
 
