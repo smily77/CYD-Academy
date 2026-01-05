@@ -1,9 +1,8 @@
 /*
  * CYD-Academy - Spiel 01: 15-Puzzle (Schiebepuzzle)
  *
- * Das klassische 15-Puzzle (auch bekannt als "Fünfzehnerspiel",
- * "Schiebepuzzle" oder "Ohne-Fleiß-kein-Preis-Spiel") - ein
- * zeitloser Denksport-Klassiker seit 1874!
+ * Das klassische 15-Puzzle im Original-Design von 1874!
+ * Rote und weiße Kacheln mit goldenen Zahlen, wie das Original.
  *
  * Ziel: Ordne die 15 nummerierten Kacheln (1-15) in der richtigen
  * Reihenfolge, indem du sie in das leere Feld schiebst.
@@ -11,35 +10,30 @@
  * Hardware:
  * - ESP32-2432S028R (CYD - Cheap Yellow Display)
  * - Touch-Screen für Spielsteuerung
- * - Optional: 4x Buttons für zusätzliche Funktionen
  *
  * Steuerung:
  * - Touch: Tippe auf eine Kachel neben dem leeren Feld zum Verschieben
- * - Button A: Neues Spiel (Shuffle)
- * - Button B: Lösung zeigen (kurz antippen)
- * - Button C: Rückgängig (letzter Zug)
- * - Button D: Pause / Fortsetzen
+ * - Touch-Button "NEU": Neues Spiel (Shuffle)
+ * - Touch-Button "UNDO": Letzten Zug rückgängig machen
+ * - Touch-Button "PAUSE": Spiel pausieren/fortsetzen
+ * - Touch-Button "HELP": Zeige Hinweis
  *
  * Features:
+ * - Original 15-Puzzle Design (Rot/Weiß mit goldenen Zahlen)
  * - Realistische 3D-Grafik mit Schatten und Highlights
  * - Glatte Schiebe-Animationen
- * - Holzrahmen-Textur um das Spielfeld
- * - Züge-Zähler und Timer
- * - Bester Score (wenigste Züge) wird gespeichert
+ * - Holzrahmen um das Spielfeld
+ * - 4 Touch-Buttons rechts vom Puzzle
+ * - Züge-Zähler und Timer (ohne Flackern)
+ * - Bester Score wird gespeichert
  * - Gewinn-Animation mit Feuerwerk
  * - Garantiert lösbares Puzzle nach Shuffle
  * - Undo-Funktion für letzte Züge
  *
- * Grafik-Details:
- * - Farbverläufe von Blau über Grün zu Orange
- * - 3D-Effekte mit mehrfarbigen Kanten (hell oben-links, dunkel unten-rechts)
- * - Schatten unter den Kacheln
- * - Große, gut lesbare Zahlen mit Text-Schatten
- * - Holzmaserung um das Spielfeld
- *
- * Bibliotheken:
- * - LovyanGFX (für Display und Touch)
- * - CYD_Display_Config.h (für Board-Konfiguration)
+ * Original-Farbschema:
+ * - Kacheln 1,3,6,8,9,11,14: ROT
+ * - Kacheln 2,4,5,7,10,12,13,15: WEISS
+ * - Zahlen: GOLD mit Schatten
  *
  * Autor: CYD-Academy
  * Lizenz: MIT
@@ -55,20 +49,32 @@ LGFX lcd;
 #define GRID_SIZE 4
 #define TILE_COUNT (GRID_SIZE * GRID_SIZE)
 
-// ========== Farben (RGB565) ==========
-#define COLOR_BACKGROUND 0x2945      // Dunkelgrau
-#define COLOR_FRAME_DARK 0x4208      // Dunkelbraun
-#define COLOR_FRAME_LIGHT 0x8C51     // Hellbraun
-#define COLOR_EMPTY 0x18C3           // Sehr dunkelgrau
-#define COLOR_TEXT_SHADOW 0x2104     // Dunkel für Schatten
+// ========== Farben (RGB565) - Original Design ==========
+#define COLOR_BACKGROUND 0x7BCF      // Helles Grau
+#define COLOR_WOOD_DARK 0x5980       // Dunkelbraun (Holz)
+#define COLOR_WOOD_LIGHT 0xAD55      // Hellbraun (Holz)
+#define COLOR_WOOD_MID 0x8C51        // Mittelbraun (Holz)
+#define COLOR_EMPTY 0x2945           // Dunkelgrau (leeres Feld)
+
+// Original 15-Puzzle Farben
+#define COLOR_TILE_RED 0xC800        // Rot (wie Original)
+#define COLOR_TILE_WHITE 0xFFFF      // Weiß
+#define COLOR_NUMBER_GOLD 0xFD20     // Gold
+#define COLOR_SHADOW 0x2104          // Schatten (sehr dunkel)
 #define COLOR_WIN_TEXT 0xFFE0        // Gelb
 
-// Farbverläufe für Kacheln (Blau -> Grün -> Orange)
-const uint16_t TILE_COLORS[15] = {
-  0x3C5F, 0x3C9F, 0x3CDF, 0x3D1F,  // 1-4: Blau-Töne
-  0x3D5F, 0x45BF, 0x4DDF, 0x55FF,  // 5-8: Cyan-Grün-Töne
-  0x5DFF, 0x6DDF, 0x7D9F, 0x8D5F,  // 9-12: Grün-Töne
-  0x9D1F, 0xAD1F, 0xBCDF           // 13-15: Orange-Töne
+// Touch-Button Farben
+#define COLOR_BUTTON_BG 0x4A49       // Dunkelgrau
+#define COLOR_BUTTON_BORDER 0x8410   // Grau
+#define COLOR_BUTTON_TEXT 0xFFFF     // Weiß
+#define COLOR_BUTTON_PRESSED 0x2945  // Noch dunkler
+
+// Welche Kacheln sind rot? (1,3,6,8,9,11,14)
+const bool IS_RED_TILE[15] = {
+  true,  false, true,  false, // 1,2,3,4
+  false, true,  false, true,  // 5,6,7,8
+  true,  false, true,  false, // 9,10,11,12
+  false, true,  false         // 13,14,15
 };
 
 // ========== Globale Variablen ==========
@@ -78,6 +84,10 @@ int16_t TILE_SIZE;         // Größe einer Kachel
 int16_t FIELD_X;           // X-Position des Spielfelds
 int16_t FIELD_Y;           // Y-Position des Spielfelds
 int16_t FRAME_WIDTH;       // Breite des Holzrahmens
+int16_t BUTTON_WIDTH;      // Breite der Touch-Buttons
+int16_t BUTTON_HEIGHT;     // Höhe der Touch-Buttons
+int16_t BUTTON_X;          // X-Position der Buttons
+int16_t BUTTON_Y;          // Y-Position der Buttons
 
 // Spiellogik
 uint8_t tiles[TILE_COUNT]; // 0 = leeres Feld, 1-15 = nummerierte Kacheln
@@ -112,6 +122,10 @@ const int MAX_HISTORY = 100;
 unsigned long lastTouchTime = 0;
 const unsigned long TOUCH_DEBOUNCE = 200;
 
+// Stats-Cache (gegen Flackern)
+uint16_t lastDrawnMoves = 9999;
+uint32_t lastDrawnTime = 9999;
+
 // ========== Forward Declarations ==========
 void initGame();
 void shufflePuzzle();
@@ -119,8 +133,9 @@ void drawBoard();
 void drawTile(uint8_t pos, bool immediate = false);
 void drawFrame();
 void drawStats();
+void drawButtons();
+bool checkButtonPress(uint16_t x, uint16_t y, int buttonIndex);
 void handleTouch();
-void handleButtons();
 bool checkWin();
 void showWinAnimation();
 uint8_t getTileAt(int8_t x, int8_t y);
@@ -151,19 +166,28 @@ void setup() {
 
   Serial.printf("Display: %dx%d\n", screenWidth, screenHeight);
 
-  // Spielfeld so groß wie möglich, aber mit Platz für Stats
-  int16_t availableHeight = screenHeight - 60;  // 60px für Stats oben
-  int16_t maxSize = (screenWidth - 40 < availableHeight) ? (screenWidth - 40) : availableHeight;
+  // Platz für Buttons rechts reservieren (70px)
+  int16_t availableWidth = screenWidth - 80;   // 70px für Buttons + 10px Margin
+  int16_t availableHeight = screenHeight - 60; // 60px für Stats oben
+
+  int16_t maxSize = (availableWidth - 40 < availableHeight) ? (availableWidth - 40) : availableHeight;
 
   FIELD_SIZE = (maxSize / GRID_SIZE) * GRID_SIZE;  // Auf Grid-Größe abrunden
   TILE_SIZE = FIELD_SIZE / GRID_SIZE;
-  FRAME_WIDTH = TILE_SIZE / 8;
+  FRAME_WIDTH = TILE_SIZE / 6;  // Etwas breiter für bessere Sichtbarkeit
 
-  FIELD_X = (screenWidth - FIELD_SIZE - FRAME_WIDTH * 2) / 2;
+  FIELD_X = 10;  // Links ausgerichtet (mit Margin)
   FIELD_Y = 60 + (availableHeight - FIELD_SIZE - FRAME_WIDTH * 2) / 2;
+
+  // Touch-Buttons rechts
+  BUTTON_WIDTH = 60;
+  BUTTON_HEIGHT = (FIELD_SIZE + FRAME_WIDTH * 2) / 4 - 10;
+  BUTTON_X = FIELD_X + FIELD_SIZE + FRAME_WIDTH * 2 + 10;
+  BUTTON_Y = FIELD_Y;
 
   Serial.printf("Field: %dx%d at (%d,%d)\n", FIELD_SIZE, FIELD_SIZE, FIELD_X, FIELD_Y);
   Serial.printf("Tile: %dx%d, Frame: %d\n", TILE_SIZE, TILE_SIZE, FRAME_WIDTH);
+  Serial.printf("Buttons: %dx%d at (%d,%d)\n", BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_X, BUTTON_Y);
 
   // Spiel initialisieren
   initGame();
@@ -181,7 +205,7 @@ void loop() {
   }
 
   if (isPaused) {
-    handleButtons();  // Nur Buttons in Pause
+    handleTouch();  // Touch-Buttons auch in Pause
     delay(50);
     return;
   }
@@ -192,13 +216,12 @@ void loop() {
     if (now - lastUpdateTime >= 100) {
       lastUpdateTime = now;
       gameDuration = (now - gameStartTime) / 1000;
-      drawStats();  // Stats neu zeichnen
+      drawStats();  // Stats neu zeichnen (nur wenn geändert)
     }
 
     handleTouch();
-    handleButtons();
   } else {
-    handleButtons();  // Nach Gewinn nur Buttons (für Neustart)
+    handleTouch();  // Nach Gewinn nur Touch (für Neustart)
   }
 
   delay(10);
@@ -222,9 +245,13 @@ void initGame() {
   gameStartTime = millis();
   lastUpdateTime = millis();
   gameDuration = 0;
+  lastDrawnMoves = 9999;
+  lastDrawnTime = 9999;
 
-  // Board zeichnen
+  // UI zeichnen
+  lcd.fillScreen(COLOR_BACKGROUND);
   drawFrame();
+  drawButtons();
   drawBoard();
   drawStats();
 
@@ -276,6 +303,8 @@ void shufflePuzzle() {
   moveCount = 0;
   moveHistory.clear();
   gameStartTime = millis();
+  lastDrawnMoves = 9999;
+  lastDrawnTime = 9999;
   drawBoard();
   drawStats();
 
@@ -309,29 +338,46 @@ void drawBoard() {
   }
 }
 
-// ========== Holzrahmen zeichnen ==========
+// ========== Holzrahmen zeichnen (realistischer) ==========
 void drawFrame() {
   int16_t x1 = FIELD_X;
   int16_t y1 = FIELD_Y;
   int16_t x2 = FIELD_X + FIELD_SIZE + FRAME_WIDTH * 2;
   int16_t y2 = FIELD_Y + FIELD_SIZE + FRAME_WIDTH * 2;
 
-  // Äußerer dunkler Rahmen
-  lcd.fillRect(x1, y1, x2 - x1, FRAME_WIDTH, COLOR_FRAME_DARK);
-  lcd.fillRect(x1, y1, FRAME_WIDTH, y2 - y1, COLOR_FRAME_DARK);
+  // Hauptrahmen (mittelbraun)
+  lcd.fillRect(x1, y1, x2 - x1, y2 - y1, COLOR_WOOD_MID);
 
-  // Innerer heller Rahmen (3D-Effekt)
-  lcd.fillRect(x1 + FRAME_WIDTH, y2 - FRAME_WIDTH, x2 - x1 - FRAME_WIDTH, FRAME_WIDTH, COLOR_FRAME_LIGHT);
-  lcd.fillRect(x2 - FRAME_WIDTH, y1 + FRAME_WIDTH, FRAME_WIDTH, y2 - y1 - FRAME_WIDTH, COLOR_FRAME_LIGHT);
-
-  // Holzmaserung (einfache Linien)
-  for (int16_t i = 0; i < FRAME_WIDTH; i += 2) {
-    lcd.drawFastHLine(x1 + i, y1 + i, x2 - x1 - i * 2, COLOR_FRAME_DARK);
-    lcd.drawFastVLine(x1 + i, y1 + i, y2 - y1 - i * 2, COLOR_FRAME_DARK);
+  // Holzmaserung simulieren (horizontale Linien in verschiedenen Brauntönen)
+  for (int16_t i = 0; i < (y2 - y1); i += 3) {
+    uint16_t woodColor = (i % 6 == 0) ? COLOR_WOOD_DARK :
+                         (i % 6 == 3) ? COLOR_WOOD_LIGHT : COLOR_WOOD_MID;
+    lcd.drawFastHLine(x1, y1 + i, x2 - x1, woodColor);
   }
+
+  // 3D-Effekt: Helle Kante oben/links
+  for (int16_t i = 0; i < FRAME_WIDTH / 3; i++) {
+    lcd.drawFastHLine(x1 + i, y1 + i, x2 - x1 - i * 2, COLOR_WOOD_LIGHT);
+    lcd.drawFastVLine(x1 + i, y1 + i, y2 - y1 - i * 2, COLOR_WOOD_LIGHT);
+  }
+
+  // 3D-Effekt: Dunkle Kante unten/rechts
+  for (int16_t i = 0; i < FRAME_WIDTH / 3; i++) {
+    lcd.drawFastHLine(x1 + i, y2 - 1 - i, x2 - x1 - i * 2, COLOR_WOOD_DARK);
+    lcd.drawFastVLine(x2 - 1 - i, y1 + i, y2 - y1 - i * 2, COLOR_WOOD_DARK);
+  }
+
+  // Innerer schwarzer Rand (Vertiefung)
+  int16_t innerX = x1 + FRAME_WIDTH;
+  int16_t innerY = y1 + FRAME_WIDTH;
+  int16_t innerW = FIELD_SIZE;
+  int16_t innerH = FIELD_SIZE;
+
+  lcd.drawRect(innerX, innerY, innerW, innerH, TFT_BLACK);
+  lcd.drawRect(innerX + 1, innerY + 1, innerW - 2, innerH - 2, COLOR_WOOD_DARK);
 }
 
-// ========== Kachel zeichnen ==========
+// ========== Kachel zeichnen (Original-Design: Rot/Weiß mit Gold) ==========
 void drawTile(uint8_t pos, bool immediate) {
   uint8_t tile = tiles[pos];
 
@@ -360,35 +406,35 @@ void drawTile(uint8_t pos, bool immediate) {
     // Leeres Feld - dunkler Hintergrund
     lcd.fillRect(px, py, TILE_SIZE, TILE_SIZE, COLOR_EMPTY);
 
-    // Subtile Vertiefung zeichnen (3D-Effekt umgekehrt)
-    lcd.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLOR_FRAME_DARK);
-    lcd.drawFastHLine(px + 1, py + 1, TILE_SIZE - 2, COLOR_FRAME_DARK);
-    lcd.drawFastVLine(px + 1, py + 1, TILE_SIZE - 2, COLOR_FRAME_DARK);
+    // Subtile Vertiefung zeichnen
+    lcd.drawRect(px, py, TILE_SIZE, TILE_SIZE, COLOR_SHADOW);
+    lcd.drawRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2, COLOR_SHADOW);
   } else {
-    // Farbige Kachel
-    uint16_t tileColor = TILE_COLORS[tile - 1];
+    // Original-Farbschema: 1,3,6,8,9,11,14 = ROT, Rest = WEISS
+    bool isRed = IS_RED_TILE[tile - 1];
+    uint16_t tileColor = isRed ? COLOR_TILE_RED : COLOR_TILE_WHITE;
 
-    // Schatten (rechts und unten)
-    int16_t shadowOffset = (TILE_SIZE / 32 > 2) ? (TILE_SIZE / 32) : 2;
+    // Schatten (rechts und unten) - größer für besseren 3D-Effekt
+    int16_t shadowOffset = (TILE_SIZE / 20 > 3) ? (TILE_SIZE / 20) : 3;
     lcd.fillRect(px + shadowOffset, py + shadowOffset,
-                 TILE_SIZE - shadowOffset, TILE_SIZE - shadowOffset,
-                 COLOR_TEXT_SHADOW);
+                 TILE_SIZE - shadowOffset + 1, TILE_SIZE - shadowOffset + 1,
+                 COLOR_SHADOW);
 
     // Hauptkachel
     lcd.fillRect(px, py, TILE_SIZE - shadowOffset, TILE_SIZE - shadowOffset, tileColor);
 
-    // 3D-Kanten (hell oben/links, dunkel unten/rechts)
-    int16_t edgeSize = (TILE_SIZE / 16 > 1) ? (TILE_SIZE / 16) : 1;
-    uint16_t lightEdge = interpolateColor(tileColor, TFT_WHITE, 0.3);
-    uint16_t darkEdge = interpolateColor(tileColor, TFT_BLACK, 0.3);
+    // 3D-Kanten für Tiefe
+    int16_t edgeSize = (TILE_SIZE / 12 > 2) ? (TILE_SIZE / 12) : 2;
 
-    // Helle Kanten (oben, links)
+    // Helle Kante (oben, links) - für 3D-Effekt
+    uint16_t lightEdge = isRed ? 0xF800 : TFT_WHITE;  // Helles Rot oder Weiß
     for (int16_t i = 0; i < edgeSize; i++) {
       lcd.drawFastHLine(px + i, py + i, TILE_SIZE - shadowOffset - i * 2, lightEdge);
       lcd.drawFastVLine(px + i, py + i, TILE_SIZE - shadowOffset - i * 2, lightEdge);
     }
 
-    // Dunkle Kanten (unten, rechts)
+    // Dunkle Kante (unten, rechts)
+    uint16_t darkEdge = isRed ? 0x8000 : 0xCE59;  // Dunkles Rot oder Hellgrau
     for (int16_t i = 0; i < edgeSize; i++) {
       lcd.drawFastHLine(px + i, py + TILE_SIZE - shadowOffset - 1 - i,
                        TILE_SIZE - shadowOffset - i * 2, darkEdge);
@@ -396,34 +442,66 @@ void drawTile(uint8_t pos, bool immediate) {
                        TILE_SIZE - shadowOffset - i * 2, darkEdge);
     }
 
-    // Zahl zeichnen
-    lcd.setTextColor(TFT_WHITE);
+    // Goldene Zahl zeichnen
+    int fontScale = (TILE_SIZE / 35 > 1) ? (TILE_SIZE / 35) : 1;
 
-    // Berechne Font-Größe basierend auf Kachel-Größe
-    int fontScale = (TILE_SIZE / 40 > 1) ? (TILE_SIZE / 40) : 1;
-
-    // Text-Schatten
-    lcd.setTextColor(COLOR_TEXT_SHADOW);
+    // Text-Schatten (schwarz)
+    lcd.setTextColor(COLOR_SHADOW);
     lcd.drawNumber(tile, px + TILE_SIZE / 2 + 2, py + TILE_SIZE / 2 + 2, 4 * fontScale);
 
-    // Haupttext
-    lcd.setTextColor(TFT_WHITE);
+    // Haupttext (gold)
+    lcd.setTextColor(COLOR_NUMBER_GOLD);
     lcd.drawNumber(tile, px + TILE_SIZE / 2, py + TILE_SIZE / 2, 4 * fontScale);
   }
 }
 
-// ========== Statistiken zeichnen ==========
+// ========== Touch-Buttons zeichnen ==========
+void drawButtons() {
+  const char* labels[4] = {"NEU", "UNDO", "PAUSE", "HELP"};
+
+  for (int i = 0; i < 4; i++) {
+    int16_t by = BUTTON_Y + i * (BUTTON_HEIGHT + 10);
+
+    // Button-Hintergrund
+    lcd.fillRect(BUTTON_X, by, BUTTON_WIDTH, BUTTON_HEIGHT, COLOR_BUTTON_BG);
+
+    // 3D-Rahmen
+    lcd.drawRect(BUTTON_X, by, BUTTON_WIDTH, BUTTON_HEIGHT, COLOR_BUTTON_BORDER);
+
+    // Helle Kante oben/links (3D-Effekt)
+    lcd.drawFastHLine(BUTTON_X + 1, by + 1, BUTTON_WIDTH - 2, TFT_WHITE);
+    lcd.drawFastVLine(BUTTON_X + 1, by + 1, BUTTON_HEIGHT - 2, TFT_WHITE);
+
+    // Dunkle Kante unten/rechts
+    lcd.drawFastHLine(BUTTON_X + 1, by + BUTTON_HEIGHT - 2, BUTTON_WIDTH - 2, TFT_BLACK);
+    lcd.drawFastVLine(BUTTON_X + BUTTON_WIDTH - 2, by + 1, BUTTON_HEIGHT - 2, TFT_BLACK);
+
+    // Text
+    lcd.setTextColor(COLOR_BUTTON_TEXT);
+    lcd.setTextDatum(MC_DATUM);
+
+    int fontSize = (BUTTON_HEIGHT > 40) ? 2 : 1;
+    lcd.drawString(labels[i], BUTTON_X + BUTTON_WIDTH / 2, by + BUTTON_HEIGHT / 2, fontSize);
+  }
+}
+
+// ========== Statistiken zeichnen (OHNE Flackern) ==========
 void drawStats() {
-  // Header-Bereich löschen
+  // Nur neu zeichnen wenn sich etwas geändert hat!
+  if (moveCount == lastDrawnMoves && gameDuration == lastDrawnTime && !isPaused) {
+    return;  // Nichts geändert, nicht neu zeichnen
+  }
+
+  // Header-Bereich löschen (nur den Teil der sich ändert)
   lcd.fillRect(0, 0, lcd.width(), 55, COLOR_BACKGROUND);
 
   lcd.setTextDatum(TL_DATUM);
-  lcd.setTextColor(TFT_WHITE);
+  lcd.setTextColor(TFT_BLACK);
 
-  // Titel
+  // Titel (nur einmal zeichnen, ändert sich nicht)
   lcd.drawString("15-PUZZLE", 10, 5, 4);
 
-  // Züge
+  // Züge (rechts oben)
   lcd.setTextDatum(TR_DATUM);
   String moves = "Zuege: " + String(moveCount);
   lcd.drawString(moves, lcd.width() - 10, 5, 2);
@@ -443,11 +521,23 @@ void drawStats() {
   // Pause-Anzeige
   if (isPaused) {
     lcd.setTextDatum(MC_DATUM);
-    lcd.setTextColor(COLOR_WIN_TEXT);
+    lcd.setTextColor(TFT_RED);
     lcd.drawString("PAUSE", lcd.width() / 2, 30, 4);
   }
 
+  // Cache aktualisieren
+  lastDrawnMoves = moveCount;
+  lastDrawnTime = gameDuration;
+
   lcd.setTextDatum(MC_DATUM);  // Zurücksetzen
+}
+
+// ========== Button-Press Check ==========
+bool checkButtonPress(uint16_t x, uint16_t y, int buttonIndex) {
+  int16_t by = BUTTON_Y + buttonIndex * (BUTTON_HEIGHT + 10);
+
+  return (x >= BUTTON_X && x <= BUTTON_X + BUTTON_WIDTH &&
+          y >= by && y <= by + BUTTON_HEIGHT);
 }
 
 // ========== Touch-Eingabe verarbeiten ==========
@@ -460,9 +550,38 @@ void handleTouch() {
     if (millis() - lastTouchTime < TOUCH_DEBOUNCE) return;
     lastTouchTime = millis();
 
+    // Touch-Buttons prüfen
+    if (touchX >= BUTTON_X && touchX <= BUTTON_X + BUTTON_WIDTH) {
+      if (checkButtonPress(touchX, touchY, 0)) {
+        // Button "NEU" gedrückt
+        Serial.println("Button NEU gedrückt");
+        initGame();
+        return;
+      } else if (checkButtonPress(touchX, touchY, 1)) {
+        // Button "UNDO" gedrückt
+        Serial.println("Button UNDO gedrückt");
+        undoMove();
+        return;
+      } else if (checkButtonPress(touchX, touchY, 2)) {
+        // Button "PAUSE" gedrückt
+        Serial.println("Button PAUSE gedrückt");
+        isPaused = !isPaused;
+        lastDrawnTime = 9999;  // Force redraw
+        drawStats();
+        return;
+      } else if (checkButtonPress(touchX, touchY, 3)) {
+        // Button "HELP" gedrückt
+        Serial.println("Button HELP gedrückt");
+        // TODO: Implementiere Hint-System
+        return;
+      }
+    }
+
     // Prüfe ob Touch im Spielfeld
-    if (touchX < FIELD_X + FRAME_WIDTH || touchX > FIELD_X + FRAME_WIDTH + FIELD_SIZE ||
-        touchY < FIELD_Y + FRAME_WIDTH || touchY > FIELD_Y + FRAME_WIDTH + FIELD_SIZE) {
+    if (touchX < FIELD_X + FRAME_WIDTH ||
+        touchX > FIELD_X + FRAME_WIDTH + FIELD_SIZE ||
+        touchY < FIELD_Y + FRAME_WIDTH ||
+        touchY > FIELD_Y + FRAME_WIDTH + FIELD_SIZE) {
       return;
     }
 
@@ -478,18 +597,6 @@ void handleTouch() {
       }
     }
   }
-}
-
-// ========== Button-Eingabe verarbeiten ==========
-void handleButtons() {
-  // Hinweis: Button-Implementierung ist optional
-  // Hier könnten die Buttons aus CYD_Display_Config.h verwendet werden
-  // Für diese Version fokussieren wir auf Touch-Steuerung
-
-  // TODO: Button A - Neues Spiel
-  // TODO: Button B - Lösung zeigen
-  // TODO: Button C - Undo
-  // TODO: Button D - Pause
 }
 
 // ========== Prüfe ob gewonnen ==========
@@ -514,16 +621,16 @@ void showWinAnimation() {
 
   // Feuerwerk-Animation
   for (int round = 0; round < 3; round++) {
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 15; i++) {
       int16_t x = random(FIELD_X + FRAME_WIDTH, FIELD_X + FRAME_WIDTH + FIELD_SIZE);
       int16_t y = random(FIELD_Y + FRAME_WIDTH, FIELD_Y + FRAME_WIDTH + FIELD_SIZE);
-      int16_t radius = random(5, 15);
-      uint16_t color = TILE_COLORS[random(15)];
+      int16_t radius = random(3, 10);
+      uint16_t color = (i % 2 == 0) ? COLOR_TILE_RED : COLOR_NUMBER_GOLD;
 
       lcd.fillCircle(x, y, radius, color);
-      delay(50);
+      delay(40);
     }
-    delay(200);
+    delay(150);
     drawBoard();  // Board neu zeichnen
   }
 
@@ -531,7 +638,7 @@ void showWinAnimation() {
   lcd.setTextDatum(MC_DATUM);
   lcd.setTextColor(COLOR_WIN_TEXT);
   lcd.fillRect(FIELD_X + FRAME_WIDTH, FIELD_Y + FIELD_SIZE / 2 - 30,
-               FIELD_SIZE, 60, COLOR_BACKGROUND);
+               FIELD_SIZE, 70, COLOR_BACKGROUND);
   lcd.drawString("GEWONNEN!", FIELD_X + FRAME_WIDTH + FIELD_SIZE / 2,
                  FIELD_Y + FIELD_SIZE / 2 - 10, 4);
 
@@ -539,23 +646,15 @@ void showWinAnimation() {
                  String(gameDuration / 60) + ":" +
                  (gameDuration % 60 < 10 ? "0" : "") +
                  String(gameDuration % 60);
+  lcd.setTextColor(TFT_BLACK);
   lcd.drawString(stats, FIELD_X + FRAME_WIDTH + FIELD_SIZE / 2,
                  FIELD_Y + FIELD_SIZE / 2 + 20, 2);
 
-  lcd.drawString("Tippe zum Neustart", FIELD_X + FRAME_WIDTH + FIELD_SIZE / 2,
+  lcd.drawString("Tippe NEU zum Neustart", FIELD_X + FRAME_WIDTH + FIELD_SIZE / 2,
                  FIELD_Y + FIELD_SIZE / 2 + 40, 2);
 
-  // Warte auf Touch für Neustart
+  // Warte auf NEU-Button
   delay(1000);
-  while (true) {
-    uint16_t x, y;
-    if (lcd.getTouch(&x, &y)) {
-      delay(200);
-      initGame();
-      break;
-    }
-    delay(50);
-  }
 }
 
 // ========== Hilfsfunktionen ==========
@@ -617,18 +716,19 @@ void moveTile(uint8_t pos, bool addToHistory) {
   emptyPos = pos;
 
   // Beide Positionen neu zeichnen (Hintergrund)
-  drawTile(oldEmpty, true);  // Neue Position der Kachel (wird durch Animation überschrieben)
+  drawTile(oldEmpty, true);  // Neue Position der Kachel
   drawTile(emptyPos, true);  // Neues leeres Feld
 
   moveCount++;
-
-  // Animation läuft in updateAnimation()
-  // Nach Animation: Win-Check
+  lastDrawnMoves = 9999;  // Force stats redraw
 }
 
 // Letzten Zug rückgängig machen
 void undoMove() {
-  if (moveHistory.empty()) return;
+  if (moveHistory.empty()) {
+    Serial.println("Keine Züge zum Rückgängigmachen");
+    return;
+  }
 
   Move lastMove = moveHistory.back();
   moveHistory.pop_back();
@@ -642,9 +742,20 @@ void undoMove() {
     }
   }
 
-  // Bewege zurück (ohne History)
-  moveTile(tilePos, false);
-  moveCount--;  // Zug nicht zählen
+  // Bewege zurück (ohne History und ohne Animation)
+  uint8_t temp = tiles[tilePos];
+  tiles[tilePos] = tiles[emptyPos];
+  tiles[emptyPos] = temp;
+  emptyPos = tilePos;
+
+  moveCount--;
+
+  // Board neu zeichnen
+  drawBoard();
+  lastDrawnMoves = 9999;  // Force stats redraw
+  drawStats();
+
+  Serial.println("Zug rückgängig gemacht");
 }
 
 // Animation aktualisieren
@@ -686,7 +797,6 @@ void updateAnimation() {
     lcd.fillRect(endPx, endPy, TILE_SIZE, TILE_SIZE, COLOR_EMPTY);
 
     // Kachel an interpolierter Position zeichnen
-    // (drawTile verwendet animProgress automatisch)
     for (uint8_t i = 0; i < TILE_COUNT; i++) {
       if (tiles[i] == animTile) {
         drawTile(i, false);
@@ -698,7 +808,7 @@ void updateAnimation() {
   delay(16);  // ~60 FPS
 }
 
-// Farben interpolieren (für 3D-Kanten)
+// Farben interpolieren
 uint16_t interpolateColor(uint16_t color1, uint16_t color2, float t) {
   // RGB565 -> RGB888
   uint8_t r1 = ((color1 >> 11) & 0x1F) << 3;
