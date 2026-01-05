@@ -31,11 +31,18 @@ Die **CYD-Academy** ist eine umfassende **Lernplattform für ESP32 Display-Progr
    - Intermediate: WiFi, Sensoren, I2C
    - Advanced: ESP-NOW, Multi-Threading, komplexe Visualisierungen
 
-2. **Arcade Games (arcade-games/)**: 14 vollständige Spiele als Master Class
+2. **Sensor Examples (sensor-examples/)**: Hardware-Integration mit I2C/SPI-Sensoren
+   - Bewegungssensoren, Wettersensoren, Distanzsensoren, Luftqualität, Gestensteuerung
+
+3. **Games (games/)**: Denksport und Puzzle-Spiele
+   - 15-Puzzle (Schiebepuzzle) mit 3D-Grafik und Animationen
+   - Weitere klassische Denkspiele in Planung (Sudoku, 2048, Minesweeper, Sokoban)
+
+4. **Arcade Games (arcade-games/)**: 14 vollständige Spiele als Master Class
    - Pong, Snake, Breakout, Space Invaders, Asteroids, Frogger, Tetris
    - CYD_Games Library mit wiederverwendbaren Klassen
 
-3. **Libraries (libraries/)**: Wiederverwendbare Komponenten
+5. **Libraries (libraries/)**: Wiederverwendbare Komponenten
    - CYD_Games: Game Engine Komponenten
 
 ---
@@ -60,11 +67,19 @@ CYD-Academy/
 │   ├── 20_Air_Quality_CCS811/
 │   └── 21_Gesture_Sensor_MGC3130/
 │
+├── sensor-examples/                # Sensor-Integration
+│   └── ...
+│
+├── games/                          # Denksport-Spiele
+│   ├── README.md
+│   ├── 01_Puzzle_15/              # 15-Puzzle (Schiebepuzzle)
+│   └── ...                        # Weitere Spiele geplant
+│
 ├── arcade-games/                   # Master Class Spiele
 │   ├── README.md
-│   ├── 01_Touch_Selector/
-│   ├── 02_Touch_Selector_Modern/
-│   ├── 03_Pong/
+│   ├── 00_RetroGames/             # Retro-Spiele-Menü
+│   ├── 01_ModernGames/            # Modern-Spiele-Menü
+│   ├── 12_Pong/
 │   └── ...
 │
 ├── libraries/                      # Lokale Libraries

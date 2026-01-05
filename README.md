@@ -30,6 +30,15 @@ Fortgeschrittene Beispiele mit externen I2C/SPI-Sensoren:
 - **Gestensensoren:** 3D Gesture Control (MGC3130)
 - Vollständige I2C-Verkabelung und Library-Guides
 
+### 🧩 [Games](games/) - Denksport-Klassiker
+Zeitlose Puzzle- und Denkspiele mit beeindruckender Grafik:
+- **15-Puzzle (Schiebepuzzle):** Das legendäre Logikspiel seit 1874
+- Realistische 3D-Grafik mit Schatten und Highlights
+- Glatte Animationen und intuitive Touch-Steuerung
+- Intelligenter Shuffle garantiert lösbare Puzzles
+- Weitere Denksport-Spiele in Planung (Sudoku, 2048, Minesweeper, Sokoban)
+- Mehr Details: [games/README.md](games/README.md)
+
 ### 🎮 [Arcade Games](arcade-games/) - Master Class
 Vollständige Arcade-Spiele als **Lern-Ressource für Fortgeschrittene**:
 - **14 Spiele:** Pong, Snake, Breakout, Space Invaders, Asteroids, Frogger, Tetris (je 2 Versionen)
@@ -289,6 +298,10 @@ CYD-Academy/
 │   ├── 21_Gesture_Sensor_MGC3130/ # 3D Gestensteuerung
 │   └── 22_Weather_Station_BMP180/ # Luftdruck + 22b_History
 │
+├── games/                         # Denksport-Spiele
+│   ├── README.md                  # Spiele-Dokumentation
+│   └── 01_Puzzle_15/              # 15-Puzzle (Schiebepuzzle)
+│
 ├── arcade-games/                  # Alle Arcade-Spiele
 │   ├── README.md                  # Spiele-Dokumentation
 │   ├── 00_RetroGames/            # Retro-Spiele-Menü
@@ -387,10 +400,11 @@ const char* password = "DeinWiFiPasswort";
 
 - **📚 16 Basis-Beispiele** zum Lernen (examples/)
 - **🔬 10 Sensor-Beispiele** für Hardware-Integration (sensor-examples/)
+- **🧩 1 Denksport-Spiel** mit mehr in Planung (games/)
 - **🎮 14 Arcade-Spiele** (7 Retro + 7 Modern)
 - **🎯 2 Touch-Menüs** für einfachen Zugriff
 - **📦 14 Klassen** in der CYD_Games Library
-- **~20.000 Zeilen Code** vollständig dokumentiert
+- **~22.000 Zeilen Code** vollständig dokumentiert
 - **✓ 100% Skalierbar** für alle CYD Displays
 
 ## 🤝 Beitragen
