@@ -135,28 +135,39 @@ void setup() {
   int16_t screenHeight = lcd.height();
 
   // Grid links, Numpad + Buttons rechts
-  int16_t availableHeight = screenHeight - 60;  // 60px für Stats
+  int16_t availableHeight = screenHeight - 50;  // 50px für Stats (kompakter)
   int16_t gridSize = (availableHeight < screenWidth - 120) ? availableHeight : (screenWidth - 120);
   gridSize = (gridSize / GRID_SIZE) * GRID_SIZE;  // Auf Grid abrunden
 
   CELL_SIZE = gridSize / GRID_SIZE;
   GRID_X = 10;
-  GRID_Y = 60 + (availableHeight - gridSize) / 2;
+  GRID_Y = 50;  // Kompakteres Layout
 
   // Numpad rechts (3x3 Grid für 1-9)
   NUMPAD_SIZE = (screenWidth - GRID_X - gridSize - 30) / 3;
   NUMPAD_X = GRID_X + gridSize + 10;
   NUMPAD_Y = GRID_Y;
 
-  // Control-Buttons unter Numpad
+  // Control-Buttons unter Numpad (dynamische Größe)
   BUTTON_W = NUMPAD_SIZE * 3;
-  BUTTON_H = 30;
   BUTTON_X = NUMPAD_X;
-  BUTTON_Y = NUMPAD_Y + NUMPAD_SIZE * 3 + 10;
+
+  // Verfügbarer Platz für Buttons
+  int16_t buttonAreaStart = NUMPAD_Y + NUMPAD_SIZE * 3 + 5;  // Weniger Spacing
+  int16_t buttonAreaHeight = screenHeight - buttonAreaStart - 5;
+
+  // Button-Höhe: 5 Buttons mit minimalem Spacing (2px)
+  BUTTON_H = (buttonAreaHeight - 4 * 2) / 5;  // 5 Buttons, 4 Gaps à 2px
+  if (BUTTON_H < 16) BUTTON_H = 16;  // Minimum 16px (für 320x240)
+  if (BUTTON_H > 35) BUTTON_H = 35;  // Maximum 35px
+
+  BUTTON_Y = buttonAreaStart;
 
   Serial.printf("Grid: %dx%d at (%d,%d), Cell: %d\n",
                 gridSize, gridSize, GRID_X, GRID_Y, CELL_SIZE);
   Serial.printf("Numpad: %d at (%d,%d)\n", NUMPAD_SIZE, NUMPAD_X, NUMPAD_Y);
+  Serial.printf("Buttons: %dx%d at (%d,%d), Area: %d\n",
+                BUTTON_W, BUTTON_H, BUTTON_X, BUTTON_Y, buttonAreaHeight);
 
   // Spiel starten
   initGame();
@@ -440,7 +451,7 @@ void drawButtons() {
   else if (difficulty == HARD) diffLabel = "HARD";
 
   for (int i = 0; i < 5; i++) {
-    int16_t by = BUTTON_Y + i * (BUTTON_H + 5);
+    int16_t by = BUTTON_Y + i * (BUTTON_H + 2);
 
     lcd.fillRect(BUTTON_X, by, BUTTON_W, BUTTON_H, COLOR_BUTTON_BG);
     lcd.drawRect(BUTTON_X, by, BUTTON_W, BUTTON_H, TFT_WHITE);
@@ -452,13 +463,15 @@ void drawButtons() {
     if (i == 1) label = diffLabel;  // Zeige aktuellen Schwierigkeitsgrad
     if (i == 2 && noteMode) label = "NOTIZ*";  // * wenn aktiv
 
-    lcd.drawString(label, BUTTON_X + BUTTON_W / 2, by + BUTTON_H / 2, 2);
+    // Dynamische Font-Größe basierend auf Button-Höhe
+    int fontSize = (BUTTON_H < 22) ? 1 : 2;
+    lcd.drawString(label, BUTTON_X + BUTTON_W / 2, by + BUTTON_H / 2, fontSize);
   }
 }
 
 // ========== Statistiken zeichnen ==========
 void drawStats() {
-  lcd.fillRect(0, 0, lcd.width(), 55, COLOR_BACKGROUND);
+  lcd.fillRect(0, 0, lcd.width(), 45, COLOR_BACKGROUND);
 
   lcd.setTextDatum(TL_DATUM);
   lcd.setTextColor(TFT_BLACK);
@@ -554,7 +567,7 @@ void handleTouch() {
   // Control-Buttons
   if (tx >= BUTTON_X && tx < BUTTON_X + BUTTON_W) {
     for (int i = 0; i < 5; i++) {
-      int16_t by = BUTTON_Y + i * (BUTTON_H + 5);
+      int16_t by = BUTTON_Y + i * (BUTTON_H + 2);
 
       if (ty >= by && ty < by + BUTTON_H) {
         if (i == 0) {
