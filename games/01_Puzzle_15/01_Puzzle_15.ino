@@ -153,7 +153,7 @@ void setup() {
 
   // Spielfeld so groß wie möglich, aber mit Platz für Stats
   int16_t availableHeight = screenHeight - 60;  // 60px für Stats oben
-  int16_t maxSize = min(screenWidth - 40, availableHeight);
+  int16_t maxSize = (screenWidth - 40 < availableHeight) ? (screenWidth - 40) : availableHeight;
 
   FIELD_SIZE = (maxSize / GRID_SIZE) * GRID_SIZE;  // Auf Grid-Größe abrunden
   TILE_SIZE = FIELD_SIZE / GRID_SIZE;
@@ -369,7 +369,7 @@ void drawTile(uint8_t pos, bool immediate) {
     uint16_t tileColor = TILE_COLORS[tile - 1];
 
     // Schatten (rechts und unten)
-    int16_t shadowOffset = max(2, TILE_SIZE / 32);
+    int16_t shadowOffset = (TILE_SIZE / 32 > 2) ? (TILE_SIZE / 32) : 2;
     lcd.fillRect(px + shadowOffset, py + shadowOffset,
                  TILE_SIZE - shadowOffset, TILE_SIZE - shadowOffset,
                  COLOR_TEXT_SHADOW);
@@ -378,7 +378,7 @@ void drawTile(uint8_t pos, bool immediate) {
     lcd.fillRect(px, py, TILE_SIZE - shadowOffset, TILE_SIZE - shadowOffset, tileColor);
 
     // 3D-Kanten (hell oben/links, dunkel unten/rechts)
-    int16_t edgeSize = max(1, TILE_SIZE / 16);
+    int16_t edgeSize = (TILE_SIZE / 16 > 1) ? (TILE_SIZE / 16) : 1;
     uint16_t lightEdge = interpolateColor(tileColor, TFT_WHITE, 0.3);
     uint16_t darkEdge = interpolateColor(tileColor, TFT_BLACK, 0.3);
 
@@ -400,7 +400,7 @@ void drawTile(uint8_t pos, bool immediate) {
     lcd.setTextColor(TFT_WHITE);
 
     // Berechne Font-Größe basierend auf Kachel-Größe
-    int fontScale = max(1, TILE_SIZE / 40);
+    int fontScale = (TILE_SIZE / 40 > 1) ? (TILE_SIZE / 40) : 1;
 
     // Text-Schatten
     lcd.setTextColor(COLOR_TEXT_SHADOW);
